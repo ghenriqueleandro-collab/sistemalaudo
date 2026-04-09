@@ -1,0 +1,191 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ─────────────────────────────────────────────
+   TABELAS
+───────────────────────────────────────────── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+tbody {
+  break-inside: auto;
+}
+
+/* Tabelas dentro das páginas do laudo: fonte menor para melhor encaixe */
+.pagina-laudo table {
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+
+.pagina-laudo table th,
+.pagina-laudo table td {
+  padding: 3px 6px;
+}
+
+/* ─────────────────────────────────────────────
+   PDF VIEWER (react-pdf)
+───────────────────────────────────────────── */
+.react-pdf__Page {
+  display: flex;
+  justify-content: center;
+}
+
+.react-pdf__Page canvas,
+.pdf-page-wrapper canvas {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* ─────────────────────────────────────────────
+   PÁGINAS DO LAUDO — base
+───────────────────────────────────────────── */
+.pagina-laudo {
+  width: 210mm;
+  box-sizing: border-box;
+  background: white;
+  break-after: page;
+  page-break-after: always;
+}
+
+/* ─────────────────────────────────────────────
+   TELA: documento contínuo A4.
+   .pagina-laudo vira display:contents — o div
+   existe no DOM (para o sumário ler data-pagina)
+   mas não cria nenhuma caixa visual.
+   .laudo-conteudo é o único container A4.
+───────────────────────────────────────────── */
+@media screen {
+  body {
+    background: #e2e8f0;
+  }
+
+  /* Container único — folha A4 contínua */
+  .laudo-conteudo {
+    width: 210mm;
+    margin: 0 auto;
+    background: white;
+    padding: 10mm 12mm 10mm;
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.12);
+    border: 1px solid #e2e8f0;
+    border-radius: 2px;
+  }
+
+  /* Wrappers de página: transparentes no layout */
+  .pagina-laudo {
+    display: contents;
+  }
+
+  /* Compensa o header sticky ao navegar pelo sumário */
+  .titulo-laudo {
+    scroll-margin-top: 84px;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   IMPRESSÃO: A4 real via @page.
+   overflow:visible garante que nada é clipado;
+   o browser divide o conteúdo em folhas A4.
+───────────────────────────────────────────── */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  header,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
+
+  .pagina-laudo {
+    width: 210mm;
+    height: auto;
+    overflow: visible;
+    display: block;
+    margin: 0;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .evitar-quebra {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  img,
+  canvas,
+  svg {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  table {
+    width: 100% !important;
+  }
+
+  tr, td, th {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .pdf-page-wrapper {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   CONTEÚDO INTERNO
+───────────────────────────────────────────── */
+.conteudo-laudo {
+  flex: 1 1 auto;
+}
+
+.quebra-automatica {
+  break-inside: auto;
+  page-break-inside: auto;
+}
