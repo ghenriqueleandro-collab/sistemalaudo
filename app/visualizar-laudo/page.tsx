@@ -440,7 +440,7 @@ export default function VisualizarLaudoPage() {
       }
 
       const blob = await pdf(
-        React.createElement(LaudoPdf, { dados: dadosComPaginas, logoUrl })
+        React.createElement(LaudoPdf, { dados: dadosComPaginas, logoUrl }) as any
       ).toBlob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -1733,3 +1733,4 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
     </AppShell>
   )
 }
+
