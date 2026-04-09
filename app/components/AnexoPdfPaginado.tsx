@@ -7,9 +7,6 @@ import 'react-pdf/dist/Page/TextLayer.css'
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
 
-// Resolução de renderização: 3× o tamanho de exibição para nitidez em tela
-// HiDPI e na impressão. O CSS em globals.css aplica max-width:100% / height:auto
-// no canvas, encolhendo-o visualmente sem perda de qualidade.
 const RENDER_SCALE = 3
 
 type Props = {
@@ -22,7 +19,6 @@ type Props = {
   larguraPagina?: number
 }
 
-// Separador de seção — alinhado ao CabecalhoLaudo do viewer principal.
 function CabecalhoLaudo() {
   return (
     <div className="mt-8 mb-2">
@@ -32,9 +28,6 @@ function CabecalhoLaudo() {
   )
 }
 
-// Wrapper semântico transparente — alinhado ao documento contínuo do viewer.
-// O CSS `.pagina-laudo { display: contents }` torna o div invisível no layout,
-// mantendo data-pagina acessível para o sumário.
 function Pagina({
   pagina,
   children,
@@ -103,7 +96,6 @@ export default function AnexoPdfPaginado({
                 <h2 className="text-2xl font-bold mb-4 titulo-laudo">{titulo}</h2>
               </>
             )}
-            {/* Canvas renderizado em alta resolução, encolhido pelo CSS */}
             <div
               className="flex justify-center mb-8"
               style={{ width: '100%', overflow: 'hidden' }}
@@ -113,7 +105,6 @@ export default function AnexoPdfPaginado({
                 width={renderWidth}
                 renderTextLayer={false}
                 renderAnnotationLayer={false}
-                style={{ maxWidth: '100%', height: 'auto' }}
               />
             </div>
           </Pagina>
