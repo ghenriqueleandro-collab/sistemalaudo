@@ -199,22 +199,6 @@ export default function HomePage() {
               {carregando ? 'Validando acesso...' : 'Entrar na gestão'}
             </button>
           </form>
-
-          <div className="mt-8 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-              <div className="text-sm font-semibold text-slate-900">Gestão centralizada</div>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Acesse rapidamente a central de laudos, relatórios e operações da plataforma.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-              <div className="text-sm font-semibold text-slate-900">Autenticação real</div>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Esta tela já está preparada para autenticar com credenciais válidas do sistema.
-              </p>
-            </div>
-          </div>
         </div>
       </section>
     </main>
