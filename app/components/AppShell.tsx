@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { signOut } from 'next-auth/react'
 import BrandLogo from './BrandLogo'
+import UserHeader from './UserHeader'
 
 const links = [
   { href: '/meus-laudos', label: 'Meus laudos' },
@@ -19,10 +19,6 @@ function classeLink(ativo: boolean) {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-
-  async function handleSair() {
-    await signOut({ callbackUrl: '/' })
-  }
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#eff6ff,white_45%,#e2e8f0)] text-slate-900">
@@ -49,19 +45,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm text-white/85 md:inline-flex">
-              Área protegida
-            </div>
-
-            <button
-              type="button"
-              onClick={handleSair}
-              className="inline-flex rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow transition hover:bg-slate-100"
-            >
-              Sair
-            </button>
-          </div>
+          <UserHeader />
         </div>
       </header>
 
