@@ -1,3 +1,13 @@
+/**
+ * SALVAR EM: src/lib/laudos-storage.ts
+ *
+ * Substitui IndexedDB por chamadas à API do servidor (Vercel KV).
+ * Todas as funções exportadas têm a mesma assinatura de antes —
+ * nenhuma outra página precisa ser alterada.
+ */
+
+// ─── Tipos (idênticos ao original) ───────────────────────────────────────────
+
 export type StatusLaudo =
   | 'rascunho'
   | 'em_preenchimento'
@@ -18,8 +28,15 @@ export type LaudoResumo = {
   solicitante?: string
 }
 
-const DB_NAME = 'laudosDB'
-const STORE_NAME = 'laudos'
+export type FiltrosLaudo = {
+  busca: string
+  status: string
+  cidade: string
+  tipoImovel: string
+  finalidade: string
+}
+
+// ─── Helpers de formatação (idênticos ao original) ───────────────────────────
 
 function normalizarTexto(valor: string) {
   return valor
@@ -56,35 +73,19 @@ export function formatarMoeda(valor: number) {
 
 export function formatarData(data?: string) {
   if (!data) return '-'
-
   const d = new Date(data)
-
   return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR')
 }
 
-async function abrirBanco(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1)
+// ─── Converte dado bruto da API em LaudoResumo ────────────────────────────────
 
-    request.onupgradeneeded = () => {
-      const db = request.result
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME)
-      }
-    }
-
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-  })
-}
-
-function gerarResumoLaudo(chave: string, valor: any): LaudoResumo | null {
-  if (!valor || typeof valor !== 'object') return null
+function gerarResumoLaudo(valor: any): LaudoResumo | null {
+  if (!valor || typeof valor !== 'object' || !valor.id) return null
 
   const codigoBase =
     valor.matricula?.trim() ||
     valor.codigo ||
-    (chave === 'laudoAtual' ? 'LAUDO-ATUAL' : chave.toUpperCase().replace(/_/g, '-'))
+    valor.id.toUpperCase().slice(0, 8)
 
   const cidade =
     valor.cidadePrincipal?.trim() ||
@@ -98,11 +99,10 @@ function gerarResumoLaudo(chave: string, valor: any): LaudoResumo | null {
     Number(valor.valor) ||
     0
 
-  const status: StatusLaudo =
-    valor.status || (chave === 'laudoAtual' ? 'em_preenchimento' : 'rascunho')
+  const status: StatusLaudo = valor.status || 'rascunho'
 
   return {
-    id: chave,
+    id: valor.id,
     codigo: codigoBase,
     endereco: valor.endereco || 'Endereço não informado',
     cidade,
@@ -125,54 +125,28 @@ function gerarResumoLaudo(chave: string, valor: any): LaudoResumo | null {
   }
 }
 
+// ─── Chave localStorage: apenas o ID do laudo em edição ──────────────────────
+// Os dados ficam no servidor; só o ID fica local para navegar entre páginas.
+const CHAVE_ID_ATUAL = 'lesath_laudo_atual_id'
+
+// ─── listarLaudos ─────────────────────────────────────────────────────────────
+
 export async function listarLaudos(): Promise<LaudoResumo[]> {
-  if (typeof window === 'undefined' || !('indexedDB' in window)) {
-    return []
-  }
-
   try {
-    const db = await abrirBanco()
-    const transaction = db.transaction(STORE_NAME, 'readonly')
-    const store = transaction.objectStore(STORE_NAME)
+    const res = await fetch('/api/laudos', { cache: 'no-store' })
+    if (!res.ok) return []
 
-    const itens = await new Promise<{ key: string; value: any }[]>((resolve, reject) => {
-      const resultados: { key: string; value: any }[] = []
-      const request = store.openCursor()
+    const dados: any[] = await res.json()
 
-      request.onsuccess = () => {
-        const cursor = request.result
-        if (!cursor) {
-          resolve(resultados)
-          return
-        }
-
-        resultados.push({ key: String(cursor.key), value: cursor.value })
-        cursor.continue()
-      }
-
-      request.onerror = () => reject(request.error)
-    })
-
-    const laudos = itens
-      .filter(({ key }) => key !== 'laudoAtual')
-      .map(({ key, value }) => gerarResumoLaudo(key, value))
+    return dados
+      .map(gerarResumoLaudo)
       .filter(Boolean) as LaudoResumo[]
-
-    return laudos.sort(
-      (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
-    )
   } catch {
     return []
   }
 }
 
-export type FiltrosLaudo = {
-  busca: string
-  status: string
-  cidade: string
-  tipoImovel: string
-  finalidade: string
-}
+// ─── filtrarLaudos (lógica idêntica ao original) ──────────────────────────────
 
 export function filtrarLaudos(laudos: LaudoResumo[], filtros: FiltrosLaudo) {
   return laudos.filter((laudo) => {
@@ -203,86 +177,83 @@ export function filtrarLaudos(laudos: LaudoResumo[], filtros: FiltrosLaudo) {
   })
 }
 
-export async function excluirLaudo(id: string) {
-  if (typeof window === 'undefined' || !('indexedDB' in window)) return
+// ─── salvarLaudo ──────────────────────────────────────────────────────────────
 
-  const db = await abrirBanco()
-  await new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
-    const request = store.delete(id)
-    request.onsuccess = () => resolve()
-    request.onerror = () => reject(request.error)
-  })
-}
-
-export async function salvarLaudo(dados: any) {
-  if (typeof window === 'undefined' || !('indexedDB' in window)) return null
-
-  const db = await abrirBanco()
-
-  const matricula = String(dados?.matricula || '').trim()
-  const chave = matricula || dados?.id || 'laudoAtual'
-
-  await new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
-
-    const request = store.put(dados, chave)
-
-    request.onsuccess = () => resolve()
-    request.onerror = () => reject(request.error)
-  })
-
-  return chave
-}
-
-async function lerLaudo(chave: string): Promise<any | null> {
-  if (typeof window === 'undefined' || !('indexedDB' in window)) return null
-
+export async function salvarLaudo(dados: any): Promise<string | null> {
   try {
-    const db = await abrirBanco()
-    return await new Promise<any>((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, 'readonly')
-      const store = transaction.objectStore(STORE_NAME)
-      const request = store.get(chave)
-      request.onsuccess = () => resolve(request.result ?? null)
-      request.onerror = () => reject(request.error)
+    const id = dados.id || crypto.randomUUID()
+    const payload = {
+      ...dados,
+      id,
+      criadoEm: dados.criadoEm || new Date().toISOString(),
+      atualizadoEm: new Date().toISOString(),
+    }
+
+    const res = await fetch('/api/laudos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     })
+
+    if (!res.ok) return null
+
+    const salvo = await res.json()
+    return salvo.id
   } catch {
     return null
   }
 }
 
-export async function definirLaudoAtual(id: string) {
+// ─── excluirLaudo ─────────────────────────────────────────────────────────────
+
+export async function excluirLaudo(id: string): Promise<void> {
+  const res = await fetch(`/api/laudos/${id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const erro = await res.json().catch(() => ({}))
+    throw new Error(erro.erro ?? 'Erro ao excluir o laudo.')
+  }
+}
+
+// ─── lerLaudo (interno) ───────────────────────────────────────────────────────
+
+async function lerLaudo(id: string): Promise<any | null> {
+  try {
+    const res = await fetch(`/api/laudos/${id}`, { cache: 'no-store' })
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
+// ─── definirLaudoAtual ────────────────────────────────────────────────────────
+
+export async function definirLaudoAtual(id: string): Promise<boolean> {
   const laudo = await lerLaudo(id)
   if (!laudo) return false
 
-  const db = await abrirBanco()
-  await new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
-    const request = store.put(laudo, 'laudoAtual')
-    request.onsuccess = () => resolve()
-    request.onerror = () => reject(request.error)
-  })
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(CHAVE_ID_ATUAL, id)
+  }
 
   return true
 }
 
-export async function obterLaudoAtual() {
-  return await lerLaudo('laudoAtual')
+// ─── obterLaudoAtual ──────────────────────────────────────────────────────────
+
+export async function obterLaudoAtual(): Promise<any | null> {
+  if (typeof window === 'undefined') return null
+
+  const id = localStorage.getItem(CHAVE_ID_ATUAL)
+  if (!id) return null
+
+  return await lerLaudo(id)
 }
 
-export async function limparLaudoAtual() {
-  if (typeof window === 'undefined' || !('indexedDB' in window)) return
+// ─── limparLaudoAtual ─────────────────────────────────────────────────────────
 
-  const db = await abrirBanco()
-  await new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
-    const request = store.delete('laudoAtual')
-    request.onsuccess = () => resolve()
-    request.onerror = () => reject(request.error)
-  })
+export async function limparLaudoAtual(): Promise<void> {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(CHAVE_ID_ATUAL)
+  }
 }
