@@ -1,7 +1,7 @@
 /**
  * SALVAR EM: src/lib/laudos-storage.ts
  *
- * Substitui IndexedDB por chamadas à API do servidor (Vercel KV).
+ * Substitui IndexedDB por chamadas à API do servidor (Upstash Redis).
  * Todas as funções exportadas têm a mesma assinatura de antes —
  * nenhuma outra página precisa ser alterada.
  */
@@ -126,7 +126,6 @@ function gerarResumoLaudo(valor: any): LaudoResumo | null {
 }
 
 // ─── Chave localStorage: apenas o ID do laudo em edição ──────────────────────
-// Os dados ficam no servidor; só o ID fica local para navegar entre páginas.
 const CHAVE_ID_ATUAL = 'lesath_laudo_atual_id'
 
 // ─── listarLaudos ─────────────────────────────────────────────────────────────
@@ -146,7 +145,7 @@ export async function listarLaudos(): Promise<LaudoResumo[]> {
   }
 }
 
-// ─── filtrarLaudos (lógica idêntica ao original) ──────────────────────────────
+// ─── filtrarLaudos (idêntico ao original) ─────────────────────────────────────
 
 export function filtrarLaudos(laudos: LaudoResumo[], filtros: FiltrosLaudo) {
   return laudos.filter((laudo) => {
@@ -207,7 +206,7 @@ export async function salvarLaudo(dados: any): Promise<string | null> {
 // ─── excluirLaudo ─────────────────────────────────────────────────────────────
 
 export async function excluirLaudo(id: string): Promise<void> {
-  const res = await fetch(`/api/laudos/${id}`, { method: 'DELETE' })
+  const res = await fetch(`/api/laudos/${encodeURIComponent(id)}`, { method: 'DELETE' })
   if (!res.ok) {
     const erro = await res.json().catch(() => ({}))
     throw new Error(erro.erro ?? 'Erro ao excluir o laudo.')
@@ -218,7 +217,7 @@ export async function excluirLaudo(id: string): Promise<void> {
 
 async function lerLaudo(id: string): Promise<any | null> {
   try {
-    const res = await fetch(`/api/laudos/${id}`, { cache: 'no-store' })
+    const res = await fetch(`/api/laudos/${encodeURIComponent(id)}`, { cache: 'no-store' })
     if (!res.ok) return null
     return await res.json()
   } catch {
