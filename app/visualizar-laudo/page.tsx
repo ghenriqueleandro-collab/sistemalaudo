@@ -897,7 +897,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                   {([
                     { label: 'ÁREA DE TERRENO',     value: dados.areaTerrenoTotal    || '-', unit: 'm²' },
                     { label: 'ÁREA CONSTRUÍDA',     value: dados.areaConstruidaTotal || '0', unit: 'm²' },
-                    { label: 'FATOR DE LIQUIDAÇÃO', value: capaFatorLiquidacao,              unit: capaLiquidezDisplay },
+                    { label: 'FATOR DE LIQUIDAÇÃO FORÇADA', value: capaFatorLiquidacao,              unit: capaLiquidezDisplay },
                   ] as { label: string; value: string; unit: string }[]).map((card, idx) => (
                     <div key={idx} className="rounded text-center px-3 py-2" style={{ border: '1px solid #d0daea', background: '#f5f8fc' }}>
                       <div style={{ fontSize: '6px', fontWeight: 700, color: '#8FA4C7', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>{card.label}</div>

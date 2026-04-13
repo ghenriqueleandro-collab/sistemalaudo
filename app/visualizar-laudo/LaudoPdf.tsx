@@ -705,7 +705,7 @@ export function LaudoPdf({
             {([
               { label: 'ÁREA DE TERRENO',     value: dados.areaTerrenoTotal    || '-', unit: 'm²' },
               { label: 'ÁREA CONSTRUÍDA',     value: dados.areaConstruidaTotal || '0', unit: 'm²' },
-              { label: 'FATOR DE LIQUIDAÇÃO', value: capaFatorLiq,                    unit: capaLiqDisplay },
+              { label: 'FATOR DE LIQUIDAÇÃO FORÇADA', value: capaFatorLiq,                    unit: capaLiqDisplay },
             ] as { label: string; value: string; unit: string }[]).map((card, idx) => (
               <View key={idx} style={{ flex: 1, border: '1pt solid #d0daea', borderRadius: 3, paddingHorizontal: 10, paddingVertical: 7, backgroundColor: '#f5f8fc', alignItems: 'center' }}>
                 <Text style={{ fontSize: 6, fontFamily: 'Helvetica-Bold', color: '#8FA4C7', letterSpacing: 0.8, marginBottom: 2 }}>{card.label}</Text>

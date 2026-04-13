@@ -395,17 +395,16 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
     if (!files.length) return
 
     try {
-      const novasFotos = await Promise.all(
-        files.map(async (file) => {
-          // Comprime localmente e faz upload para o Blob
-          const comprimida = await comprimirImagem(file, 1600, 0.75)
-          const url = await uploadArquivo(comprimida.file)
-          return {
-            preview: url,  // URL do Blob (não base64)
-            legenda: file.name.replace(/\.[^/.]+$/, ''),
-          }
+      // Processa sequencialmente para evitar sobrecarga no servidor
+      const novasFotos: { preview: string; legenda: string }[] = []
+      for (const file of files) {
+        const comprimida = await comprimirImagem(file, 1600, 0.75)
+        const url = await uploadArquivo(comprimida.file)
+        novasFotos.push({
+          preview: url,
+          legenda: file.name.replace(/\.[^/.]+$/, ''),
         })
-      )
+      }
 
       setFotos((prev) => [...prev, ...novasFotos])
       e.target.value = ''
