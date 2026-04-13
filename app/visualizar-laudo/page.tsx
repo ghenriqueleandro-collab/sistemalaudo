@@ -314,6 +314,15 @@ function formatarMoeda(valor: number) {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+// Garante que medidas de área sempre mostrem 2 casas decimais (ex: 900 m² → 900,00 m²)
+function formatarArea(valor?: string): string {
+  if (!valor) return ''
+  const numStr = valor.replace(/m²/g, '').replace(/\s/g, '').trim()
+  const num = parseFloat(numStr.replace(',', '.'))
+  if (isNaN(num)) return valor
+  return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' m²'
+}
+
 function obterTextoGarantia(classificacao?: string, observacoes?: string) {
   if (classificacao === 'boa') {
     return {
@@ -895,8 +904,8 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 {/* Strip de áreas */}
                 <div className="grid grid-cols-3 gap-2 mb-3">
                   {([
-                    { label: 'ÁREA DE TERRENO',     value: dados.areaTerrenoTotal    || '-', unit: 'm²' },
-                    { label: 'ÁREA CONSTRUÍDA',     value: dados.areaConstruidaTotal || '0', unit: 'm²' },
+                    { label: 'ÁREA DE TERRENO',     value: formatarArea(dados.areaTerrenoTotal) || '-', unit: '' },
+                    { label: 'ÁREA CONSTRUÍDA',     value: formatarArea(dados.areaConstruidaTotal) || '0', unit: '' },
                     { label: 'FATOR DE LIQUIDAÇÃO FORÇADA', value: capaFatorLiquidacao,              unit: capaLiquidezDisplay },
                   ] as { label: string; value: string; unit: string }[]).map((card, idx) => (
                     <div key={idx} className="rounded text-center px-3 py-2" style={{ border: '1px solid #d0daea', background: '#f5f8fc' }}>
@@ -1033,10 +1042,10 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     <tr><td className="border p-2 font-bold">Estado de Conservação</td><td className="border p-2">{dados.estadoConservacao}</td></tr>
                     <tr><td className="border p-2 font-bold">IPTU</td><td className="border p-2">{dados.iptu}</td></tr>
                     <tr><td className="border p-2 font-bold">Especificações de divisões</td><td className="border p-2">{dados.divisoes?.filter((d) => d.quantidade && d.ambiente).map((d) => `${d.quantidade} ${d.ambiente}`).join(', ') || ''}</td></tr>
-                    <tr><td className="border p-2 font-bold">Área construída total</td><td className="border p-2">{dados.areaConstruidaTotal || ''}</td></tr>
-                    <tr><td className="border p-2 font-bold">Área construída averbada</td><td className="border p-2">{dados.areaConstruidaAverbada || ''}</td></tr>
-                    <tr><td className="border p-2 font-bold">Área de terreno total</td><td className="border p-2">{dados.areaTerrenoTotal || ''}</td></tr>
-                    <tr><td className="border p-2 font-bold">Área de terreno averbada</td><td className="border p-2">{dados.areaTerrenoAverbada || ''}</td></tr>
+                    <tr><td className="border p-2 font-bold">Área construída total</td><td className="border p-2">{formatarArea(dados.areaConstruidaTotal)}</td></tr>
+                    <tr><td className="border p-2 font-bold">Área construída averbada</td><td className="border p-2">{formatarArea(dados.areaConstruidaAverbada)}</td></tr>
+                    <tr><td className="border p-2 font-bold">Área de terreno total</td><td className="border p-2">{formatarArea(dados.areaTerrenoTotal)}</td></tr>
+                    <tr><td className="border p-2 font-bold">Área de terreno averbada</td><td className="border p-2">{formatarArea(dados.areaTerrenoAverbada)}</td></tr>
                   </tbody>
                 </table>
                 {dados.melhoramentosPublicos && (

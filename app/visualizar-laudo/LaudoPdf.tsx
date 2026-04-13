@@ -109,6 +109,14 @@ function cn(valor: string) {
   return Number(valor.replace(/\s/g, '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0
 }
 
+function formatarArea(valor?: string): string {
+  if (!valor) return ''
+  const numStr = valor.replace(/m²/g, '').replace(/ /g, '').trim()
+  const num = parseFloat(numStr.replace(',', '.'))
+  if (isNaN(num)) return valor
+  return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' m²'
+}
+
 function arredondar(valor: number) {
   return Math.round(valor / 100) * 100
 }
@@ -703,9 +711,9 @@ export function LaudoPdf({
           {/* Strip de áreas */}
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
             {([
-              { label: 'ÁREA DE TERRENO',     value: dados.areaTerrenoTotal    || '-', unit: 'm²' },
-              { label: 'ÁREA CONSTRUÍDA',     value: dados.areaConstruidaTotal || '0', unit: 'm²' },
-              { label: 'FATOR DE LIQUIDAÇÃO FORÇADA', value: capaFatorLiq,                    unit: capaLiqDisplay },
+              { label: 'ÁREA DE TERRENO',     value: formatarArea(dados.areaTerrenoTotal) || '-', unit: '' },
+              { label: 'ÁREA CONSTRUÍDA',     value: formatarArea(dados.areaConstruidaTotal) || '0', unit: '' },
+              { label: 'FATOR DE LIQUIDAÇÃO', value: capaFatorLiq,                    unit: capaLiqDisplay },
             ] as { label: string; value: string; unit: string }[]).map((card, idx) => (
               <View key={idx} style={{ flex: 1, border: '1pt solid #d0daea', borderRadius: 3, paddingHorizontal: 10, paddingVertical: 7, backgroundColor: '#f5f8fc', alignItems: 'center' }}>
                 <Text style={{ fontSize: 6, fontFamily: 'Helvetica-Bold', color: '#8FA4C7', letterSpacing: 0.8, marginBottom: 2 }}>{card.label}</Text>
@@ -881,12 +889,12 @@ export function LaudoPdf({
             ['Especificações de divisões',
               (dados.divisoes || []).filter(d => d.quantidade && d.ambiente)
                 .map(d => `${d.quantidade} ${d.ambiente}`).join(', ') || '-'],
-            ['Área construída total', dados.areaConstruidaTotal || '-'],
-            ['Área construída averbada', dados.areaConstruidaAverbada || '-'],
+            ['Área construída total', formatarArea(dados.areaConstruidaTotal) || '-'],
+            ['Área construída averbada', formatarArea(dados.areaConstruidaAverbada) || '-'],
             ...((dados.areaConstruidaNaoAverbada ?? 0) > 0
               ? [['Área construída não averbada', `${dados.areaConstruidaNaoAverbada} m²`]] : []),
-            ['Área de terreno total', dados.areaTerrenoTotal || '-'],
-            ['Área de terreno averbada', dados.areaTerrenoAverbada || '-'],
+            ['Área de terreno total', formatarArea(dados.areaTerrenoTotal) || '-'],
+            ['Área de terreno averbada', formatarArea(dados.areaTerrenoAverbada) || '-'],
             ...((dados.areaTerrenoNaoAverbada ?? 0) > 0
               ? [['Área de terreno não averbada', `${dados.areaTerrenoNaoAverbada} m²`]] : []),
           ].map(([label, value], idx) => (
