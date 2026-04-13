@@ -12,12 +12,13 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN!,
 })
 
-type Params = { params: { id: string } }
+type Params = { params: Promise<{ id: string }> }
 
 // GET /api/laudos/:id
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
-    const laudo = await redis.get<any>(`laudo:${params.id}`)
+    const { id } = await params
+    const laudo = await redis.get<any>(`laudo:${id}`)
 
     if (!laudo) {
       return NextResponse.json({ erro: 'Laudo não encontrado.' }, { status: 404 })
@@ -33,7 +34,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
 // PUT /api/laudos/:id → atualiza laudo existente
 export async function PUT(request: NextRequest, { params }: Params) {
   try {
-    const existente = await redis.get<any>(`laudo:${params.id}`)
+    const { id } = await params
+    const existente = await redis.get<any>(`laudo:${id}`)
 
     if (!existente) {
       return NextResponse.json({ erro: 'Laudo não encontrado.' }, { status: 404 })
@@ -44,12 +46,12 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const laudoAtualizado = {
       ...existente,
       ...dados,
-      id: params.id,
+      id,
       criadoEm: existente.criadoEm,
       atualizadoEm: new Date().toISOString(),
     }
 
-    await redis.set(`laudo:${params.id}`, laudoAtualizado)
+    await redis.set(`laudo:${id}`, laudoAtualizado)
 
     return NextResponse.json(laudoAtualizado)
   } catch (erro) {
@@ -61,15 +63,16 @@ export async function PUT(request: NextRequest, { params }: Params) {
 // DELETE /api/laudos/:id
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
-    const existente = await redis.get<any>(`laudo:${params.id}`)
+    const { id } = await params
+    const existente = await redis.get<any>(`laudo:${id}`)
 
     if (!existente) {
       return NextResponse.json({ erro: 'Laudo não encontrado.' }, { status: 404 })
     }
 
     await Promise.all([
-      redis.del(`laudo:${params.id}`),
-      redis.srem('laudo_ids', params.id),
+      redis.del(`laudo:${id}`),
+      redis.srem('laudo_ids', id),
     ])
 
     return NextResponse.json({ sucesso: true })
