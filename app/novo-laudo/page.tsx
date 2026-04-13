@@ -139,6 +139,29 @@ export default function NovoLaudoPage() {
 const [laudoId, setLaudoId] = useState('')
 const [editandoLaudoExistente, setEditandoLaudoExistente] = useState(false)
 const [formPronto, setFormPronto] = useState(false)
+const [salvando, setSalvando] = useState(false)
+
+  // Remove base64 do payload antes de salvar no Redis.
+  // Qualquer valor que comece com "data:" é base64 — substitui por string vazia.
+  // Imagens e PDFs devem ser URLs do Blob (vindas de uploadArquivo).
+  function limparBase64(dados: any): any {
+    const isBase64 = (v: any) => typeof v === 'string' && v.startsWith('data:')
+    const resultado = { ...dados }
+    const camposDirectos = [
+      'croqui', 'imagemBenfeitorias',
+      'documentacaoPdf', 'calculoPdf', 'localizacaoComparativos',
+    ]
+    for (const campo of camposDirectos) {
+      if (isBase64(resultado[campo])) resultado[campo] = ''
+    }
+    if (Array.isArray(resultado.croquis)) {
+      resultado.croquis = resultado.croquis.filter((c: any) => !isBase64(c?.preview))
+    }
+    if (Array.isArray(resultado.fotos)) {
+      resultado.fotos = resultado.fotos.filter((f: any) => !isBase64(f?.preview))
+    }
+    return resultado
+  }
 
   useEffect(() => {
   if (!formPronto) return
@@ -147,16 +170,17 @@ const [formPronto, setFormPronto] = useState(false)
   if (!matricula) return
 
   const timeout = setTimeout(() => {
-    salvarLaudo({
-  id: matricula,
-  ...form,
-  matricula,
-  caracteristicasTerreno:
-    form.caracteristicasTerreno?.trim() ||
-    `Foram coletados ${form.quantidadeElementos || 0} elementos comparativos, de porte e características o mais semelhante possível ao avaliando, com alguns fatores contemplados no cálculo.`,
-  status: obterStatusLaudo(),
-  atualizadoEm: new Date().toISOString(),
-})
+    const dadosAutoSave = limparBase64({
+      id: matricula,
+      ...form,
+      matricula,
+      caracteristicasTerreno:
+        form.caracteristicasTerreno?.trim() ||
+        `Foram coletados ${form.quantidadeElementos || 0} elementos comparativos, de porte e características o mais semelhante possível ao avaliando, com alguns fatores contemplados no cálculo.`,
+      status: obterStatusLaudo(),
+      atualizadoEm: new Date().toISOString(),
+    })
+    salvarLaudo(dadosAutoSave)
   }, 800)
 
   return () => clearTimeout(timeout)
@@ -776,20 +800,31 @@ if (!matricula) {
 }
 
 try {
-  await salvarLaudo({
-  id: matricula,
-  ...dadosLaudo,
-  matricula,
-  status: obterStatusLaudo(),
-  atualizadoEm: new Date().toISOString(),
-})
+  setSalvando(true)
 
-  await definirLaudoAtual(matricula)
+  const dadosParaSalvar = limparBase64({
+    id: matricula,
+    ...dadosLaudo,
+    matricula,
+    status: obterStatusLaudo(),
+    atualizadoEm: new Date().toISOString(),
+  })
+
+  const idSalvo = await salvarLaudo(dadosParaSalvar)
+
+  if (!idSalvo) {
+    alert('Erro ao salvar o laudo. Verifique sua conexão e tente novamente.')
+    return
+  }
+
+  await definirLaudoAtual(idSalvo)
   window.open('/visualizar-laudo', '_blank')
 } catch (error) {
-      console.error(error)
-      alert('Erro ao salvar o laudo.')
-    }
+  console.error(error)
+  alert('Erro ao salvar o laudo.')
+} finally {
+  setSalvando(false)
+}
   }
 
   return (
@@ -924,7 +959,12 @@ try {
             <NavegacaoEtapas etapaAtual={etapaAtual} setEtapaAtual={setEtapaAtual} />
 
             <div className="pt-4 border-t">
-              <button className="bg-blue-600 text-white px-4 py-2 rounded">Salvar Laudo</button>
+              <button
+                disabled={salvando}
+                className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {salvando ? 'Salvando...' : 'Salvar Laudo'}
+              </button>
             </div>
           </form>
         </div>

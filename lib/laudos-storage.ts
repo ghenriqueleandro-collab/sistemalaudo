@@ -179,28 +179,27 @@ export function filtrarLaudos(laudos: LaudoResumo[], filtros: FiltrosLaudo) {
 // ─── salvarLaudo ──────────────────────────────────────────────────────────────
 
 export async function salvarLaudo(dados: any): Promise<string | null> {
-  try {
-    const id = dados.id || crypto.randomUUID()
-    const payload = {
-      ...dados,
-      id,
-      criadoEm: dados.criadoEm || new Date().toISOString(),
-      atualizadoEm: new Date().toISOString(),
-    }
-
-    const res = await fetch('/api/laudos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-
-    if (!res.ok) return null
-
-    const salvo = await res.json()
-    return salvo.id
-  } catch {
-    return null
+  const id = dados.id || crypto.randomUUID()
+  const payload = {
+    ...dados,
+    id,
+    criadoEm: dados.criadoEm || new Date().toISOString(),
+    atualizadoEm: new Date().toISOString(),
   }
+
+  const res = await fetch('/api/laudos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+
+  if (!res.ok) {
+    const erro = await res.json().catch(() => ({}))
+    throw new Error(erro.erro ?? `Erro ao salvar laudo (HTTP ${res.status})`)
+  }
+
+  const salvo = await res.json()
+  return salvo.id
 }
 
 // ─── excluirLaudo ─────────────────────────────────────────────────────────────
