@@ -226,15 +226,12 @@ async function lerLaudo(id: string): Promise<any | null> {
 }
 
 // ─── definirLaudoAtual ────────────────────────────────────────────────────────
+// Salva o ID direto sem buscar no servidor — o laudo já está na lista.
 
 export async function definirLaudoAtual(id: string): Promise<boolean> {
-  const laudo = await lerLaudo(id)
-  if (!laudo) return false
-
   if (typeof window !== 'undefined') {
     localStorage.setItem(CHAVE_ID_ATUAL, id)
   }
-
   return true
 }
 
