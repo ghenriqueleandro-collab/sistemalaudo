@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import AppShell from '../components/AppShell'
 import dynamic from 'next/dynamic'
+import { obterLaudoAtual } from '@/lib/laudos-storage'
 
 const PdfViewer = dynamic(() => import('../components/PdfViewer'), {
   ssr: false,
@@ -381,28 +382,7 @@ function obterPontosFundamentacao(grau?: string) {
   return 0
 }
 
-function abrirBanco(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('laudosDB', 1)
-    request.onupgradeneeded = () => {
-      const db = request.result
-      if (!db.objectStoreNames.contains('laudos')) db.createObjectStore('laudos')
-    }
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-  })
-}
 
-async function buscarLaudoIndexedDB(chave: string) {
-  const db = await abrirBanco()
-  return new Promise<any>((resolve, reject) => {
-    const transaction = db.transaction('laudos', 'readonly')
-    const store = transaction.objectStore('laudos')
-    const request = store.get(chave)
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-  })
-}
 
 export default function VisualizarLaudoPage() {
   let contadorPagina = 0
@@ -461,7 +441,7 @@ export default function VisualizarLaudoPage() {
   useEffect(() => {
     async function carregarLaudo() {
       try {
-        const parsed = (await buscarLaudoIndexedDB('laudoAtual')) as DadosLaudo
+        const parsed = (await obterLaudoAtual()) as DadosLaudo
         if (parsed) {
           setDados({
             ...parsed,
