@@ -353,6 +353,18 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
     }
   }
 
+  // ─── Upload para Vercel Blob ─────────────────────────────────────────────
+  // Envia o arquivo para a API e retorna a URL pública permanente.
+  // Assim nenhum base64 é salvo no Redis — apenas URLs pequenas.
+  async function uploadArquivo(file: File): Promise<string> {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await fetch('/api/upload', { method: 'POST', body: formData })
+    if (!res.ok) throw new Error('Erro ao fazer upload do arquivo.')
+    const { url } = await res.json()
+    return url
+  }
+
   async function handleFotos(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
     if (!files.length) return
@@ -360,10 +372,11 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
     try {
       const novasFotos = await Promise.all(
         files.map(async (file) => {
+          // Comprime localmente e faz upload para o Blob
           const comprimida = await comprimirImagem(file, 1600, 0.75)
+          const url = await uploadArquivo(comprimida.file)
           return {
-            file: comprimida.file,
-            preview: comprimida.preview,
+            preview: url,  // URL do Blob (não base64)
             legenda: file.name.replace(/\.[^/.]+$/, ''),
           }
         })
@@ -373,7 +386,7 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
       e.target.value = ''
     } catch (error) {
       console.error(error)
-      alert('Erro ao comprimir uma ou mais imagens.')
+      alert('Erro ao fazer upload de uma ou mais imagens.')
     }
   }
 
@@ -574,7 +587,8 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
       const novosCroquis = await Promise.all(
         files.map(async (file) => {
           const comprimida = await comprimirImagem(file, 1600, 0.75)
-          return { preview: comprimida.preview }
+          const url = await uploadArquivo(comprimida.file)
+          return { preview: url }
         })
       )
 
@@ -587,19 +601,21 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
       e.target.value = ''
     } catch (error) {
       console.error(error)
-      alert('Erro ao comprimir uma ou mais imagens do croqui.')
+      alert('Erro ao fazer upload de uma ou mais imagens do croqui.')
     }
   }
 
-  function handleImagemBenfeitorias(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImagemBenfeitorias(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
 
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setForm((prev) => ({ ...prev, imagemBenfeitorias: reader.result as string }))
+    try {
+      const url = await uploadArquivo(file)
+      setForm((prev) => ({ ...prev, imagemBenfeitorias: url }))
+    } catch (error) {
+      console.error(error)
+      alert('Erro ao fazer upload da imagem das benfeitorias.')
     }
-    reader.readAsDataURL(file)
   }
 
   function removerCroqui(index: number) {
@@ -609,26 +625,30 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
     })
   }
 
-  function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>, campo: 'documentacaoPdf' | 'calculoPdf') {
+  async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>, campo: 'documentacaoPdf' | 'calculoPdf') {
     const file = e.target.files?.[0]
     if (!file) return
 
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setForm((prev) => ({ ...prev, [campo]: reader.result as string }))
+    try {
+      const url = await uploadArquivo(file)
+      setForm((prev) => ({ ...prev, [campo]: url }))
+    } catch (error) {
+      console.error(error)
+      alert('Erro ao fazer upload do PDF.')
     }
-    reader.readAsDataURL(file)
   }
 
-  function handleLocalizacaoComparativos(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleLocalizacaoComparativos(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
 
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setForm((prev) => ({ ...prev, localizacaoComparativos: reader.result as string }))
+    try {
+      const url = await uploadArquivo(file)
+      setForm((prev) => ({ ...prev, localizacaoComparativos: url }))
+    } catch (error) {
+      console.error(error)
+      alert('Erro ao fazer upload da imagem de localização.')
     }
-    reader.readAsDataURL(file)
   }
 
   function formatarDataBR(data: string) {

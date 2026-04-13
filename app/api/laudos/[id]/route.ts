@@ -1,83 +1,31 @@
 /**
- * SALVAR EM: src/app/api/laudos/[id]/route.ts
- *
- * A pasta deve se chamar literalmente [id] com os colchetes.
+ * SALVAR EM: src/app/api/upload/route.ts
  */
 
-import { Redis } from '@upstash/redis'
+import { put } from '@vercel/blob'
 import { NextRequest, NextResponse } from 'next/server'
 
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL!,
-  token: process.env.KV_REST_API_TOKEN!,
-})
-
-type Params = { params: Promise<{ id: string }> }
-
-// GET /api/laudos/:id
-export async function GET(_req: NextRequest, { params }: Params) {
+export async function POST(request: NextRequest) {
   try {
-    const { id } = await params
-    const laudo = await redis.get<any>(`laudo:${id}`)
+    const formData = await request.formData()
+    const file = formData.get('file') as File
 
-    if (!laudo) {
-      return NextResponse.json({ erro: 'Laudo não encontrado.' }, { status: 404 })
+    if (!file) {
+      return NextResponse.json({ erro: 'Nenhum arquivo enviado.' }, { status: 400 })
     }
 
-    return NextResponse.json(laudo)
+    // Gera um nome único para evitar colisões
+    const extensao = file.name.split('.').pop() || 'bin'
+    const nomeUnico = `laudos/${Date.now()}-${Math.random().toString(36).slice(2)}.${extensao}`
+
+    const blob = await put(nomeUnico, file, {
+      access: 'public',
+      contentType: file.type,
+    })
+
+    return NextResponse.json({ url: blob.url })
   } catch (erro) {
-    console.error('[GET /api/laudos/:id]', erro)
-    return NextResponse.json({ erro: 'Erro ao buscar laudo.' }, { status: 500 })
-  }
-}
-
-// PUT /api/laudos/:id → atualiza laudo existente
-export async function PUT(request: NextRequest, { params }: Params) {
-  try {
-    const { id } = await params
-    const existente = await redis.get<any>(`laudo:${id}`)
-
-    if (!existente) {
-      return NextResponse.json({ erro: 'Laudo não encontrado.' }, { status: 404 })
-    }
-
-    const dados = await request.json()
-
-    const laudoAtualizado = {
-      ...existente,
-      ...dados,
-      id,
-      criadoEm: existente.criadoEm,
-      atualizadoEm: new Date().toISOString(),
-    }
-
-    await redis.set(`laudo:${id}`, laudoAtualizado)
-
-    return NextResponse.json(laudoAtualizado)
-  } catch (erro) {
-    console.error('[PUT /api/laudos/:id]', erro)
-    return NextResponse.json({ erro: 'Erro ao atualizar laudo.' }, { status: 500 })
-  }
-}
-
-// DELETE /api/laudos/:id
-export async function DELETE(_req: NextRequest, { params }: Params) {
-  try {
-    const { id } = await params
-    const existente = await redis.get<any>(`laudo:${id}`)
-
-    if (!existente) {
-      return NextResponse.json({ erro: 'Laudo não encontrado.' }, { status: 404 })
-    }
-
-    await Promise.all([
-      redis.del(`laudo:${id}`),
-      redis.srem('laudo_ids', id),
-    ])
-
-    return NextResponse.json({ sucesso: true })
-  } catch (erro) {
-    console.error('[DELETE /api/laudos/:id]', erro)
-    return NextResponse.json({ erro: 'Erro ao excluir laudo.' }, { status: 500 })
+    console.error('[POST /api/upload]', erro)
+    return NextResponse.json({ erro: 'Erro ao fazer upload do arquivo.' }, { status: 500 })
   }
 }
