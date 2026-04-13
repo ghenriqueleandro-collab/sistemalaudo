@@ -1,6 +1,6 @@
 'use client'
 
-import { definirLaudoAtual, limparLaudoAtual, obterLaudoAtual, salvarLaudo } from '@/lib/laudos-storage'
+import { buscarLaudo, definirLaudoAtual, limparLaudoAtual, obterLaudoAtual, salvarLaudo } from '@/lib/laudos-storage'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import MenuEtapas from '../components/formulario/MenuEtapas'
@@ -203,7 +203,8 @@ const [salvando, setSalvando] = useState(false)
       
       const url = new URL(window.location.href)
 const modo = url.searchParams.get('modo')
-const laudoSalvo = modo === 'novo' ? null : await obterLaudoAtual()
+const idParam = url.searchParams.get('id')
+const laudoSalvo = modo === 'novo' ? null : (idParam ? await buscarLaudo(idParam) : await obterLaudoAtual())
 
 if (!laudoSalvo) {
   setEditandoLaudoExistente(false)

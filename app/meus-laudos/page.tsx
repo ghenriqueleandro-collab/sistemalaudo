@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import AppShell from '../components/AppShell'
 import {
-  definirLaudoAtual,
+  buscarLaudo,
   excluirLaudo,
   filtrarLaudos,
   formatarData,
@@ -87,25 +87,24 @@ export default function MeusLaudosPage() {
   )
 
   async function handleExcluir(id: string) {
-  const confirmar = window.confirm('Tem certeza que deseja excluir este laudo?')
-  if (!confirmar) return
+    const confirmar = window.confirm('Tem certeza que deseja excluir este laudo?')
+    if (!confirmar) return
 
-  try {
-    setExcluindoId(id)
-    await excluirLaudo(id)
-    setLaudos((atual) => atual.filter((item) => item.id !== id))
-  } catch (error) {
-    console.error(error)
-    alert('Erro ao excluir o laudo.')
-  } finally {
-    setExcluindoId(null)
+    try {
+      setExcluindoId(id)
+      await excluirLaudo(id)
+      setLaudos((atual) => atual.filter((item) => item.id !== id))
+    } catch (error) {
+      console.error(error)
+      alert('Erro ao excluir o laudo.')
+    } finally {
+      setExcluindoId(null)
+    }
   }
-}
 
-  async function prepararLaudo(id: string, destino: string) {
-    const ok = await definirLaudoAtual(id)
-    if (!ok) return
-    window.location.href = destino
+  // Navega passando o ID diretamente na URL — sem depender de localStorage
+  function prepararLaudo(id: string, destino: string) {
+    window.location.href = destino + '?id=' + encodeURIComponent(id)
   }
 
   function limparFiltros() {
@@ -128,8 +127,7 @@ export default function MeusLaudosPage() {
               Meus laudos
             </h1>
             <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-600">
-              Gerencie, edite e acompanhe todos os laudos cadastrados em uma
-              estrutura offline organizada e pronta para futura sincronização.
+              Gerencie, edite e acompanhe todos os laudos em tempo real.
             </p>
           </div>
 
@@ -145,15 +143,15 @@ export default function MeusLaudosPage() {
             </label>
 
             <button
-  type="button"
-  onClick={async () => {
-    await limparLaudoAtual()
-    window.location.href = '/novo-laudo?modo=novo'
-  }}
-  className="inline-flex items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#15803d,#22c55e)] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20"
->
-  + Novo laudo
-</button>
+              type="button"
+              onClick={async () => {
+                await limparLaudoAtual()
+                window.location.href = '/novo-laudo?modo=novo'
+              }}
+              className="inline-flex items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#15803d,#22c55e)] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20"
+            >
+              + Novo laudo
+            </button>
           </div>
         </div>
 
@@ -177,27 +175,21 @@ export default function MeusLaudosPage() {
             <select value={cidade} onChange={(e) => setCidade(e.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none">
               <option value="">Cidade</option>
               {cidades.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
+                <option key={item} value={item}>{item}</option>
               ))}
             </select>
 
             <select value={tipoImovel} onChange={(e) => setTipoImovel(e.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none">
               <option value="">Tipo de imóvel</option>
               {tipos.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
+                <option key={item} value={item}>{item}</option>
               ))}
             </select>
 
             <select value={finalidade} onChange={(e) => setFinalidade(e.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none">
               <option value="">Finalidade</option>
               {finalidades.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
+                <option key={item} value={item}>{item}</option>
               ))}
             </select>
 
@@ -230,20 +222,20 @@ export default function MeusLaudosPage() {
 
               <tbody className="divide-y divide-slate-100 text-slate-700">
                 {carregando && (
-  <tr>
-    <td colSpan={9} className="px-6 py-12 text-center text-slate-500">
-      Carregando laudos...
-    </td>
-  </tr>
-)}
+                  <tr>
+                    <td colSpan={9} className="px-6 py-12 text-center text-slate-500">
+                      Carregando laudos...
+                    </td>
+                  </tr>
+                )}
 
-{!carregando && filtrados.length === 0 && (
-  <tr>
-    <td colSpan={9} className="px-6 py-12 text-center text-slate-500">
-      Nenhum laudo encontrado com os filtros atuais.
-    </td>
-  </tr>
-)}
+                {!carregando && filtrados.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="px-6 py-12 text-center text-slate-500">
+                      Nenhum laudo encontrado com os filtros atuais.
+                    </td>
+                  </tr>
+                )}
 
                 {filtrados.map((laudo) => (
                   <tr key={laudo.id} className="hover:bg-slate-50/70">
@@ -276,13 +268,13 @@ export default function MeusLaudosPage() {
                           Visualizar
                         </button>
                         <button
-  type="button"
-  onClick={() => handleExcluir(laudo.id)}
-  disabled={excluindoId === laudo.id}
-  className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 disabled:opacity-60 disabled:cursor-not-allowed"
->
-  {excluindoId === laudo.id ? 'Excluindo...' : 'Excluir'}
-</button>
+                          type="button"
+                          onClick={() => handleExcluir(laudo.id)}
+                          disabled={excluindoId === laudo.id}
+                          className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {excluindoId === laudo.id ? 'Excluindo...' : 'Excluir'}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -293,10 +285,7 @@ export default function MeusLaudosPage() {
 
           <div className="flex flex-col gap-3 border-t border-slate-100 px-6 py-4 text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
             <div>
-              Mostrando {Math.min(filtrados.length, 10)} de {filtrados.length} laudos encontrados.
-            </div>
-            <div className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Base preparada para futuro backend
+              Mostrando {filtrados.length} de {laudos.length} laudos encontrados.
             </div>
           </div>
         </div>

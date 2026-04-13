@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import AppShell from '../components/AppShell'
 import dynamic from 'next/dynamic'
-import { obterLaudoAtual } from '@/lib/laudos-storage'
+import { obterLaudoAtual, buscarLaudo } from '@/lib/laudos-storage'
 
 const PdfViewer = dynamic(() => import('../components/PdfViewer'), {
   ssr: false,
@@ -441,7 +441,12 @@ export default function VisualizarLaudoPage() {
   useEffect(() => {
     async function carregarLaudo() {
       try {
-        const parsed = (await obterLaudoAtual()) as DadosLaudo
+        // Prioriza o ID passado na URL (?id=...), fallback para localStorage
+        const urlParams = new URL(window.location.href)
+        const idParam = urlParams.searchParams.get('id')
+        const parsed = (idParam
+          ? await buscarLaudo(idParam)
+          : await obterLaudoAtual()) as DadosLaudo
         if (parsed) {
           setDados({
             ...parsed,

@@ -224,6 +224,12 @@ async function lerLaudo(id: string): Promise<any | null> {
   }
 }
 
+// ─── buscarLaudo (público) ───────────────────────────────────────────────────
+
+export async function buscarLaudo(id: string): Promise<any | null> {
+  return await lerLaudo(id)
+}
+
 // ─── definirLaudoAtual ────────────────────────────────────────────────────────
 // Salva o ID direto sem buscar no servidor — o laudo já está na lista.
 
