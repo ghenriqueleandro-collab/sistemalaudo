@@ -126,8 +126,10 @@ export default function MeusLaudosPage() {
     setBusca(''); setStatus(''); setCidade(''); setTipoImovel(''); setFinalidade('')
   }
 
-  const podeEditar = perfil === 'admin' || perfil === 'editor'
-  const podeExcluirDireto = perfil === 'admin'
+  // Se perfil ainda não carregou, mostra tudo (evita piscar e sumir botões)
+  const perfilCarregado = !!perfil
+  const podeEditar = !perfilCarregado || perfil === 'admin' || perfil === 'editor'
+  const podeExcluirDireto = !perfilCarregado || perfil === 'admin'
 
   return (
     <AppShell>

@@ -50,7 +50,8 @@ export default function AprovacoesPage() {
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/')
-    if (status === 'authenticated' && perfil !== 'admin') router.push('/meus-laudos')
+    // Só redireciona se perfil foi carregado E não é admin
+    if (status === 'authenticated' && perfil && perfil !== 'admin') router.push('/meus-laudos')
   }, [status, perfil])
 
   const carregar = useCallback(async () => {
@@ -64,12 +65,12 @@ export default function AprovacoesPage() {
   }, [])
 
   useEffect(() => {
-    if (perfil === 'admin') {
+    if (status === 'authenticated') {
       carregar()
       const intervalo = setInterval(carregar, 15_000)
       return () => clearInterval(intervalo)
     }
-  }, [perfil, carregar])
+  }, [status, carregar])
 
   async function processar(id: string, acao: 'aprovar' | 'negar') {
     setProcessando(id)

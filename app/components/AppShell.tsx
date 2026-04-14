@@ -105,8 +105,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     { href: '/aprovacoes', label: 'Aprovações', perfis: ['admin'] },
     { href: '/usuarios', label: 'Usuários', perfis: ['admin'] },
   ].filter((link) => {
-    // Se perfil ainda não carregou, mostra só os links básicos
-    if (!perfil) return ['meus-laudos'].some(p => link.href.includes(p))
+    // Se perfil ainda não carregou, mostra todos os links
+    if (!perfil) return true
     return link.perfis.includes(perfil)
   })
 
