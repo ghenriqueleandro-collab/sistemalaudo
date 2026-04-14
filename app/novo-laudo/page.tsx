@@ -185,9 +185,24 @@ const [salvando, setSalvando] = useState(false)
       fundamentacaoEvolutivo,
       precisao,
       fotos: fotos.map((f: any) => ({ preview: f.preview, legenda: f.legenda })),
-      valorFinalImovel,
-      areaConstruidaNaoAverbada,
-      areaTerrenoNaoAverbada,
+      // Calculados inline para evitar uso antes da declaração
+      valorFinalImovel: (() => {
+        const t = Number(String(form.valorTerreno || '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0
+        const b = Number(String(form.valorBenfeitorias || '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0
+        const fc = Number(String(form.fatorComercializacao || '1').replace(/\s/g, '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 1
+        const prod = outrosFatoresImovel.reduce((acc: number, i: any) => acc * (Number(String(i.valor || '1').replace(/\s/g, '').replace(/\./g, '').replace(',', '.')) || 1), 1)
+        return (t + b) * fc * prod
+      })(),
+      areaConstruidaNaoAverbada: Math.max(
+        (Number(String(form.areaConstruidaTotal || '0').replace(/[^\d.,]/g, '').replace(',', '.')) || 0) -
+        (Number(String(form.areaConstruidaAverbada || '0').replace(/[^\d.,]/g, '').replace(',', '.')) || 0),
+        0
+      ),
+      areaTerrenoNaoAverbada: Math.max(
+        (Number(String(form.areaTerrenoTotal || '0').replace(/[^\d.,]/g, '').replace(',', '.')) || 0) -
+        (Number(String(form.areaTerrenoAverbada || '0').replace(/[^\d.,]/g, '').replace(',', '.')) || 0),
+        0
+      ),
       caracteristicasTerreno:
         form.caracteristicasTerreno?.trim() ||
         `Foram coletados ${form.quantidadeElementos || 0} elementos comparativos, de porte e características o mais semelhante possível ao avaliando, com alguns fatores contemplados no cálculo.`,
@@ -211,9 +226,6 @@ const [salvando, setSalvando] = useState(false)
   fundamentacaoEvolutivo,
   precisao,
   fotos,
-  valorFinalImovel,
-  areaConstruidaNaoAverbada,
-  areaTerrenoNaoAverbada,
 ])
 
   const exibirTabelaFatoresTerreno =
