@@ -55,6 +55,8 @@ export default function UsuariosPage() {
   const [usuarioSelecionado, setUsuarioSelecionado] = useState<Usuario | null>(null)
   const [mostrarForm, setMostrarForm] = useState(false)
   const [salvando, setSalvando] = useState(false)
+  const [novaSenhaEdicao, setNovaSenhaEdicao] = useState('')
+  const [redefinindo, setRedefinindo] = useState(false)
   const [erro, setErro] = useState('')
 
   const [novoNome, setNovoNome] = useState('')
@@ -134,6 +136,31 @@ export default function UsuariosPage() {
       }
     } finally {
       setSalvando(false)
+    }
+  }
+
+  async function redefinirSenha() {
+    if (!usuarioSelecionado) return
+    if (!novaSenhaEdicao || novaSenhaEdicao.length < 6) {
+      alert('A senha deve ter pelo menos 6 caracteres.')
+      return
+    }
+    if (!confirm(`Redefinir a senha de ${usuarioSelecionado.nome}?`)) return
+    setRedefinindo(true)
+    try {
+      const res = await fetch(`/api/usuarios/${encodeURIComponent(usuarioSelecionado.email)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ senha: novaSenhaEdicao }),
+      })
+      if (res.ok) {
+        setNovaSenhaEdicao('')
+        alert('Senha redefinida com sucesso.')
+      } else {
+        alert('Erro ao redefinir a senha.')
+      }
+    } finally {
+      setRedefinindo(false)
     }
   }
 
@@ -298,6 +325,24 @@ export default function UsuariosPage() {
               >
                 {salvando ? 'Salvando...' : 'Salvar permissões'}
               </button>
+
+              <div className="mt-6 pt-5 border-t border-slate-100">
+                <p className="text-xs font-semibold text-slate-500 mb-3">Redefinir senha</p>
+                <input
+                  type="password"
+                  value={novaSenhaEdicao}
+                  onChange={(e) => setNovaSenhaEdicao(e.target.value)}
+                  placeholder="Nova senha (mín. 6 caracteres)"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:bg-white mb-3"
+                />
+                <button
+                  onClick={redefinirSenha}
+                  disabled={redefinindo || !novaSenhaEdicao}
+                  className="w-full rounded-2xl border border-amber-200 bg-amber-50 py-2.5 text-sm font-semibold text-amber-700 disabled:opacity-50"
+                >
+                  {redefinindo ? 'Redefinindo...' : 'Redefinir senha'}
+                </button>
+              </div>
             </div>
           ) : (
             <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-6 flex items-center justify-center text-sm text-slate-400">
