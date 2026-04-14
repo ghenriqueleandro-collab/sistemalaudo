@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import AppShell from '../components/AppShell'
 import {
   buscarLaudo,
@@ -44,12 +44,21 @@ export default function MeusLaudosPage() {
   const [finalidade, setFinalidade] = useState('')
   const [excluindoId, setExcluindoId] = useState<string | null>(null)
 
-  useEffect(() => {
-    listarLaudos().then((dados) => {
+  const carregarLaudos = useCallback(async () => {
+    try {
+      const dados = await listarLaudos()
       setLaudos(dados)
+    } finally {
       setCarregando(false)
-    })
+    }
   }, [])
+
+  // Carrega na montagem e atualiza automaticamente a cada 15 segundos
+  useEffect(() => {
+    carregarLaudos()
+    const intervalo = setInterval(carregarLaudos, 15_000)
+    return () => clearInterval(intervalo)
+  }, [carregarLaudos])
 
   const cidades = useMemo(
     () => [...new Set(laudos.map((item) => item.cidade).filter(Boolean))].sort(),
@@ -141,6 +150,15 @@ export default function MeusLaudosPage() {
                 className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
               />
             </label>
+
+            <button
+              type="button"
+              onClick={carregarLaudos}
+              className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm"
+              title="Atualizar lista"
+            >
+              ↻ Atualizar
+            </button>
 
             <button
               type="button"
