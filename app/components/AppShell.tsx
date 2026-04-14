@@ -104,8 +104,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     { href: '/novo-laudo', label: 'Novo laudo', perfis: ['admin', 'editor'] },
     { href: '/aprovacoes', label: 'Aprovações', perfis: ['admin'] },
     { href: '/usuarios', label: 'Usuários', perfis: ['admin'] },
-    { href: '/relatorios', label: 'Relatórios', perfis: ['admin', 'editor', 'visualizador'] },
-  ].filter((link) => !perfil || link.perfis.includes(perfil))
+  ].filter((link) => {
+    // Se perfil ainda não carregou, mostra só os links básicos
+    if (!perfil) return ['meus-laudos'].some(p => link.href.includes(p))
+    return link.perfis.includes(perfil)
+  })
 
   function classeLink(ativo: boolean) {
     return ativo

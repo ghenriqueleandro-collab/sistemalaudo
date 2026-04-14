@@ -66,12 +66,13 @@ export default function UsuariosPage() {
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/')
-    if (status === 'authenticated' && perfil !== 'admin') router.push('/meus-laudos')
+    // Só redireciona se perfil foi carregado E não é admin
+    if (status === 'authenticated' && perfil && perfil !== 'admin') router.push('/meus-laudos')
   }, [status, perfil])
 
   useEffect(() => {
-    if (perfil === 'admin') carregarUsuarios()
-  }, [perfil])
+    if (status === 'authenticated') carregarUsuarios()
+  }, [status])
 
   async function carregarUsuarios() {
     setCarregando(true)
