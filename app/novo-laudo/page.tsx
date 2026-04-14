@@ -140,6 +140,8 @@ const [laudoId, setLaudoId] = useState('')
 const [editandoLaudoExistente, setEditandoLaudoExistente] = useState(false)
 const [formPronto, setFormPronto] = useState(false)
 const [salvando, setSalvando] = useState(false)
+// UUID gerado uma vez na criação e reutilizado em todos os saves do mesmo laudo
+const [laudoUuid, setLaudoUuid] = useState(() => crypto.randomUUID())
 
   // Remove base64 do payload antes de salvar no Redis.
   // Qualquer valor que comece com "data:" é base64 — substitui por string vazia.
@@ -166,43 +168,11 @@ const [salvando, setSalvando] = useState(false)
   useEffect(() => {
   if (!formPronto) return
 
-  const matricula = String(form.matricula || '').trim()
-  if (!matricula) return
-
   const timeout = setTimeout(() => {
     const dadosAutoSave = limparBase64({
-      id: matricula,
+      id: laudoUuid,
       ...form,
-      matricula,
-      // Todos os estados fora do form incluídos aqui
-      divisoes,
-      acabamentos,
-      resumoMercado,
-      outrosFatoresImovel,
-      fatoresSelecionados,
-      fundamentacao,
-      fundamentacaoInferencia,
-      fundamentacaoEvolutivo,
-      precisao,
-      fotos: fotos.map((f: any) => ({ preview: f.preview, legenda: f.legenda })),
-      // Calculados inline para evitar uso antes da declaração
-      valorFinalImovel: (() => {
-        const t = Number(String(form.valorTerreno || '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0
-        const b = Number(String(form.valorBenfeitorias || '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0
-        const fc = Number(String(form.fatorComercializacao || '1').replace(/\s/g, '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 1
-        const prod = outrosFatoresImovel.reduce((acc: number, i: any) => acc * (Number(String(i.valor || '1').replace(/\s/g, '').replace(/\./g, '').replace(',', '.')) || 1), 1)
-        return (t + b) * fc * prod
-      })(),
-      areaConstruidaNaoAverbada: Math.max(
-        (Number(String(form.areaConstruidaTotal || '0').replace(/[^\d.,]/g, '').replace(',', '.')) || 0) -
-        (Number(String(form.areaConstruidaAverbada || '0').replace(/[^\d.,]/g, '').replace(',', '.')) || 0),
-        0
-      ),
-      areaTerrenoNaoAverbada: Math.max(
-        (Number(String(form.areaTerrenoTotal || '0').replace(/[^\d.,]/g, '').replace(',', '.')) || 0) -
-        (Number(String(form.areaTerrenoAverbada || '0').replace(/[^\d.,]/g, '').replace(',', '.')) || 0),
-        0
-      ),
+      matricula: form.matricula,
       caracteristicasTerreno:
         form.caracteristicasTerreno?.trim() ||
         `Foram coletados ${form.quantidadeElementos || 0} elementos comparativos, de porte e características o mais semelhante possível ao avaliando, com alguns fatores contemplados no cálculo.`,
@@ -213,20 +183,7 @@ const [salvando, setSalvando] = useState(false)
   }, 800)
 
   return () => clearTimeout(timeout)
-}, [
-  form,
-  formPronto,
-  divisoes,
-  acabamentos,
-  resumoMercado,
-  outrosFatoresImovel,
-  fatoresSelecionados,
-  fundamentacao,
-  fundamentacaoInferencia,
-  fundamentacaoEvolutivo,
-  precisao,
-  fotos,
-])
+}, [form, formPronto, laudoUuid])
 
   const exibirTabelaFatoresTerreno =
     form.metodoAvaliacao === 'comparativo' ||
@@ -257,6 +214,8 @@ if (!laudoSalvo) {
 
       setEditandoLaudoExistente(true)
       setLaudoId(String(laudoSalvo.matricula || laudoSalvo.id || '').trim())
+      // Restaura o UUID original do laudo para não criar duplicata ao salvar
+      if (laudoSalvo.id) setLaudoUuid(laudoSalvo.id)
 
       setForm((prev) => ({
         ...prev,
@@ -837,7 +796,7 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
     const matricula = String(form.matricula || '').trim()
 
 if (!matricula) {
-  alert('Preencha a matrícula do imóvel. Ela será a chave do laudo.')
+  alert('Preencha a matrícula do imóvel antes de salvar.')
   return
 }
 
@@ -845,9 +804,9 @@ try {
   setSalvando(true)
 
   const dadosParaSalvar = limparBase64({
-    id: matricula,
+    id: laudoUuid,   // UUID único — nunca colide com outro laudo
     ...dadosLaudo,
-    matricula,
+    matricula,       // Matrícula é só um campo de texto, não o ID
     status: obterStatusLaudo(),
     atualizadoEm: new Date().toISOString(),
   })
@@ -860,7 +819,7 @@ try {
   }
 
   await definirLaudoAtual(idSalvo)
-  window.open('/visualizar-laudo', '_blank')
+  window.open('/visualizar-laudo?id=' + encodeURIComponent(laudoUuid), '_blank')
 } catch (error) {
   console.error(error)
   alert('Erro ao salvar o laudo.')
