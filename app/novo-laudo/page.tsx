@@ -174,6 +174,20 @@ const [salvando, setSalvando] = useState(false)
       id: matricula,
       ...form,
       matricula,
+      // Todos os estados fora do form incluídos aqui
+      divisoes,
+      acabamentos,
+      resumoMercado,
+      outrosFatoresImovel,
+      fatoresSelecionados,
+      fundamentacao,
+      fundamentacaoInferencia,
+      fundamentacaoEvolutivo,
+      precisao,
+      fotos: fotos.map((f: any) => ({ preview: f.preview, legenda: f.legenda })),
+      valorFinalImovel,
+      areaConstruidaNaoAverbada,
+      areaTerrenoNaoAverbada,
       caracteristicasTerreno:
         form.caracteristicasTerreno?.trim() ||
         `Foram coletados ${form.quantidadeElementos || 0} elementos comparativos, de porte e características o mais semelhante possível ao avaliando, com alguns fatores contemplados no cálculo.`,
@@ -184,7 +198,23 @@ const [salvando, setSalvando] = useState(false)
   }, 800)
 
   return () => clearTimeout(timeout)
-}, [form, formPronto])
+}, [
+  form,
+  formPronto,
+  divisoes,
+  acabamentos,
+  resumoMercado,
+  outrosFatoresImovel,
+  fatoresSelecionados,
+  fundamentacao,
+  fundamentacaoInferencia,
+  fundamentacaoEvolutivo,
+  precisao,
+  fotos,
+  valorFinalImovel,
+  areaConstruidaNaoAverbada,
+  areaTerrenoNaoAverbada,
+])
 
   const exibirTabelaFatoresTerreno =
     form.metodoAvaliacao === 'comparativo' ||
