@@ -26,6 +26,7 @@ type Props = {
   handleChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => void
+  onAutoFill?: (campos: Record<string, string>) => void
   areaConstruidaNaoAverbada: number
   areaTerrenoNaoAverbada: number
   usarCidadeReferencia: boolean
@@ -39,14 +40,14 @@ type Props = {
   adicionarLinhaDivisao: () => void
   removerLinhaDivisao: (index: number) => void
   handleCroqui: (e: React.ChangeEvent<HTMLInputElement>) => void
-
-removerCroqui: (index: number) => void
+  removerCroqui: (index: number) => void
 }
 
 export default function Etapa01A06({
   form,
   handleChange,
   handleMelhoramentosPublicosChange,
+  onAutoFill,
   areaConstruidaNaoAverbada,
   areaTerrenoNaoAverbada,
   usarCidadeReferencia,
@@ -61,6 +62,7 @@ export default function Etapa01A06({
   const [buscandoCoords, setBuscandoCoords] = useState(false)
   const [msgCoords, setMsgCoords] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
 
+  // Fallback: atualiza campo a campo via evento sintético (quando onAutoFill não é fornecido)
   function setField(name: string, value: string) {
     handleChange({
       target: { name, value },
@@ -97,7 +99,6 @@ export default function Etapa01A06({
       const estado = a.state || ''
       const cep = a.postcode ? `CEP ${a.postcode}` : ''
       const enderecoMontado = [rua, bairro, cidade, estado, cep].filter(Boolean).join(' – ')
-      if (enderecoMontado) setField('endereco', enderecoMontado)
 
       // ── 2. Pontos de referência via Overpass API ───────────────────────────
       const overpassQuery = `
@@ -140,11 +141,22 @@ export default function Etapa01A06({
         if (poisUnicos.length === 5) break
       }
 
-      if (poisUnicos[0]) { setField('referencia1', poisUnicos[0].nome); setField('distancia1', formatarDistancia(poisUnicos[0].dist)) }
-      if (poisUnicos[1]) { setField('referencia2', poisUnicos[1].nome); setField('distancia2', formatarDistancia(poisUnicos[1].dist)) }
-      if (poisUnicos[2]) { setField('referencia3', poisUnicos[2].nome); setField('distancia3', formatarDistancia(poisUnicos[2].dist)) }
-      if (poisUnicos[3]) { setField('referencia4', poisUnicos[3].nome); setField('distancia4', formatarDistancia(poisUnicos[3].dist)) }
-      if (poisUnicos[4]) { setField('referencia5', poisUnicos[4].nome); setField('distancia5', formatarDistancia(poisUnicos[4].dist)) }
+      // Monta todos os campos de uma vez para garantir atualização atômica do estado
+      const camposAutoFill: Record<string, string> = {}
+      if (enderecoMontado) camposAutoFill['endereco'] = enderecoMontado
+      if (poisUnicos[0]) { camposAutoFill['referencia1'] = poisUnicos[0].nome; camposAutoFill['distancia1'] = formatarDistancia(poisUnicos[0].dist) }
+      if (poisUnicos[1]) { camposAutoFill['referencia2'] = poisUnicos[1].nome; camposAutoFill['distancia2'] = formatarDistancia(poisUnicos[1].dist) }
+      if (poisUnicos[2]) { camposAutoFill['referencia3'] = poisUnicos[2].nome; camposAutoFill['distancia3'] = formatarDistancia(poisUnicos[2].dist) }
+      if (poisUnicos[3]) { camposAutoFill['referencia4'] = poisUnicos[3].nome; camposAutoFill['distancia4'] = formatarDistancia(poisUnicos[3].dist) }
+      if (poisUnicos[4]) { camposAutoFill['referencia5'] = poisUnicos[4].nome; camposAutoFill['distancia5'] = formatarDistancia(poisUnicos[4].dist) }
+
+      if (onAutoFill) {
+        // Caminho ideal: uma única atualização de estado no pai
+        onAutoFill(camposAutoFill)
+      } else {
+        // Fallback: atualiza campo a campo
+        Object.entries(camposAutoFill).forEach(([k, v]) => setField(k, v))
+      }
 
       setMsgCoords({ tipo: 'ok', texto: 'Endereço e referências preenchidos automaticamente.' })
     } catch (err) {
