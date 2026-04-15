@@ -111,24 +111,41 @@ export default function Etapa01A06({
       erroEndereco = true
     }
 
-    // ── 2. Pontos de referência via Overpass API (independente) ────────────────
+    // ── 2. Pontos de referência via Overpass (tenta múltiplos mirrors) ──────────
     try {
-      const overpassQuery = [
-        '[out:json][timeout:25];(',
-        `node["name"]["amenity"~"hospital|school|bank|pharmacy|supermarket|place_of_worship|police|fire_station|college|university"](around:5000,${lat},${lon});`,
-        `way["name"]["amenity"~"hospital|school|bank|supermarket|place_of_worship"](around:5000,${lat},${lon});`,
-        `node["name"]["shop"~"supermarket|mall"](around:5000,${lat},${lon});`,
-        `node["name"]["leisure"~"park|stadium"](around:5000,${lat},${lon});`,
-        ');out center 40;',
-      ].join('')
+      // Query simplificada e mais compatível
+      const overpassQuery =
+        `[out:json][timeout:30];` +
+        `(` +
+        `nwr["name"]["amenity"~"^(hospital|school|bank|pharmacy|place_of_worship|police|fire_station|college|university|supermarket|marketplace)$"](around:6000,${lat},${lon});` +
+        `nwr["name"]["leisure"~"^(park|stadium|sports_centre)$"](around:6000,${lat},${lon});` +
+        `nwr["name"]["shop"~"^(supermarket|mall|department_store)$"](around:6000,${lat},${lon});` +
+        `);out center 60;`
 
-      const resOver = await fetch('https://overpass-api.de/api/interpreter', {
-        method: 'POST',
-        body: `data=${encodeURIComponent(overpassQuery)}`,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      })
-      if (!resOver.ok) throw new Error(`Overpass HTTP ${resOver.status}`)
-      const dadosOver = await resOver.json()
+      const mirrors = [
+        'https://overpass-api.de/api/interpreter',
+        'https://overpass.kumi.systems/api/interpreter',
+        'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+      ]
+
+      let dadosOver: any = null
+      for (const mirror of mirrors) {
+        try {
+          const res = await fetch(mirror, {
+            method: 'POST',
+            body: `data=${encodeURIComponent(overpassQuery)}`,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            signal: AbortSignal.timeout(20000),
+          })
+          if (!res.ok) continue
+          const json = await res.json()
+          if (json?.elements?.length > 0) { dadosOver = json; break }
+        } catch {
+          continue
+        }
+      }
+
+      if (!dadosOver) throw new Error('Todos os mirrors Overpass falharam')
 
       type PoiItem = { nome: string; dist: number }
       const pois: PoiItem[] = (dadosOver.elements || [])
