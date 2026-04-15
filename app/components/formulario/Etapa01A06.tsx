@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { flushSync } from 'react-dom'
 
 // ─── Helpers de geocodificação ────────────────────────────────────────────────
 
@@ -154,8 +155,11 @@ export default function Etapa01A06({
         // Caminho ideal: uma única atualização de estado no pai
         onAutoFill(camposAutoFill)
       } else {
-        // Fallback: atualiza campo a campo
-        Object.entries(camposAutoFill).forEach(([k, v]) => setField(k, v))
+        // Fallback: usa flushSync para forçar cada atualização de forma síncrona,
+        // evitando que chamadas consecutivas se sobreescrevam por closure desatualizado
+        Object.entries(camposAutoFill).forEach(([k, v]) => {
+          flushSync(() => setField(k, v))
+        })
       }
 
       setMsgCoords({ tipo: 'ok', texto: 'Endereço e referências preenchidos automaticamente.' })
