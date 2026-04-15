@@ -84,11 +84,14 @@ export default function Etapa01A06({
     setBuscandoCoords(true)
     setMsgCoords(null)
 
+    const camposAutoFill: Record<string, string> = {}
+    let erroEndereco = false
+    let erroReferencias = false
+
+    // ── 1. Endereço via Nominatim (independente) ───────────────────────────────
     try {
-      // ── 1. Endereço via Nominatim ──────────────────────────────────────────
       const resRev = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=pt-BR`,
-        { headers: { 'User-Agent': 'LesathLaudos/1.0' } }
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=pt-BR`
       )
       if (!resRev.ok) throw new Error('Nominatim indisponível')
       const dadosRev = await resRev.json()
@@ -100,40 +103,43 @@ export default function Etapa01A06({
       const estado = a.state || ''
       const cep = a.postcode ? `CEP ${a.postcode}` : ''
       const enderecoMontado = [rua, bairro, cidade, estado, cep].filter(Boolean).join(' – ')
+      if (enderecoMontado) camposAutoFill['endereco'] = enderecoMontado
+    } catch (err) {
+      console.error('Nominatim:', err)
+      erroEndereco = true
+    }
 
-      // ── 2. Pontos de referência via Overpass API ───────────────────────────
-      const overpassQuery = `
-        [out:json][timeout:20];
-        (
-          node["name"]["amenity"~"hospital|school|bank|pharmacy|supermarket|place_of_worship|police|fire_station|courthouse|college|university"](around:4000,${lat},${lon});
-          way["name"]["amenity"~"hospital|school|bank|supermarket|shopping_mall|place_of_worship"](around:4000,${lat},${lon});
-          node["name"]["shop"~"supermarket|mall"](around:4000,${lat},${lon});
-          node["name"]["leisure"~"park|stadium"](around:4000,${lat},${lon});
-        );
-        out center 30;
-      `.trim()
+    // ── 2. Pontos de referência via Overpass API (independente) ────────────────
+    try {
+      const overpassQuery = [
+        '[out:json][timeout:25];(',
+        `node["name"]["amenity"~"hospital|school|bank|pharmacy|supermarket|place_of_worship|police|fire_station|college|university"](around:5000,${lat},${lon});`,
+        `way["name"]["amenity"~"hospital|school|bank|supermarket|place_of_worship"](around:5000,${lat},${lon});`,
+        `node["name"]["shop"~"supermarket|mall"](around:5000,${lat},${lon});`,
+        `node["name"]["leisure"~"park|stadium"](around:5000,${lat},${lon});`,
+        ');out center 40;',
+      ].join('')
 
       const resOver = await fetch('https://overpass-api.de/api/interpreter', {
         method: 'POST',
         body: `data=${encodeURIComponent(overpassQuery)}`,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       })
-      if (!resOver.ok) throw new Error('Overpass indisponível')
+      if (!resOver.ok) throw new Error(`Overpass HTTP ${resOver.status}`)
       const dadosOver = await resOver.json()
 
-      type PoiItem = { lat: number; lon: number; nome: string; dist: number }
+      type PoiItem = { nome: string; dist: number }
       const pois: PoiItem[] = (dadosOver.elements || [])
         .map((el: any) => {
           const elLat = el.lat ?? el.center?.lat
           const elLon = el.lon ?? el.center?.lon
           const nome = el.tags?.name
           if (!elLat || !elLon || !nome) return null
-          return { lat: elLat, lon: elLon, nome, dist: haversineMetros(lat, lon, elLat, elLon) }
+          return { nome, dist: haversineMetros(lat, lon, elLat, elLon) }
         })
         .filter(Boolean)
         .sort((a: PoiItem, b: PoiItem) => a.dist - b.dist)
 
-      // Remove duplicados por nome
       const vistos = new Set<string>()
       const poisUnicos: PoiItem[] = []
       for (const p of pois) {
@@ -142,33 +148,39 @@ export default function Etapa01A06({
         if (poisUnicos.length === 5) break
       }
 
-      // Monta todos os campos de uma vez para garantir atualização atômica do estado
-      const camposAutoFill: Record<string, string> = {}
-      if (enderecoMontado) camposAutoFill['endereco'] = enderecoMontado
       if (poisUnicos[0]) { camposAutoFill['referencia1'] = poisUnicos[0].nome; camposAutoFill['distancia1'] = formatarDistancia(poisUnicos[0].dist) }
       if (poisUnicos[1]) { camposAutoFill['referencia2'] = poisUnicos[1].nome; camposAutoFill['distancia2'] = formatarDistancia(poisUnicos[1].dist) }
       if (poisUnicos[2]) { camposAutoFill['referencia3'] = poisUnicos[2].nome; camposAutoFill['distancia3'] = formatarDistancia(poisUnicos[2].dist) }
       if (poisUnicos[3]) { camposAutoFill['referencia4'] = poisUnicos[3].nome; camposAutoFill['distancia4'] = formatarDistancia(poisUnicos[3].dist) }
       if (poisUnicos[4]) { camposAutoFill['referencia5'] = poisUnicos[4].nome; camposAutoFill['distancia5'] = formatarDistancia(poisUnicos[4].dist) }
+    } catch (err) {
+      console.error('Overpass:', err)
+      erroReferencias = true
+    }
 
+    // ── 3. Aplica todos os campos coletados ────────────────────────────────────
+    if (Object.keys(camposAutoFill).length > 0) {
       if (onAutoFill) {
-        // Caminho ideal: uma única atualização de estado no pai
         onAutoFill(camposAutoFill)
       } else {
-        // Fallback: usa flushSync para forçar cada atualização de forma síncrona,
-        // evitando que chamadas consecutivas se sobreescrevam por closure desatualizado
         Object.entries(camposAutoFill).forEach(([k, v]) => {
           flushSync(() => setField(k, v))
         })
       }
-
-      setMsgCoords({ tipo: 'ok', texto: 'Endereço e referências preenchidos automaticamente.' })
-    } catch (err) {
-      console.error(err)
-      setMsgCoords({ tipo: 'erro', texto: 'Não foi possível buscar os dados. Verifique as coordenadas e tente novamente.' })
-    } finally {
-      setBuscandoCoords(false)
     }
+
+    // ── 4. Feedback ao usuário ─────────────────────────────────────────────────
+    if (!erroEndereco && !erroReferencias) {
+      setMsgCoords({ tipo: 'ok', texto: 'Endereço e referências preenchidos automaticamente.' })
+    } else if (!erroEndereco && erroReferencias) {
+      setMsgCoords({ tipo: 'ok', texto: 'Endereço preenchido. Referências não encontradas (serviço externo indisponível).' })
+    } else if (erroEndereco && !erroReferencias) {
+      setMsgCoords({ tipo: 'ok', texto: 'Referências preenchidas. Endereço não encontrado para essas coordenadas.' })
+    } else {
+      setMsgCoords({ tipo: 'erro', texto: 'Não foi possível buscar os dados. Verifique sua conexão e tente novamente.' })
+    }
+
+    setBuscandoCoords(false)
   }
 
   return (
