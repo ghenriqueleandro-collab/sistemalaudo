@@ -1,5 +1,25 @@
 'use client'
 
+import { useState } from 'react'
+
+// ─── Helpers de geocodificação ────────────────────────────────────────────────
+
+function haversineMetros(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371000
+  const toRad = (v: number) => (v * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.asin(Math.sqrt(a))
+}
+
+function formatarDistancia(m: number) {
+  if (m < 1000) return `${Math.round(m)} m`
+  return `${(m / 1000).toFixed(1).replace('.', ',')} km`
+}
+
 type Props = {
   handleMelhoramentosPublicosChange: (campo: string, valor: string) => void
   form: any
@@ -38,6 +58,103 @@ export default function Etapa01A06({
   handleCroqui,
   removerCroqui,
 }: Props) {
+  const [buscandoCoords, setBuscandoCoords] = useState(false)
+  const [msgCoords, setMsgCoords] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
+
+  function setField(name: string, value: string) {
+    handleChange({
+      target: { name, value },
+    } as React.ChangeEvent<HTMLInputElement>)
+  }
+
+  async function buscarDadosPorCoordenadas() {
+    const raw = (form.coordenadasImovel || '').trim()
+    const match = raw.match(/(-?\d+[.,]?\d*)[,\s]+(-?\d+[.,]?\d*)/)
+    if (!match) {
+      setMsgCoords({ tipo: 'erro', texto: 'Formato inválido. Use: -23.550520, -46.633308' })
+      return
+    }
+
+    const lat = parseFloat(match[1].replace(',', '.'))
+    const lon = parseFloat(match[2].replace(',', '.'))
+
+    setBuscandoCoords(true)
+    setMsgCoords(null)
+
+    try {
+      // ── 1. Endereço via Nominatim ──────────────────────────────────────────
+      const resRev = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=pt-BR`,
+        { headers: { 'User-Agent': 'LesathLaudos/1.0' } }
+      )
+      if (!resRev.ok) throw new Error('Nominatim indisponível')
+      const dadosRev = await resRev.json()
+
+      const a = dadosRev.address || {}
+      const rua = [a.road, a.house_number].filter(Boolean).join(', ')
+      const bairro = a.suburb || a.neighbourhood || ''
+      const cidade = a.city || a.town || a.village || ''
+      const estado = a.state || ''
+      const cep = a.postcode ? `CEP ${a.postcode}` : ''
+      const enderecoMontado = [rua, bairro, cidade, estado, cep].filter(Boolean).join(' – ')
+      if (enderecoMontado) setField('endereco', enderecoMontado)
+
+      // ── 2. Pontos de referência via Overpass API ───────────────────────────
+      const overpassQuery = `
+        [out:json][timeout:20];
+        (
+          node["name"]["amenity"~"hospital|school|bank|pharmacy|supermarket|place_of_worship|police|fire_station|courthouse|college|university"](around:4000,${lat},${lon});
+          way["name"]["amenity"~"hospital|school|bank|supermarket|shopping_mall|place_of_worship"](around:4000,${lat},${lon});
+          node["name"]["shop"~"supermarket|mall"](around:4000,${lat},${lon});
+          node["name"]["leisure"~"park|stadium"](around:4000,${lat},${lon});
+        );
+        out center 30;
+      `.trim()
+
+      const resOver = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        body: `data=${encodeURIComponent(overpassQuery)}`,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      })
+      if (!resOver.ok) throw new Error('Overpass indisponível')
+      const dadosOver = await resOver.json()
+
+      type PoiItem = { lat: number; lon: number; nome: string; dist: number }
+      const pois: PoiItem[] = (dadosOver.elements || [])
+        .map((el: any) => {
+          const elLat = el.lat ?? el.center?.lat
+          const elLon = el.lon ?? el.center?.lon
+          const nome = el.tags?.name
+          if (!elLat || !elLon || !nome) return null
+          return { lat: elLat, lon: elLon, nome, dist: haversineMetros(lat, lon, elLat, elLon) }
+        })
+        .filter(Boolean)
+        .sort((a: PoiItem, b: PoiItem) => a.dist - b.dist)
+
+      // Remove duplicados por nome
+      const vistos = new Set<string>()
+      const poisUnicos: PoiItem[] = []
+      for (const p of pois) {
+        const chave = p.nome.toLowerCase().trim()
+        if (!vistos.has(chave)) { vistos.add(chave); poisUnicos.push(p) }
+        if (poisUnicos.length === 5) break
+      }
+
+      if (poisUnicos[0]) { setField('referencia1', poisUnicos[0].nome); setField('distancia1', formatarDistancia(poisUnicos[0].dist)) }
+      if (poisUnicos[1]) { setField('referencia2', poisUnicos[1].nome); setField('distancia2', formatarDistancia(poisUnicos[1].dist)) }
+      if (poisUnicos[2]) { setField('referencia3', poisUnicos[2].nome); setField('distancia3', formatarDistancia(poisUnicos[2].dist)) }
+      if (poisUnicos[3]) { setField('referencia4', poisUnicos[3].nome); setField('distancia4', formatarDistancia(poisUnicos[3].dist)) }
+      if (poisUnicos[4]) { setField('referencia5', poisUnicos[4].nome); setField('distancia5', formatarDistancia(poisUnicos[4].dist)) }
+
+      setMsgCoords({ tipo: 'ok', texto: 'Endereço e referências preenchidos automaticamente.' })
+    } catch (err) {
+      console.error(err)
+      setMsgCoords({ tipo: 'erro', texto: 'Não foi possível buscar os dados. Verifique as coordenadas e tente novamente.' })
+    } finally {
+      setBuscandoCoords(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -46,6 +163,52 @@ export default function Etapa01A06({
         </h2>
         <p className="text-sm text-gray-600">
           Preencha os dados iniciais do imóvel, áreas, divisões, referências e croqui.
+        </p>
+      </div>
+
+      {/* ── Coordenadas com preenchimento automático ── */}
+      <div className="border rounded p-4 bg-blue-50 space-y-3">
+        <label className="block font-semibold text-blue-900">
+          📍 Coordenadas do imóvel
+        </label>
+
+        <div className="flex gap-2">
+          <input
+            name="coordenadasImovel"
+            placeholder="Ex: -23.550520, -46.633308"
+            value={form.coordenadasImovel || ''}
+            onChange={handleChange}
+            className="flex-1 border p-2 rounded bg-white"
+          />
+          <button
+            type="button"
+            onClick={buscarDadosPorCoordenadas}
+            disabled={buscandoCoords || !form.coordenadasImovel?.trim()}
+            className="px-4 py-2 rounded bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition whitespace-nowrap"
+          >
+            {buscandoCoords ? (
+              <span className="flex items-center gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                Buscando…
+              </span>
+            ) : (
+              '🔍 Preencher dados'
+            )}
+          </button>
+        </div>
+
+        {msgCoords && (
+          <p className={`text-sm rounded px-3 py-2 ${msgCoords.tipo === 'ok' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {msgCoords.tipo === 'ok' ? '✅ ' : '⚠️ '}{msgCoords.texto}
+          </p>
+        )}
+
+        <p className="text-xs text-blue-700">
+          Após inserir as coordenadas, clique em <strong>Preencher dados</strong> para buscar automaticamente o endereço e os pontos de referência mais próximos.
+          Os campos preenchidos podem ser editados manualmente.
         </p>
       </div>
 
@@ -352,12 +515,36 @@ export default function Etapa01A06({
       />
 
       <input
-  name="coordenadasImovel"
-  placeholder="Coordenadas do imóvel (ex: -26.220514, -48.915834)"
-  value={form.coordenadasImovel || ''}
-  onChange={handleChange}
-  className="w-full border p-2 rounded"
-/>
+        name="referencia4"
+        placeholder="Local de referência 4"
+        value={form.referencia4 || ''}
+        onChange={handleChange}
+        className="w-full border p-2 rounded"
+      />
+
+      <input
+        name="distancia4"
+        placeholder="Distância da referência 4"
+        value={form.distancia4 || ''}
+        onChange={handleChange}
+        className="w-full border p-2 rounded"
+      />
+
+      <input
+        name="referencia5"
+        placeholder="Local de referência 5"
+        value={form.referencia5 || ''}
+        onChange={handleChange}
+        className="w-full border p-2 rounded"
+      />
+
+      <input
+        name="distancia5"
+        placeholder="Distância da referência 5"
+        value={form.distancia5 || ''}
+        onChange={handleChange}
+        className="w-full border p-2 rounded"
+      />
 
 <div className="border rounded p-4 bg-gray-50">
   <h3 className="text-lg font-bold mb-3 text-center">
