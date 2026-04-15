@@ -121,6 +121,16 @@ function arredondar(valor: number) {
   return Math.round(valor / 100) * 100
 }
 
+// Extrai a cidade do campo endereço (formato: "Rua – Bairro – Cidade – Estado – CEP ...")
+function extrairCidadeDoEndereco(endereco?: string, fallback?: string): string {
+  if (!endereco) return fallback || ''
+  const partes = endereco.split(' – ').map(p => p.trim()).filter(Boolean)
+  // Remove partes que são CEP ou UF (2 letras maiúsculas)
+  const filtradas = partes.filter(p => !p.startsWith('CEP') && !/^[A-Z]{2}$/.test(p))
+  // A cidade fica na penúltima posição (antes do estado/CEP), ou a última disponível
+  return filtradas.length >= 2 ? filtradas[filtradas.length - 2] : filtradas[filtradas.length - 1] || fallback || ''
+}
+
 function numeroPorExtenso(valor: number): string {
   const unidades = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove',
     'dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove']
@@ -614,7 +624,7 @@ export function LaudoPdf({
           <Text style={s.coverMainTitle}>{'Laudo de\nAvaliação'}</Text>
           <Text style={s.coverSubtitle}>{finalidade}</Text>
           <Text style={s.coverLocLabel}>LOCALIZAÇÃO DO IMÓVEL</Text>
-          <Text style={s.coverLocVal}>{dados.cidadePrincipal}</Text>
+          <Text style={s.coverLocVal}>{extrairCidadeDoEndereco(dados.endereco, dados.cidadePrincipal)}</Text>
           <View style={s.coverDivider} />
           <View style={s.coverGrid}>
             {[
@@ -650,7 +660,7 @@ export function LaudoPdf({
           <View>
             <Text style={{ fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#8FA4C7', letterSpacing: 1.5, marginBottom: 2 }}>NBR 14653</Text>
             <Text style={{ fontSize: 16, fontFamily: 'Helvetica-Bold', color: '#ffffff', lineHeight: 1.1 }}>Capa Resumo</Text>
-            <Text style={{ fontSize: 8, color: '#b8cce4', marginTop: 2 }}>Laudo de Avaliação — {dados.cidadePrincipal || 'Joinville'}</Text>
+            <Text style={{ fontSize: 8, color: '#b8cce4', marginTop: 2 }}>Laudo de Avaliação — {extrairCidadeDoEndereco(dados.endereco, dados.cidadePrincipal) || 'Joinville'}</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <View style={{ backgroundColor: '#1a3a6e', borderRadius: 3, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 4 }}>
