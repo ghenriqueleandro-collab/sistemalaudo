@@ -129,9 +129,9 @@ export default function Etapa01A06({
       const overpassQuery =
         `[out:json][timeout:30];` +
         `(` +
-        `nwr["name"]["amenity"~"^(hospital|school|bank|pharmacy|place_of_worship|police|fire_station|college|university|supermarket|marketplace)$"](around:6000,${lat},${lon});` +
-        `nwr["name"]["leisure"~"^(park|stadium|sports_centre)$"](around:6000,${lat},${lon});` +
-        `nwr["name"]["shop"~"^(supermarket|mall|department_store)$"](around:6000,${lat},${lon});` +
+        `nwr["name"]["amenity"~"^(hospital|bank|pharmacy|school|place_of_worship|police|college|university|fuel|courthouse|town_hall)$"](around:6000,${lat},${lon});` +
+        `nwr["name"]["shop"~"^(supermarket|mall)$"](around:6000,${lat},${lon});` +
+        `nwr["name"]["leisure"~"^(stadium)$"](around:6000,${lat},${lon});` +
         `);out center 60;`
 
       const mirrors = [
