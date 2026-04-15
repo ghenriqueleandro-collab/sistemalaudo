@@ -74,6 +74,10 @@ export default function NovoLaudoPage() {
     distancia2: '',
     referencia3: '',
     distancia3: '',
+    referencia4: '',
+    distancia4: '',
+    referencia5: '',
+    distancia5: '',
     coordenadasImovel: '',
     terrenoEncravado: false,
     confrontacaoCursoAgua: false,
@@ -892,6 +896,7 @@ try {
                 removerLinhaDivisao={removerLinhaDivisao}
                 handleCroqui={handleCroqui}
                 removerCroqui={removerCroqui}
+                setForm={setForm}
               />
             )}
 

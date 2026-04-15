@@ -28,6 +28,7 @@ type Props = {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => void
   onAutoFill?: (campos: Record<string, string>) => void
+  setForm?: React.Dispatch<React.SetStateAction<any>>
   areaConstruidaNaoAverbada: number
   areaTerrenoNaoAverbada: number
   usarCidadeReferencia: boolean
@@ -49,6 +50,7 @@ export default function Etapa01A06({
   handleChange,
   handleMelhoramentosPublicosChange,
   onAutoFill,
+  setForm: setFormDirect,
   areaConstruidaNaoAverbada,
   areaTerrenoNaoAverbada,
   usarCidadeReferencia,
@@ -160,9 +162,13 @@ export default function Etapa01A06({
 
     // ── 3. Aplica todos os campos coletados ────────────────────────────────────
     if (Object.keys(camposAutoFill).length > 0) {
-      if (onAutoFill) {
+      if (setFormDirect) {
+        // Melhor caminho: atualização atômica via setForm funcional
+        setFormDirect((prev: any) => ({ ...prev, ...camposAutoFill }))
+      } else if (onAutoFill) {
         onAutoFill(camposAutoFill)
       } else {
+        // Fallback: flushSync para forçar atualizações síncronas
         Object.entries(camposAutoFill).forEach(([k, v]) => {
           flushSync(() => setField(k, v))
         })
