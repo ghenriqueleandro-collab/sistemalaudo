@@ -111,7 +111,19 @@ export default function Etapa01A06({
       erroEndereco = true
     }
 
-    // ── 2. Pontos de referência via Overpass (tenta múltiplos mirrors) ──────────
+    // ── 2. Limpa referências antigas antes de buscar novas ────────────────────
+    camposAutoFill['referencia1'] = ''
+    camposAutoFill['distancia1'] = ''
+    camposAutoFill['referencia2'] = ''
+    camposAutoFill['distancia2'] = ''
+    camposAutoFill['referencia3'] = ''
+    camposAutoFill['distancia3'] = ''
+    camposAutoFill['referencia4'] = ''
+    camposAutoFill['distancia4'] = ''
+    camposAutoFill['referencia5'] = ''
+    camposAutoFill['distancia5'] = ''
+
+    // ── 3. Pontos de referência via Overpass (tenta múltiplos mirrors) ──────────
     try {
       // Query simplificada e mais compatível
       const overpassQuery =
@@ -177,7 +189,7 @@ export default function Etapa01A06({
       erroReferencias = true
     }
 
-    // ── 3. Aplica todos os campos coletados ────────────────────────────────────
+    // ── 4. Aplica todos os campos coletados ────────────────────────────────────
     if (Object.keys(camposAutoFill).length > 0) {
       if (setFormDirect) {
         // Melhor caminho: atualização atômica via setForm funcional
@@ -192,7 +204,7 @@ export default function Etapa01A06({
       }
     }
 
-    // ── 4. Feedback ao usuário ─────────────────────────────────────────────────
+    // ── 5. Feedback ao usuário ─────────────────────────────────────────────────
     if (!erroEndereco && !erroReferencias) {
       setMsgCoords({ tipo: 'ok', texto: 'Endereço e referências preenchidos automaticamente.' })
     } else if (!erroEndereco && erroReferencias) {
