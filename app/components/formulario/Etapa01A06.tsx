@@ -421,13 +421,23 @@ export default function Etapa01A06({
         className="w-full border p-2 rounded"
       />
 
-      <input
+      <select
         name="estadoConservacao"
-        placeholder="Estado de conservação"
         value={form.estadoConservacao}
         onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
+        className="w-full border p-2 rounded bg-white"
+      >
+        <option value="">Estado de conservação</option>
+        <option value="Novo">Novo</option>
+        <option value="Entre novo e regular">Entre novo e regular</option>
+        <option value="Regular">Regular</option>
+        <option value="Entre regular e reparos simples">Entre regular e reparos simples</option>
+        <option value="Reparos simples">Reparos simples</option>
+        <option value="Entre reparos simples e importantes">Entre reparos simples e importantes</option>
+        <option value="Reparos importantes">Reparos importantes</option>
+        <option value="Entre reparos importantes e sem valor">Entre reparos importantes e sem valor</option>
+        <option value="Sem valor">Sem valor</option>
+      </select>
 
       <input
   name="iptu"
