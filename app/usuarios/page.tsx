@@ -1,219 +1,282 @@
 /**
- * SALVAR EM: src/app/meus-laudos/page.tsx
+ * SALVAR EM: src/app/usuarios/page.tsx
  */
 
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import AppShell from '../components/AppShell'
-import {
-  excluirLaudo,
-  filtrarLaudos,
-  formatarData,
-  formatarMoeda,
-  formatarStatus,
-  listarLaudos,
-  limparLaudoAtual,
-  type LaudoResumo,
-  type StatusLaudo,
-} from '../../lib/laudos-storage'
 
-const statusConfig: Record<StatusLaudo, string> = {
-  rascunho: 'bg-amber-50 text-amber-700 ring-amber-200',
-  em_preenchimento: 'bg-blue-50 text-blue-700 ring-blue-200',
-  em_revisao: 'bg-rose-50 text-rose-700 ring-rose-200',
-  finalizado: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+type Perfil = 'admin' | 'editor' | 'visualizador' | 'agendador'
+
+type Usuario = {
+  id: string
+  nome: string
+  email: string
+  perfil: Perfil
+  ativo: boolean
+  permissoes: {
+    criarLaudos: boolean
+    editarLaudos: boolean
+    excluirLaudos: boolean
+    visualizarTodos: boolean
+    gerarPdf: boolean
+    realizarAgendamentos: boolean
+  }
 }
 
-function CardResumo({ titulo, valor, classe }: { titulo: string; valor: number; classe: string }) {
-  return (
-    <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_-42px_rgba(15,23,42,0.5)]">
-      <div className={`inline-flex rounded-2xl px-3 py-1 text-xs font-semibold ${classe}`}>{titulo}</div>
-      <div className="mt-5 text-4xl font-semibold tracking-tight text-slate-950">{valor}</div>
-    </div>
-  )
+const perfilLabel: Record<Perfil, string> = {
+  admin: 'Administrador',
+  editor: 'Editor',
+  visualizador: 'Visualizador',
+  agendador: 'Agendador',
 }
 
-export default function MeusLaudosPage() {
-  const { data: session } = useSession()
-  const perfil = (session?.user as any)?.perfil
-  const usuarioEmail = session?.user?.email || ''
-  const usuarioNome = session?.user?.name || usuarioEmail
+const perfilClasse: Record<Perfil, string> = {
+  admin: 'bg-blue-50 text-blue-700 ring-blue-200',
+  editor: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  visualizador: 'bg-slate-100 text-slate-600 ring-slate-200',
+  agendador: 'bg-amber-50 text-amber-700 ring-amber-200',
+}
 
+const permissaoLabel: Record<string, string> = {
+  criarLaudos: 'Criar laudos',
+  editarLaudos: 'Editar laudos',
+  excluirLaudos: 'Excluir (requer aprovação)',
+  visualizarTodos: 'Visualizar todos os laudos',
+  gerarPdf: 'Gerar PDF',
+  realizarAgendamentos: 'Realizar agendamentos',
+}
+
+export default function UsuariosPage() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [carregando, setCarregando] = useState(true)
-  const [laudos, setLaudos] = useState<LaudoResumo[]>([])
-  const [busca, setBusca] = useState('')
-  const [status, setStatus] = useState('')
-  const [cidade, setCidade] = useState('')
-  const [tipoImovel, setTipoImovel] = useState('')
-  const [finalidade, setFinalidade] = useState('')
-  const [excluindoId, setExcluindoId] = useState<string | null>(null)
-  const [solicitandoId, setSolicitandoId] = useState<string | null>(null)
+  const [usuarioSelecionado, setUsuarioSelecionado] = useState<Usuario | null>(null)
+  const [mostrarForm, setMostrarForm] = useState(false)
+  const [salvando, setSalvando] = useState(false)
+  const [novaSenhaEdicao, setNovaSenhaEdicao] = useState('')
+  const [redefinindo, setRedefinindo] = useState(false)
+  const [erro, setErro] = useState('')
 
-  const carregarLaudos = useCallback(async () => {
+  const [novoNome, setNovoNome] = useState('')
+  const [novoEmail, setNovoEmail] = useState('')
+  const [novaSenha, setNovaSenha] = useState('')
+  const [novoPerfil, setNovoPerfil] = useState<Perfil>('editor')
+
+  // Normaliza perfil para minúsculo para evitar problemas de capitalização
+  const perfil = ((session?.user as any)?.perfil || '').toLowerCase()
+
+  useEffect(() => {
+    if (status === 'unauthenticated') router.push('/')
+    if (status === 'authenticated' && perfil && perfil !== 'admin') router.push('/meus-laudos')
+  }, [status, perfil])
+
+  useEffect(() => {
+    if (status === 'authenticated') carregarUsuarios()
+  }, [status])
+
+  async function carregarUsuarios() {
+    setCarregando(true)
     try {
-      const dados = await listarLaudos()
-      setLaudos(dados)
+      const res = await fetch('/api/usuarios', { cache: 'no-store' })
+      const dados = await res.json()
+      setUsuarios(dados)
     } finally {
       setCarregando(false)
     }
-  }, [])
-
-  useEffect(() => {
-    carregarLaudos()
-    const intervalo = setInterval(carregarLaudos, 15_000)
-    return () => clearInterval(intervalo)
-  }, [carregarLaudos])
-
-  const cidades = useMemo(() => [...new Set(laudos.map((i) => i.cidade).filter(Boolean))].sort(), [laudos])
-  const tipos = useMemo(() => [...new Set(laudos.map((i) => i.tipoImovel).filter(Boolean))].sort(), [laudos])
-  const finalidades = useMemo(() => [...new Set(laudos.map((i) => i.finalidade).filter(Boolean))].sort(), [laudos])
-
-  const filtrados = useMemo(
-    () => filtrarLaudos(laudos, { busca, status, cidade, tipoImovel, finalidade }),
-    [laudos, busca, status, cidade, tipoImovel, finalidade]
-  )
-
-  const resumo = useMemo(() => ({
-    total: laudos.length,
-    emAndamento: laudos.filter((i) => i.status === 'em_preenchimento').length,
-    finalizados: laudos.filter((i) => i.status === 'finalizado').length,
-    rascunhos: laudos.filter((i) => i.status === 'rascunho').length,
-  }), [laudos])
-
-  async function handleExcluir(id: string) {
-    if (!confirm('Tem certeza que deseja excluir este laudo?')) return
-    try {
-      setExcluindoId(id)
-      await excluirLaudo(id)
-      setLaudos((atual) => atual.filter((item) => item.id !== id))
-    } catch {
-      alert('Erro ao excluir o laudo.')
-    } finally {
-      setExcluindoId(null)
-    }
   }
 
-  async function handleSolicitarExclusao(laudo: LaudoResumo) {
-    if (!confirm(`Solicitar exclusão do laudo #${laudo.codigo}? O administrador precisará aprovar.`)) return
-    setSolicitandoId(laudo.id)
+  async function criarUsuario() {
+    if (!novoNome || !novoEmail || !novaSenha) {
+      setErro('Preencha nome, e-mail e senha.')
+      return
+    }
+    setSalvando(true)
+    setErro('')
     try {
-      const res = await fetch('/api/solicitacoes', {
+      const res = await fetch('/api/usuarios', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          laudoId: laudo.id,
-          laudoCodigo: laudo.codigo,
-          laudoEndereco: laudo.endereco,
-          usuarioEmail,
-          usuarioNome,
-        }),
+        body: JSON.stringify({ nome: novoNome, email: novoEmail, senha: novaSenha, perfil: novoPerfil }),
       })
       const dados = await res.json()
-      if (!res.ok) { alert(dados.erro || 'Erro ao enviar solicitação.'); return }
-      alert('Solicitação enviada. O administrador será notificado.')
+      if (!res.ok) { setErro(dados.erro || 'Erro ao criar usuário.'); return }
+      setUsuarios((prev) => [...prev, dados])
+      setMostrarForm(false)
+      setNovoNome(''); setNovoEmail(''); setNovaSenha(''); setNovoPerfil('editor')
     } finally {
-      setSolicitandoId(null)
+      setSalvando(false)
     }
   }
 
-  function prepararLaudo(id: string, destino: string) {
-    window.location.href = destino + '?id=' + encodeURIComponent(id)
+  async function toggleAtivo(usuario: Usuario) {
+    const res = await fetch(`/api/usuarios/${encodeURIComponent(usuario.email)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ativo: !usuario.ativo }),
+    })
+    if (res.ok) {
+      setUsuarios((prev) => prev.map((u) => u.email === usuario.email ? { ...u, ativo: !u.ativo } : u))
+      if (usuarioSelecionado?.email === usuario.email) setUsuarioSelecionado((p) => p ? { ...p, ativo: !p.ativo } : p)
+    }
   }
 
-  function limparFiltros() {
-    setBusca(''); setStatus(''); setCidade(''); setTipoImovel(''); setFinalidade('')
+  async function salvarPermissoes(usuario: Usuario) {
+    setSalvando(true)
+    try {
+      const res = await fetch(`/api/usuarios/${encodeURIComponent(usuario.email)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ permissoes: usuario.permissoes, perfil: usuario.perfil }),
+      })
+      if (res.ok) {
+        setUsuarios((prev) => prev.map((u) => u.email === usuario.email ? usuario : u))
+        alert('Permissões salvas com sucesso.')
+      }
+    } finally {
+      setSalvando(false)
+    }
   }
 
-  // Se perfil ainda não carregou, mostra tudo (evita piscar e sumir botões)
-  const perfilCarregado = !!perfil
-  const podeEditar = !perfilCarregado || perfil === 'admin' || perfil === 'editor'
-  const podeExcluirDireto = !perfilCarregado || perfil === 'admin'
+  async function redefinirSenha() {
+    if (!usuarioSelecionado) return
+    if (!novaSenhaEdicao || novaSenhaEdicao.length < 6) {
+      alert('A senha deve ter pelo menos 6 caracteres.')
+      return
+    }
+    if (!confirm(`Redefinir a senha de ${usuarioSelecionado.nome}?`)) return
+    setRedefinindo(true)
+    try {
+      const res = await fetch(`/api/usuarios/${encodeURIComponent(usuarioSelecionado.email)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ senha: novaSenhaEdicao }),
+      })
+      if (res.ok) {
+        setNovaSenhaEdicao('')
+        alert('Senha redefinida com sucesso.')
+      } else {
+        alert('Erro ao redefinir a senha.')
+      }
+    } finally {
+      setRedefinindo(false)
+    }
+  }
+
+  async function removerUsuario(email: string) {
+    if (!confirm('Tem certeza que deseja remover este usuário?')) return
+    await fetch(`/api/usuarios/${encodeURIComponent(email)}`, { method: 'DELETE' })
+    setUsuarios((prev) => prev.filter((u) => u.email !== email))
+    if (usuarioSelecionado?.email === email) setUsuarioSelecionado(null)
+  }
+
+  if (status === 'loading' || carregando) {
+    return (
+      <AppShell>
+        <div className="flex items-center justify-center py-24 text-slate-400 text-sm">
+          Carregando...
+        </div>
+      </AppShell>
+    )
+  }
 
   return (
     <AppShell>
       <section className="mx-auto max-w-7xl px-6 pb-16 pt-10 lg:px-10 lg:pt-14">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between mb-8">
           <div>
-            <div className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-400">central operacional</div>
-            <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-950 md:text-5xl">Meus laudos</h1>
-            <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-600">Gerencie, edite e acompanhe todos os laudos em tempo real.</p>
+            <div className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-400">
+              administração
+            </div>
+            <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-950">
+              Gerenciamento de usuários
+            </h1>
+            <p className="mt-3 text-slate-600">
+              Cadastre usuários e defina o que cada um pode fazer no sistema.
+            </p>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <label className="flex min-w-[280px] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-              <span className="h-2 w-2 rounded-full bg-slate-300" />
-              <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por código, endereço ou proprietário" className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400" />
-            </label>
-            <button type="button" onClick={carregarLaudos} className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm">↻ Atualizar</button>
-            {podeEditar && (
-              <button type="button" onClick={async () => { await limparLaudoAtual(); window.location.href = '/novo-laudo?modo=novo' }} className="inline-flex items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#15803d,#22c55e)] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20">
-                + Novo laudo
-              </button>
-            )}
-          </div>
+          <button
+            onClick={() => setMostrarForm(true)}
+            className="inline-flex items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#15803d,#22c55e)] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20"
+          >
+            + Adicionar usuário
+          </button>
         </div>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <CardResumo titulo="Total de laudos" valor={resumo.total} classe="bg-blue-50 text-blue-700" />
-          <CardResumo titulo="Em andamento" valor={resumo.emAndamento} classe="bg-orange-50 text-orange-700" />
-          <CardResumo titulo="Finalizados" valor={resumo.finalizados} classe="bg-emerald-50 text-emerald-700" />
-          <CardResumo titulo="Rascunhos" valor={resumo.rascunhos} classe="bg-slate-100 text-slate-700" />
-        </div>
-
-        <div className="mt-8 rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm lg:p-5">
-          <div className="grid gap-3 lg:grid-cols-[repeat(4,minmax(0,1fr))_220px]">
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"><option value="">Status</option><option value="rascunho">Rascunho</option><option value="em_preenchimento">Em preenchimento</option><option value="em_revisao">Em revisão</option><option value="finalizado">Finalizado</option></select>
-            <select value={cidade} onChange={(e) => setCidade(e.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"><option value="">Cidade</option>{cidades.map((c) => <option key={c} value={c}>{c}</option>)}</select>
-            <select value={tipoImovel} onChange={(e) => setTipoImovel(e.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"><option value="">Tipo de imóvel</option>{tipos.map((t) => <option key={t} value={t}>{t}</option>)}</select>
-            <select value={finalidade} onChange={(e) => setFinalidade(e.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"><option value="">Finalidade</option>{finalidades.map((f) => <option key={f} value={f}>{f}</option>)}</select>
-            <button type="button" onClick={limparFiltros} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">Limpar filtros</button>
+        {mostrarForm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-8 shadow-xl">
+              <h2 className="text-xl font-semibold text-slate-950 mb-6">Novo usuário</h2>
+              {erro && <div className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 border border-rose-200">{erro}</div>}
+              <div className="space-y-4">
+                <input value={novoNome} onChange={(e) => setNovoNome(e.target.value)} placeholder="Nome completo" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white" />
+                <input type="email" value={novoEmail} onChange={(e) => setNovoEmail(e.target.value)} placeholder="E-mail" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white" />
+                <input type="password" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} placeholder="Senha inicial" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white" />
+                <select value={novoPerfil} onChange={(e) => setNovoPerfil(e.target.value as Perfil)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none">
+                  <option value="editor">Editor</option>
+                  <option value="visualizador">Visualizador</option>
+                  <option value="agendador">Agendador</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+              <div className="mt-6 flex gap-3">
+                <button onClick={() => { setMostrarForm(false); setErro('') }} className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700">Cancelar</button>
+                <button onClick={criarUsuario} disabled={salvando} className="flex-1 rounded-2xl bg-blue-600 py-3 text-sm font-semibold text-white disabled:opacity-60">
+                  {salvando ? 'Criando...' : 'Criar usuário'}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="mt-8 overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
+        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+          <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
             <table className="min-w-full text-left text-sm">
               <thead className="bg-slate-50 text-slate-500">
                 <tr>
-                  <th className="px-6 py-4 font-semibold">Código</th>
-                  <th className="px-6 py-4 font-semibold">Endereço</th>
-                  <th className="px-6 py-4 font-semibold">Cidade</th>
-                  <th className="px-6 py-4 font-semibold">Tipo</th>
-                  <th className="px-6 py-4 font-semibold">Solicitante</th>
-                  <th className="px-6 py-4 font-semibold">Data</th>
+                  <th className="px-6 py-4 font-semibold">Nome</th>
+                  <th className="px-6 py-4 font-semibold">E-mail</th>
+                  <th className="px-6 py-4 font-semibold">Perfil</th>
                   <th className="px-6 py-4 font-semibold">Status</th>
-                  <th className="px-6 py-4 font-semibold">Valor</th>
                   <th className="px-6 py-4 font-semibold">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
-                {carregando && <tr><td colSpan={9} className="px-6 py-12 text-center text-slate-500">Carregando laudos...</td></tr>}
-                {!carregando && filtrados.length === 0 && <tr><td colSpan={9} className="px-6 py-12 text-center text-slate-500">Nenhum laudo encontrado com os filtros atuais.</td></tr>}
-                {filtrados.map((laudo) => (
-                  <tr key={laudo.id} className="hover:bg-slate-50/70">
-                    <td className="px-6 py-4 font-semibold text-slate-950">{laudo.codigo}</td>
-                    <td className="px-6 py-4">{laudo.endereco}</td>
-                    <td className="px-6 py-4">{laudo.cidade}</td>
-                    <td className="px-6 py-4">{laudo.tipoImovel}</td>
-                    <td className="px-6 py-4">{(laudo as any).solicitante || '—'}</td>
-                    <td className="px-6 py-4">{formatarData(laudo.data)}</td>
-                    <td className="px-6 py-4"><span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${statusConfig[laudo.status]}`}>{formatarStatus(laudo.status)}</span></td>
-                    <td className="px-6 py-4 font-medium">{formatarMoeda(laudo.valor)}</td>
+              <tbody className="divide-y divide-slate-100">
+                {usuarios.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                      Nenhum usuário cadastrado ainda.
+                    </td>
+                  </tr>
+                )}
+                {usuarios.map((u) => (
+                  <tr key={u.email} className={`hover:bg-slate-50/70 cursor-pointer ${usuarioSelecionado?.email === u.email ? 'bg-blue-50/50' : ''}`} onClick={() => setUsuarioSelecionado(u)}>
+                    <td className="px-6 py-4 font-medium text-slate-950">{u.nome}</td>
+                    <td className="px-6 py-4 text-slate-600">{u.email}</td>
                     <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-2">
-                        {podeEditar && <button type="button" onClick={() => prepararLaudo(laudo.id, '/novo-laudo')} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700">Editar</button>}
-                        <button type="button" onClick={() => prepararLaudo(laudo.id, '/visualizar-laudo')} className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">Visualizar</button>
-                        {podeExcluirDireto && (
-                          <button type="button" onClick={() => handleExcluir(laudo.id)} disabled={excluindoId === laudo.id} className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 disabled:opacity-60">
-                            {excluindoId === laudo.id ? 'Excluindo...' : 'Excluir'}
-                          </button>
-                        )}
-                        {perfil === 'editor' && (
-                          <button type="button" onClick={() => handleSolicitarExclusao(laudo)} disabled={solicitandoId === laudo.id} className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 disabled:opacity-60">
-                            {solicitandoId === laudo.id ? 'Enviando...' : 'Solicitar exclusão'}
-                          </button>
-                        )}
+                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${perfilClasse[u.perfil] || 'bg-slate-100 text-slate-600 ring-slate-200'}`}>
+                        {perfilLabel[u.perfil] || u.perfil}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${u.ativo ? 'text-emerald-700' : 'text-slate-400'}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${u.ativo ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                        {u.ativo ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => toggleAtivo(u)} className={`rounded-xl border px-3 py-1.5 text-xs font-semibold ${u.ativo ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                          {u.ativo ? 'Desativar' : 'Ativar'}
+                        </button>
+                        <button onClick={() => removerUsuario(u.email)} className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700">
+                          Remover
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -221,9 +284,74 @@ export default function MeusLaudosPage() {
               </tbody>
             </table>
           </div>
-          <div className="border-t border-slate-100 px-6 py-4 text-sm text-slate-500">
-            Mostrando {filtrados.length} de {laudos.length} laudos encontrados.
-          </div>
+
+          {usuarioSelecionado ? (
+            <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm h-fit">
+              <h2 className="text-base font-semibold text-slate-950 mb-1">Permissões</h2>
+              <p className="text-sm text-slate-500 mb-5">{usuarioSelecionado.nome}</p>
+
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-slate-500 mb-2">Perfil</label>
+                <select
+                  value={usuarioSelecionado.perfil}
+                  onChange={(e) => setUsuarioSelecionado({ ...usuarioSelecionado, perfil: e.target.value as Perfil })}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none"
+                >
+                  <option value="editor">Editor</option>
+                  <option value="visualizador">Visualizador</option>
+                  <option value="agendador">Agendador</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+
+              <div className="space-y-3">
+                {Object.entries(usuarioSelecionado.permissoes || {}).map(([chave, valor]) => (
+                  <div key={chave} className="flex items-center justify-between gap-3 py-2 border-t border-slate-100">
+                    <span className="text-sm text-slate-700">{permissaoLabel[chave] || chave}</span>
+                    <button
+                      onClick={() => setUsuarioSelecionado({
+                        ...usuarioSelecionado,
+                        permissoes: { ...usuarioSelecionado.permissoes, [chave]: !valor }
+                      })}
+                      className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${valor ? 'bg-blue-600' : 'bg-slate-200'}`}
+                    >
+                      <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${valor ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={() => salvarPermissoes(usuarioSelecionado)}
+                disabled={salvando}
+                className="mt-6 w-full rounded-2xl bg-blue-600 py-3 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {salvando ? 'Salvando...' : 'Salvar permissões'}
+              </button>
+
+              <div className="mt-6 pt-5 border-t border-slate-100">
+                <p className="text-xs font-semibold text-slate-500 mb-3">Redefinir senha</p>
+                <input
+                  type="password"
+                  value={novaSenhaEdicao}
+                  onChange={(e) => setNovaSenhaEdicao(e.target.value)}
+                  placeholder="Nova senha (mín. 6 caracteres)"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:bg-white mb-3"
+                />
+                <button
+                  onClick={redefinirSenha}
+                  disabled={redefinindo || !novaSenhaEdicao}
+                  className="w-full rounded-2xl border border-amber-200 bg-amber-50 py-2.5 text-sm font-semibold text-amber-700 disabled:opacity-50"
+                >
+                  {redefinindo ? 'Redefinindo...' : 'Redefinir senha'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-6 flex items-center justify-center text-sm text-slate-400">
+              Clique em um usuário para editar as permissões
+            </div>
+          )}
         </div>
       </section>
     </AppShell>
