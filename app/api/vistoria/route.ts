@@ -16,8 +16,12 @@ export async function GET(request: NextRequest) {
     const token = request.nextUrl.searchParams.get('token')
     if (!token) return NextResponse.json({ erro: 'Token não informado.' }, { status: 400 })
 
-    const laudoId = await redis.get<string>(`vistoria_token:${token}`)
-    if (!laudoId) return NextResponse.json({ erro: 'Link inválido ou expirado.' }, { status: 404 })
+    const laudoIdRaw = await redis.get(`vistoria_token:${token}`)
+    if (!laudoIdRaw) return NextResponse.json({ erro: 'Link inválido ou expirado.' }, { status: 404 })
+    // Upstash às vezes retorna { value: "xxx" } — normalizamos para string
+    const laudoId = typeof laudoIdRaw === 'object' && laudoIdRaw !== null
+      ? String((laudoIdRaw as any).value ?? JSON.stringify(laudoIdRaw))
+      : String(laudoIdRaw)
 
     const laudo = await redis.get<any>(`laudo:${laudoId}`)
     if (!laudo) return NextResponse.json({ erro: 'Laudo não encontrado.' }, { status: 404 })
@@ -77,7 +81,10 @@ export async function PUT(request: NextRequest) {
 
     let id = laudoId
     if (!id && token) {
-      id = await redis.get<string>(`vistoria_token:${token}`)
+      const raw = await redis.get(`vistoria_token:${token}`)
+      id = raw
+        ? (typeof raw === 'object' && raw !== null ? String((raw as any).value ?? raw) : String(raw))
+        : null
     }
     if (!id) return NextResponse.json({ erro: 'laudoId ou token obrigatório.' }, { status: 400 })
 
