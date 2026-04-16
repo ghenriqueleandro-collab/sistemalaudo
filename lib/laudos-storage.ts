@@ -26,6 +26,15 @@ export type LaudoResumo = {
   valor: number
   proprietario?: string
   solicitante?: string
+  // Campos do módulo de agendamento
+  responsavelNome?: string
+  responsavelEmail?: string
+  criadoPorNome?: string
+  statusVistoria?: string
+  tokenVistoria?: string
+  dataAgendamento?: string
+  horarioAgendamento?: string
+  nomeVistoriador?: string
 }
 
 export type FiltrosLaudo = {

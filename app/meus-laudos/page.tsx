@@ -26,6 +26,14 @@ const statusConfig: Record<StatusLaudo, string> = {
   finalizado: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
 }
 
+const vistoriaConfig: Record<string, { label: string; classe: string }> = {
+  aguardando_agendamento: { label: 'Ag. agendamento', classe: 'bg-slate-100 text-slate-500' },
+  agendada:               { label: 'Agendada',         classe: 'bg-amber-50 text-amber-700' },
+  realizada:              { label: 'Realizada',         classe: 'bg-purple-50 text-purple-700' },
+  fotos_disponiveis:      { label: '📷 Fotos prontas', classe: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' },
+  finalizado:             { label: 'Finalizado',        classe: 'bg-emerald-50 text-emerald-700' },
+}
+
 function CardResumo({ titulo, valor, classe }: { titulo: string; valor: number; classe: string }) {
   return (
     <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_-42px_rgba(15,23,42,0.5)]">
@@ -130,6 +138,7 @@ export default function MeusLaudosPage() {
   const perfilCarregado = !!perfil
   const podeEditar = !perfilCarregado || perfil === 'admin' || perfil === 'editor'
   const podeExcluirDireto = !perfilCarregado || perfil === 'admin'
+  const podeAgendar = !perfilCarregado || perfil === 'admin' || perfil === 'agendador'
 
   return (
     <AppShell>
@@ -181,6 +190,8 @@ export default function MeusLaudosPage() {
                   <th className="px-6 py-4 font-semibold">Cidade</th>
                   <th className="px-6 py-4 font-semibold">Tipo</th>
                   <th className="px-6 py-4 font-semibold">Solicitante</th>
+                  <th className="px-6 py-4 font-semibold">Responsável</th>
+                  <th className="px-6 py-4 font-semibold">Vistoria</th>
                   <th className="px-6 py-4 font-semibold">Data</th>
                   <th className="px-6 py-4 font-semibold">Status</th>
                   <th className="px-6 py-4 font-semibold">Valor</th>
@@ -188,8 +199,8 @@ export default function MeusLaudosPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {carregando && <tr><td colSpan={9} className="px-6 py-12 text-center text-slate-500">Carregando laudos...</td></tr>}
-                {!carregando && filtrados.length === 0 && <tr><td colSpan={9} className="px-6 py-12 text-center text-slate-500">Nenhum laudo encontrado com os filtros atuais.</td></tr>}
+                {carregando && <tr><td colSpan={11} className="px-6 py-12 text-center text-slate-500">Carregando laudos...</td></tr>}
+                {!carregando && filtrados.length === 0 && <tr><td colSpan={11} className="px-6 py-12 text-center text-slate-500">Nenhum laudo encontrado com os filtros atuais.</td></tr>}
                 {filtrados.map((laudo) => (
                   <tr key={laudo.id} className="hover:bg-slate-50/70">
                     <td className="px-6 py-4 font-semibold text-slate-950">{laudo.codigo}</td>
@@ -197,6 +208,20 @@ export default function MeusLaudosPage() {
                     <td className="px-6 py-4">{laudo.cidade}</td>
                     <td className="px-6 py-4">{laudo.tipoImovel}</td>
                     <td className="px-6 py-4">{(laudo as any).solicitante || '—'}</td>
+                    <td className="px-6 py-4">
+                      {(laudo as any).responsavelNome
+                        ? <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700"><span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />{(laudo as any).responsavelNome}</span>
+                        : <span className="text-slate-400 text-xs">Não atribuído</span>}
+                    </td>
+                    <td className="px-6 py-4">
+                      {(() => {
+                        const sv = (laudo as any).statusVistoria || 'aguardando_agendamento'
+                        const cfg = vistoriaConfig[sv]
+                        return cfg
+                          ? <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${cfg.classe}`}>{cfg.label}</span>
+                          : null
+                      })()}
+                    </td>
                     <td className="px-6 py-4">{formatarData(laudo.data)}</td>
                     <td className="px-6 py-4"><span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${statusConfig[laudo.status]}`}>{formatarStatus(laudo.status)}</span></td>
                     <td className="px-6 py-4 font-medium">{formatarMoeda(laudo.valor)}</td>
