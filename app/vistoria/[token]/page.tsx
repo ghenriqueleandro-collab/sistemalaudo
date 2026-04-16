@@ -5,7 +5,7 @@
  * Página pública — sem autenticação — para o vistoriador enviar fotos pelo celular.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { use, useEffect, useRef, useState } from 'react'
 
 type StatusVistoria =
   | 'aguardando_agendamento'
@@ -31,8 +31,9 @@ type FotoUpload = {
   erro?: string
 }
 
-export default function VistoriaPage({ params }: { params: { token: string } }) {
-  const { token } = params
+export default function VistoriaPage({ params }: { params: Promise<{ token: string }> }) {
+  const resolvedParams = use(params)
+  const token = resolvedParams.token
 
   const [laudo, setLaudo] = useState<DadosLaudo | null>(null)
   const [carregando, setCarregando] = useState(true)
