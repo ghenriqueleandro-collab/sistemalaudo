@@ -305,7 +305,15 @@ export default function UsuariosPage() {
               </div>
 
               <div className="space-y-3">
-                {Object.entries(usuarioSelecionado.permissoes || {}).map(([chave, valor]) => (
+                {Object.entries({
+                  criarLaudos: false,
+                  editarLaudos: false,
+                  excluirLaudos: false,
+                  visualizarTodos: false,
+                  gerarPdf: false,
+                  realizarAgendamentos: false,
+                  ...usuarioSelecionado.permissoes,
+                }).map(([chave, valor]) => (
                   <div key={chave} className="flex items-center justify-between gap-3 py-2 border-t border-slate-100">
                     <span className="text-sm text-slate-700">{permissaoLabel[chave] || chave}</span>
                     <button
