@@ -17,14 +17,21 @@ export async function GET(request: NextRequest) {
     if (!token) return NextResponse.json({ erro: 'Token não informado.' }, { status: 400 })
 
     const laudoIdRaw = await redis.get(`vistoria_token:${token}`)
-    if (!laudoIdRaw) return NextResponse.json({ erro: 'Link inválido ou expirado.' }, { status: 404 })
-    // Upstash às vezes retorna { value: "xxx" } — normalizamos para string
-    const laudoId = typeof laudoIdRaw === 'object' && laudoIdRaw !== null
+    const debug = { token, laudoIdRaw, tipo: typeof laudoIdRaw, chave: `vistoria_token:${token}` }
+    console.log('[DEBUG GET /api/vistoria]', JSON.stringify(debug))
+
+    if (laudoIdRaw === null || laudoIdRaw === undefined) {
+      return NextResponse.json({ erro: 'Link inválido ou expirado.', debug }, { status: 404 })
+    }
+
+    const laudoId = typeof laudoIdRaw === 'object'
       ? String((laudoIdRaw as any).value ?? JSON.stringify(laudoIdRaw))
       : String(laudoIdRaw)
 
     const laudo = await redis.get<any>(`laudo:${laudoId}`)
-    if (!laudo) return NextResponse.json({ erro: 'Laudo não encontrado.' }, { status: 404 })
+    if (!laudo) {
+      return NextResponse.json({ erro: 'Laudo não encontrado.', debug: { ...debug, laudoId } }, { status: 404 })
+    }
 
     return NextResponse.json({
       laudoId,
@@ -33,9 +40,9 @@ export async function GET(request: NextRequest) {
       tipo: laudo.tipo || '',
       statusVistoria: laudo.statusVistoria || 'aguardando_agendamento',
     })
-  } catch (erro) {
+  } catch (erro: any) {
     console.error('[GET /api/vistoria]', erro)
-    return NextResponse.json({ erro: 'Erro ao buscar vistoria.' }, { status: 500 })
+    return NextResponse.json({ erro: 'Erro ao buscar vistoria.', detalhe: erro?.message }, { status: 500 })
   }
 }
 
@@ -81,10 +88,7 @@ export async function PUT(request: NextRequest) {
 
     let id = laudoId
     if (!id && token) {
-      const raw = await redis.get(`vistoria_token:${token}`)
-      id = raw
-        ? (typeof raw === 'object' && raw !== null ? String((raw as any).value ?? raw) : String(raw))
-        : null
+      id = await redis.get<string>(`vistoria_token:${token}`)
     }
     if (!id) return NextResponse.json({ erro: 'laudoId ou token obrigatório.' }, { status: 400 })
 
