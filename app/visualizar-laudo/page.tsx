@@ -1021,7 +1021,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                   <h2 className="font-bold text-lg titulo-laudo">4. OBSERVAÇÕES PRELIMINARES</h2>
                   <div className="space-y-4">
                     <p>Este laudo fundamenta-se no que estabelecem as normas técnicas da ABNT, Avaliação de Bens, registradas como NBR 14653- Parte 1 (Procedimentos Gerais) e Parte 2 (Imóveis Urbanos), e baseia-se:</p>
-                    <ul className="list-[lower-alpha] pl-6 space-y-1">
+                    <ul className="list-disc pl-6 space-y-1">
                       <li>Na documentação fornecida;</li>
                       <li>Em informações constatadas &quot;in loco&quot; quando da vistoria ao imóvel.</li>
                       <li>Em informações obtidas junto a agentes do mercado imobiliário local (vendedores, compradores, intermediários e etc).</li>
