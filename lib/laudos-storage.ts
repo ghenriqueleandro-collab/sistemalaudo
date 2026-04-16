@@ -27,8 +27,8 @@ export type LaudoResumo = {
   proprietario?: string
   solicitante?: string
   // Campos do módulo de agendamento
-  responsavelNome?: string
-  responsavelEmail?: string
+  editorResponsavelNome?: string
+  editorResponsavelEmail?: string
   criadoPorNome?: string
   statusVistoria?: string
   tokenVistoria?: string
@@ -131,8 +131,8 @@ function gerarResumoLaudo(valor: any): LaudoResumo | null {
     valor: valorCalculado,
     proprietario: valor.proprietario,
     solicitante: valor.solicitante,
-    responsavelNome: valor.responsavelNome,
-    responsavelEmail: valor.responsavelEmail,
+    editorResponsavelNome: valor.editorResponsavelNome,
+    editorResponsavelEmail: valor.editorResponsavelEmail,
     statusVistoria: valor.statusVistoria,
     tokenVistoria: valor.tokenVistoria,
     dataAgendamento: valor.dataAgendamento,

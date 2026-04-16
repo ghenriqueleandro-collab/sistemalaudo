@@ -194,7 +194,7 @@ export default function MeusLaudosPage() {
           {filtrados.map((laudo) => {
             const sv = (laudo as any).statusVistoria || 'aguardando_agendamento'
             const vcfg = vistoriaConfig[sv]
-            const responsavelNome = (laudo as any).responsavelNome
+            const responsavelNome = (laudo as any).editorResponsavelNome
             return (
               <div key={laudo.id} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-300 transition-colors">
                 {/* Linha 1 — endereço + badges */}

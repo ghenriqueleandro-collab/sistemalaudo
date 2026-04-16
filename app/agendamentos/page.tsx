@@ -34,8 +34,8 @@ type LaudoAgendamento = {
   dataAgendamento?: string
   horarioAgendamento?: string
   nomeVistoriador?: string
-  responsavelNome?: string
-  responsavelEmail?: string
+  editorResponsavelNome?: string
+  editorResponsavelEmail?: string
   criadoPorNome?: string
   historicoEventos?: EventoHistorico[]
   criadoEm: string
@@ -93,7 +93,7 @@ export default function AgendamentosPage() {
   const [dataAgendamento, setDataAgendamento] = useState('')
   const [horarioAgendamento, setHorarioAgendamento] = useState('')
   const [nomeVistoriador, setNomeVistoriador] = useState('')
-  const [responsavelEmail, setResponsavelEmail] = useState('')
+  const [editorResponsavelEmail, setEditorResponsavelEmail] = useState('')
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/')
@@ -129,7 +129,7 @@ export default function AgendamentosPage() {
     setDataAgendamento(laudo.dataAgendamento || '')
     setHorarioAgendamento(laudo.horarioAgendamento || '')
     setNomeVistoriador(laudo.nomeVistoriador || '')
-    setResponsavelEmail(laudo.responsavelEmail || '')
+    setEditorResponsavelEmail(laudo.editorResponsavelEmail || '')
     setLinkCopiado(false)
   }
 
@@ -167,7 +167,7 @@ export default function AgendamentosPage() {
     }
     setSalvando(true)
     try {
-      const usuarioResp = usuarios.find((u) => u.email === responsavelEmail)
+      const usuarioResp = usuarios.find((u) => u.email === editorResponsavelEmail)
       const nomeResponsavel = session?.user?.name || 'Agendador'
 
       await fetch('/api/vistoria', {
@@ -179,8 +179,8 @@ export default function AgendamentosPage() {
           dataAgendamento,
           horarioAgendamento,
           nomeVistoriador,
-          responsavelEmail,
-          responsavelNome: usuarioResp?.nome || '',
+          editorResponsavelEmail,
+          editorResponsavelNome: usuarioResp?.nome || '',
           eventoHistorico: {
             usuario: nomeResponsavel,
             acao: `Vistoria agendada para ${dataAgendamento} às ${horarioAgendamento}${nomeVistoriador ? ` — Vistoriador: ${nomeVistoriador}` : ''}`,
@@ -189,12 +189,12 @@ export default function AgendamentosPage() {
       })
 
       // Notifica o responsável pelo laudo
-      if (responsavelEmail) {
+      if (editorResponsavelEmail) {
         await fetch('/api/notificacoes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: responsavelEmail,
+            email: editorResponsavelEmail,
             tipo: 'vistoria_agendada',
             titulo: 'Vistoria agendada',
             mensagem: `A vistoria do imóvel em ${laudoSelecionado.endereco} foi agendada para ${dataAgendamento} às ${horarioAgendamento}.`,
@@ -303,7 +303,7 @@ export default function AgendamentosPage() {
                         <p className="font-medium text-slate-900 truncate">{laudo.endereco || 'Endereço não informado'}</p>
                         <p className="text-xs text-slate-500 mt-0.5">
                           {laudo.proprietario || '—'}
-                          {laudo.responsavelNome && ` · Resp: ${laudo.responsavelNome}`}
+                          {laudo.editorResponsavelNome && ` · Resp: ${laudo.editorResponsavelNome}`}
                         </p>
                         {laudo.dataAgendamento && (
                           <p className="text-xs text-amber-600 mt-0.5">
@@ -388,7 +388,7 @@ export default function AgendamentosPage() {
 
                 <div>
                   <label className="block text-xs text-slate-500 mb-1">Responsável pelo laudo</label>
-                  <select value={responsavelEmail} onChange={(e) => setResponsavelEmail(e.target.value)}
+                  <select value={editorResponsavelEmail} onChange={(e) => setEditorResponsavelEmail(e.target.value)}
                     className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-400 bg-white">
                     <option value="">Selecione o editor responsável</option>
                     {usuarios.map((u) => (
