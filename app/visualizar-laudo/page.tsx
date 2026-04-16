@@ -146,6 +146,13 @@ const RodapeLaudo = ({
   )
 }
 
+function extrairCidadeDoEndereco(endereco?: string, fallback?: string): string {
+  if (!endereco) return fallback || ''
+  const partes = endereco.split(' – ').map(p => p.trim()).filter(Boolean)
+  const filtradas = partes.filter(p => !p.startsWith('CEP') && !/^[A-Z]{2}$/.test(p))
+  return filtradas.length >= 2 ? filtradas[filtradas.length - 2] : filtradas[filtradas.length - 1] || fallback || ''
+}
+
 function chunkArray<T>(items: T[], size: number) {
   if (!items.length) return [] as T[][]
   const groups: T[][] = []
@@ -757,7 +764,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 </div>
 
                 <div className="text-[8px] font-bold tracking-[0.18em] text-[#8FA4C7] mb-1.5">LOCALIZAÇÃO DO IMÓVEL</div>
-                <div className="text-[13px] font-bold text-[#17325C]">{dados.cidadePrincipal}</div>
+                <div className="text-[13px] font-bold text-[#17325C]">{extrairCidadeDoEndereco(dados.endereco, dados.cidadePrincipal)}</div>
 
                 <div className="w-8 h-[3px] bg-[#2347C6] mt-6 mb-7 rounded-full" />
 
@@ -848,7 +855,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 <div>
                   <div style={{ fontSize: '7px', fontWeight: 700, color: '#8FA4C7', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '2px' }}>NBR 14653</div>
                   <div style={{ fontSize: '17px', fontWeight: 700, color: '#ffffff', lineHeight: 1.1 }}>Capa Resumo</div>
-                  <div style={{ fontSize: '8px', color: '#b8cce4', marginTop: '2px' }}>Laudo de Avaliação — {dados.cidadePrincipal || 'Joinville'}</div>
+                  <div style={{ fontSize: '8px', color: '#b8cce4', marginTop: '2px' }}>Laudo de Avaliação — {extrairCidadeDoEndereco(dados.endereco, dados.cidadePrincipal) || 'Joinville'}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ display: 'inline-block', fontSize: '7px', fontWeight: 700, letterSpacing: '0.14em', padding: '3px 8px', borderRadius: '3px', marginBottom: '4px', background: '#1a3a6e', color: '#b8cce4' }}>LAUDO DE AVALIAÇÃO</div>
