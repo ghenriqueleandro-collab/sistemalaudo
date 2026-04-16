@@ -338,7 +338,7 @@ function obterTextoGarantia(classificacao?: string, observacoes?: string) {
   if (classificacao === 'boa') {
     return {
       titulo: 'O imóvel avaliado apresenta-se como boa garantia.',
-      texto: 'Após análise dos elementos apresentados no presente laudo, entendemos que o imóvel em questão reúne condições satisfatórias para ser aceito como garantia.',
+      texto: 'Após análise das características apresentadas no presente laudo, entendemos que o imóvel em questão reúne condições satisfatórias para ser aceito como garantia.',
     }
   }
   if (classificacao === 'observacoes') {
