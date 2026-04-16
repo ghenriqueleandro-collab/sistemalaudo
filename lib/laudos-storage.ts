@@ -131,6 +131,13 @@ function gerarResumoLaudo(valor: any): LaudoResumo | null {
     valor: valorCalculado,
     proprietario: valor.proprietario,
     solicitante: valor.solicitante,
+    responsavelNome: valor.responsavelNome,
+    responsavelEmail: valor.responsavelEmail,
+    statusVistoria: valor.statusVistoria,
+    tokenVistoria: valor.tokenVistoria,
+    dataAgendamento: valor.dataAgendamento,
+    horarioAgendamento: valor.horarioAgendamento,
+    nomeVistoriador: valor.nomeVistoriador,
   }
 }
 
