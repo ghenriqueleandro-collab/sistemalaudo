@@ -264,6 +264,10 @@ type DadosLaudo = {
   distancia2: string
   referencia3: string
   distancia3: string
+  referencia4?: string
+  distancia4?: string
+  referencia5?: string
+  distancia5?: string
   coordenadasImovel?: string
   terrenoEncravado?: boolean
   confrontacaoCursoAgua?: boolean
@@ -1028,6 +1032,8 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     {dados.referencia1 && dados.distancia1 && <li>Distância até {dados.referencia1}: {dados.distancia1}.</li>}
                     {dados.referencia2 && dados.distancia2 && <li>Distância até {dados.referencia2}: {dados.distancia2}.</li>}
                     {dados.referencia3 && dados.distancia3 && <li>Distância até {dados.referencia3}: {dados.distancia3}.</li>}
+                    {dados.referencia4 && dados.distancia4 && <li>Distância até {dados.referencia4}: {dados.distancia4}.</li>}
+                    {dados.referencia5 && dados.distancia5 && <li>Distância até {dados.referencia5}: {dados.distancia5}.</li>}
                     {dados.cidadePrincipal && dados.distanciaCidadePrincipal && <li>Distância até a cidade de {dados.cidadePrincipal}: {dados.distanciaCidadePrincipal}.</li>}
                   </ul>
                   {dados.coordenadasImovel && <p className="mt-4">Coordenadas Geográficas do imóvel avaliando: {dados.coordenadasImovel}</p>}

@@ -48,6 +48,10 @@ export type DadosLaudo = {
   distancia2: string
   referencia3: string
   distancia3: string
+  referencia4?: string
+  distancia4?: string
+  referencia5?: string
+  distancia5?: string
   coordenadasImovel?: string
   terrenoEncravado?: boolean
   confrontacaoCursoAgua?: boolean
@@ -872,6 +876,8 @@ export function LaudoPdf({
         {dados.referencia1 && dados.distancia1 && <Bullet>Distância até {dados.referencia1}: {dados.distancia1}.</Bullet>}
         {dados.referencia2 && dados.distancia2 && <Bullet>Distância até {dados.referencia2}: {dados.distancia2}.</Bullet>}
         {dados.referencia3 && dados.distancia3 && <Bullet>Distância até {dados.referencia3}: {dados.distancia3}.</Bullet>}
+        {dados.referencia4 && dados.distancia4 && <Bullet>Distância até {dados.referencia4}: {dados.distancia4}.</Bullet>}
+        {dados.referencia5 && dados.distancia5 && <Bullet>Distância até {dados.referencia5}: {dados.distancia5}.</Bullet>}
         {dados.cidadePrincipal && dados.distanciaCidadePrincipal && (
           <Bullet>Distância até a cidade de {dados.cidadePrincipal}: {dados.distanciaCidadePrincipal}.</Bullet>
         )}
