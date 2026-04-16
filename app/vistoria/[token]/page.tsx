@@ -245,6 +245,14 @@ export default function VistoriaPage({ params }: { params: Promise<{ token: stri
       </div>
 
       <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+        {/* Aviso de contato */}
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3 items-start">
+          <span className="text-amber-500 text-lg shrink-0">⚠️</span>
+          <p className="text-sm text-amber-800 leading-relaxed">
+            Qualquer problema que houver durante a vistoria, entre em contato com o responsável pelo agendamento pelo WhatsApp.
+          </p>
+        </div>
+
         {/* Dados do imóvel */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Imóvel</p>
