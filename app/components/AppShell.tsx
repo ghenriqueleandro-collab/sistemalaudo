@@ -101,8 +101,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const links = [
     { href: '/meus-laudos', label: 'Meus laudos', perfis: ['admin', 'editor', 'visualizador', 'agendador'] },
-    { href: '/novo-laudo', label: 'Novo laudo', perfis: ['admin', 'editor'] },
-    { href: '/agendamentos', label: 'Agendamentos', perfis: ['admin', 'agendador'] },
+    { href: '/agendamentos', label: 'Agendamentos', perfis: ['admin', 'agendador', 'editor'] },
     { href: '/aprovacoes', label: 'Aprovações', perfis: ['admin'] },
     { href: '/usuarios', label: 'Usuários', perfis: ['admin'] },
   ].filter((link) => {

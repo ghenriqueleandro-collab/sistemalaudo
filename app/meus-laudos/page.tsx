@@ -14,7 +14,6 @@ import {
   formatarMoeda,
   formatarStatus,
   listarLaudos,
-  limparLaudoAtual,
   type LaudoResumo,
   type StatusLaudo,
 } from '../../lib/laudos-storage'
@@ -155,11 +154,7 @@ export default function MeusLaudosPage() {
               <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por código, endereço ou proprietário" className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400" />
             </label>
             <button type="button" onClick={carregarLaudos} className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm">↻ Atualizar</button>
-            {podeEditar && (
-              <button type="button" onClick={async () => { await limparLaudoAtual(); window.location.href = '/novo-laudo?modo=novo' }} className="inline-flex items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#15803d,#22c55e)] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20">
-                + Novo laudo
-              </button>
-            )}
+
           </div>
         </div>
 

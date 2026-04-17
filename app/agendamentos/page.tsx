@@ -49,6 +49,18 @@ type Usuario = {
   ativo: boolean
 }
 
+// ─── Helpers geocodificação ───────────────────────────────────────────────────
+function haversineMetros(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371000
+  const toRad = (v: number) => (v * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1); const dLon = toRad(lon2 - lon1)
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2
+  return R * 2 * Math.asin(Math.sqrt(a))
+}
+function formatarDistancia(m: number) {
+  return m < 1000 ? `${Math.round(m)} m` : `${(m/1000).toFixed(1).replace('.',',')} km`
+}
+
 const statusLabel: Record<StatusVistoria, string> = {
   aguardando_agendamento: 'Aguardando agendamento',
   agendada: 'Vistoria agendada',
@@ -85,6 +97,29 @@ export default function AgendamentosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [carregando, setCarregando] = useState(true)
   const [laudoSelecionado, setLaudoSelecionado] = useState<LaudoAgendamento | null>(null)
+  const [mostrarModalNovoLaudo, setMostrarModalNovoLaudo] = useState(false)
+  const [criandoLaudo, setCriandoLaudo] = useState(false)
+  const [buscandoCoords, setBuscandoCoords] = useState(false)
+  const [msgCoords, setMsgCoords] = useState<{tipo:'ok'|'erro';texto:string}|null>(null)
+  const [novoLaudo, setNovoLaudo] = useState({
+    coordenadasImovel: '',
+    endereco: '',
+    proprietario: '',
+    solicitante: '',
+    tipo: '',
+    finalidade: '',
+    areaConstruidaTotal: '',
+    areaConstruidaAverbada: '',
+    areaTerrenoTotal: '',
+    areaTerrenoAverbada: '',
+    matricula: '',
+    iptu: '',
+    referencia1: '', distancia1: '',
+    referencia2: '', distancia2: '',
+    referencia3: '', distancia3: '',
+    referencia4: '', distancia4: '',
+    referencia5: '', distancia5: '',
+  })
   const [filtroStatus, setFiltroStatus] = useState<StatusVistoria | ''>('')
   const [salvando, setSalvando] = useState(false)
   const [linkCopiado, setLinkCopiado] = useState(false)
@@ -107,6 +142,106 @@ export default function AgendamentosPage() {
       carregarDados()
     }
   }, [status])
+
+  function setNovoLaudoField(name: string, value: string) {
+    setNovoLaudo((prev) => ({ ...prev, [name]: value }))
+  }
+
+  async function buscarCoordenadas() {
+    const raw = novoLaudo.coordenadasImovel.trim()
+    const match = raw.match(/(-?\d+[.,]?\d*)[,\s]+(-?\d+[.,]?\d*)/)
+    if (!match) { setMsgCoords({ tipo: 'erro', texto: 'Formato inválido. Use: -23.550520, -46.633308' }); return }
+    const lat = parseFloat(match[1].replace(',', '.'))
+    const lon = parseFloat(match[2].replace(',', '.'))
+    setBuscandoCoords(true); setMsgCoords(null)
+    const campos: Record<string, string> = {}
+    try {
+      const resRev = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=pt-BR`)
+      if (resRev.ok) {
+        const d = await resRev.json(); const a = d.address || {}
+        const rua = [a.road, a.house_number].filter(Boolean).join(', ')
+        const bairro = a.suburb || a.neighbourhood || ''
+        const cidade = a.city || a.town || a.village || ''
+        const estado = a.state || ''
+        const cep = a.postcode ? `CEP ${a.postcode}` : ''
+        const end = [rua, bairro, cidade, estado, cep].filter(Boolean).join(' – ')
+        if (end) campos['endereco'] = end
+      }
+    } catch {}
+    try {
+      const q = `[out:json][timeout:30];(nwr["name"]["amenity"~"^(hospital|bank|pharmacy|school|place_of_worship|police|college|university|fuel|courthouse|town_hall)$"](around:6000,${lat},${lon});nwr["name"]["shop"~"^(supermarket|mall)$"](around:6000,${lat},${lon});nwr["name"]["leisure"~"^(stadium)$"](around:6000,${lat},${lon}););out center 60;`
+      const mirrors = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']
+      let elements: any[] = []
+      for (const mirror of mirrors) {
+        try {
+          const res = await fetch(mirror, { method: 'POST', body: `data=${encodeURIComponent(q)}`, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: AbortSignal.timeout(20000) })
+          if (!res.ok) continue
+          const json = await res.json()
+          if (json?.elements?.length > 0) { elements = json.elements; break }
+        } catch {}
+      }
+      type P = { nome: string; dist: number }
+      const pois: P[] = elements.map((el: any) => {
+        const elLat = el.lat ?? el.center?.lat; const elLon = el.lon ?? el.center?.lon
+        const nome = el.tags?.name
+        if (!elLat || !elLon || !nome) return null
+        return { nome, dist: haversineMetros(lat, lon, elLat, elLon) }
+      }).filter(Boolean).sort((a: P, b: P) => a.dist - b.dist)
+      const vistos = new Set<string>(); const unicos: P[] = []
+      for (const p of pois) { const k = p.nome.toLowerCase().trim(); if (!vistos.has(k)) { vistos.add(k); unicos.push(p) } if (unicos.length === 5) break }
+      campos['referencia1'] = ''; campos['distancia1'] = ''
+      campos['referencia2'] = ''; campos['distancia2'] = ''
+      campos['referencia3'] = ''; campos['distancia3'] = ''
+      campos['referencia4'] = ''; campos['distancia4'] = ''
+      campos['referencia5'] = ''; campos['distancia5'] = ''
+      if (unicos[0]) { campos['referencia1'] = unicos[0].nome; campos['distancia1'] = formatarDistancia(unicos[0].dist) }
+      if (unicos[1]) { campos['referencia2'] = unicos[1].nome; campos['distancia2'] = formatarDistancia(unicos[1].dist) }
+      if (unicos[2]) { campos['referencia3'] = unicos[2].nome; campos['distancia3'] = formatarDistancia(unicos[2].dist) }
+      if (unicos[3]) { campos['referencia4'] = unicos[3].nome; campos['distancia4'] = formatarDistancia(unicos[3].dist) }
+      if (unicos[4]) { campos['referencia5'] = unicos[4].nome; campos['distancia5'] = formatarDistancia(unicos[4].dist) }
+    } catch {}
+    if (Object.keys(campos).length > 0) setNovoLaudo((prev) => ({ ...prev, ...campos }))
+    setMsgCoords({ tipo: 'ok', texto: 'Endereço e referências preenchidos automaticamente.' })
+    setBuscandoCoords(false)
+  }
+
+  async function criarNovoLaudo() {
+    if (!novoLaudo.endereco && !novoLaudo.coordenadasImovel) {
+      alert('Preencha pelo menos o endereço ou as coordenadas do imóvel.')
+      return
+    }
+    setCriandoLaudo(true)
+    try {
+      const id = crypto.randomUUID()
+      const agora = new Date().toISOString()
+      const criadoPor = session?.user?.name || 'Agendador'
+      const payload = {
+        id,
+        ...novoLaudo,
+        status: 'em_preenchimento',
+        statusVistoria: 'aguardando_agendamento',
+        criadoPorNome: criadoPor,
+        criadoEm: agora,
+        atualizadoEm: agora,
+        melhoramentosPublicos: {},
+        croquis: [],
+        fotos: [],
+        historicoEventos: [{ data: agora, usuario: criadoPor, acao: 'Laudo criado pelo agendador' }],
+      }
+      const res = await fetch('/api/laudos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) { alert('Erro ao criar laudo.'); return }
+      setMostrarModalNovoLaudo(false)
+      setNovoLaudo({ coordenadasImovel:'',endereco:'',proprietario:'',solicitante:'',tipo:'',finalidade:'',areaConstruidaTotal:'',areaConstruidaAverbada:'',areaTerrenoTotal:'',areaTerrenoAverbada:'',matricula:'',iptu:'',referencia1:'',distancia1:'',referencia2:'',distancia2:'',referencia3:'',distancia3:'',referencia4:'',distancia4:'',referencia5:'',distancia5:'' })
+      setMsgCoords(null)
+      await carregarDados()
+    } finally {
+      setCriandoLaudo(false)
+    }
+  }
 
   async function carregarDados() {
     setCarregando(true)
@@ -260,10 +395,137 @@ export default function AgendamentosPage() {
 
         {/* Cabeçalho */}
         <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm mb-8">
-          <div className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-400">gestão de vistorias</div>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-950">Agendamentos</h1>
-          <p className="mt-2 text-slate-500 text-sm">Acompanhe e gerencie as vistorias de cada laudo.</p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-400">gestão de vistorias</div>
+              <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-950">Agendamentos</h1>
+              <p className="mt-2 text-slate-500 text-sm">Acompanhe e gerencie as vistorias de cada laudo.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMostrarModalNovoLaudo(true)}
+              className="shrink-0 inline-flex items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#15803d,#22c55e)] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20"
+            >
+              + Iniciar novo laudo
+            </button>
+          </div>
         </div>
+
+        {/* Modal novo laudo */}
+        {mostrarModalNovoLaudo && (
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 overflow-y-auto py-8 px-4">
+            <div className="w-full max-w-2xl rounded-[28px] border border-slate-200 bg-white p-8 shadow-xl">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-slate-950">Iniciar novo laudo</h2>
+                <button onClick={() => { setMostrarModalNovoLaudo(false); setMsgCoords(null) }} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Coordenadas */}
+                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 space-y-3">
+                  <label className="block text-sm font-semibold text-blue-900">📍 Coordenadas do imóvel</label>
+                  <div className="flex gap-2">
+                    <input
+                      value={novoLaudo.coordenadasImovel}
+                      onChange={(e) => setNovoLaudoField('coordenadasImovel', e.target.value)}
+                      placeholder="Ex: -23.550520, -46.633308"
+                      className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={buscarCoordenadas}
+                      disabled={buscandoCoords || !novoLaudo.coordenadasImovel.trim()}
+                      className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                    >
+                      {buscandoCoords ? 'Buscando…' : '🔍 Preencher'}
+                    </button>
+                  </div>
+                  {msgCoords && (
+                    <p className={`text-xs rounded px-3 py-2 ${msgCoords.tipo === 'ok' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {msgCoords.tipo === 'ok' ? '✅ ' : '⚠️ '}{msgCoords.texto}
+                    </p>
+                  )}
+                </div>
+
+                {/* Endereço */}
+                <input value={novoLaudo.endereco} onChange={(e) => setNovoLaudoField('endereco', e.target.value)}
+                  placeholder="Endereço" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+
+                {/* Proprietário e Solicitante */}
+                <div className="grid grid-cols-2 gap-3">
+                  <input value={novoLaudo.proprietario} onChange={(e) => setNovoLaudoField('proprietario', e.target.value)}
+                    placeholder="Proprietário" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+                  <input value={novoLaudo.solicitante} onChange={(e) => setNovoLaudoField('solicitante', e.target.value)}
+                    placeholder="Solicitante / Interessado" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+                </div>
+
+                {/* Tipo e Finalidade */}
+                <div className="grid grid-cols-2 gap-3">
+                  <input value={novoLaudo.tipo} onChange={(e) => setNovoLaudoField('tipo', e.target.value)}
+                    placeholder="Tipo do imóvel" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+                  <select value={novoLaudo.finalidade} onChange={(e) => setNovoLaudoField('finalidade', e.target.value)}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400 bg-white">
+                    <option value="">Selecione a finalidade</option>
+                    <option value="garantia">Garantia</option>
+                    <option value="execucao">Execução</option>
+                  </select>
+                </div>
+
+                {/* Matrícula e IPTU */}
+                <div className="grid grid-cols-2 gap-3">
+                  <input value={novoLaudo.matricula} onChange={(e) => setNovoLaudoField('matricula', e.target.value)}
+                    placeholder="Matrícula do imóvel" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+                  <input value={novoLaudo.iptu} onChange={(e) => setNovoLaudoField('iptu', e.target.value)}
+                    placeholder="IPTU" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+                </div>
+
+                {/* Áreas principais */}
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                  <p className="text-sm font-semibold text-slate-700">Áreas principais</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input value={novoLaudo.areaConstruidaTotal} onChange={(e) => setNovoLaudoField('areaConstruidaTotal', e.target.value)}
+                      placeholder="Área construída total (m²)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
+                    <input value={novoLaudo.areaConstruidaAverbada} onChange={(e) => setNovoLaudoField('areaConstruidaAverbada', e.target.value)}
+                      placeholder="Área construída averbada (m²)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
+                    <input value={novoLaudo.areaTerrenoTotal} onChange={(e) => setNovoLaudoField('areaTerrenoTotal', e.target.value)}
+                      placeholder="Área de terreno total (m²)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
+                    <input value={novoLaudo.areaTerrenoAverbada} onChange={(e) => setNovoLaudoField('areaTerrenoAverbada', e.target.value)}
+                      placeholder="Área de terreno averbada (m²)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
+                  </div>
+                </div>
+
+                {/* Referências — somente leitura após geocodificação */}
+                {(novoLaudo.referencia1 || novoLaudo.referencia2) && (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                    <p className="text-sm font-semibold text-slate-700">Pontos de referência</p>
+                    {[1,2,3,4,5].map((n) => {
+                      const ref = (novoLaudo as any)[`referencia${n}`]
+                      const dist = (novoLaudo as any)[`distancia${n}`]
+                      if (!ref) return null
+                      return (
+                        <div key={n} className="flex items-center justify-between text-sm">
+                          <span className="text-slate-700">{ref}</span>
+                          <span className="text-slate-500 text-xs">{dist}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button onClick={() => { setMostrarModalNovoLaudo(false); setMsgCoords(null) }}
+                  className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  Cancelar
+                </button>
+                <button onClick={criarNovoLaudo} disabled={criandoLaudo}
+                  className="flex-1 rounded-2xl bg-[linear-gradient(135deg,#0f3d68,#2563eb)] py-3 text-sm font-semibold text-white disabled:opacity-60">
+                  {criandoLaudo ? 'Criando laudo...' : 'Criar laudo'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Cards de resumo */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
