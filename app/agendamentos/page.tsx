@@ -186,7 +186,7 @@ export default function AgendamentosPage() {
         const nome = el.tags?.name
         if (!elLat || !elLon || !nome) return null
         return { nome, dist: haversineMetros(lat, lon, elLat, elLon) }
-      }).filter(Boolean).sort((a: P, b: P) => a.dist - b.dist)
+      }).filter((x): x is P => x !== null).sort((a, b) => a.dist - b.dist)
       const vistos = new Set<string>(); const unicos: P[] = []
       for (const p of pois) { const k = p.nome.toLowerCase().trim(); if (!vistos.has(k)) { vistos.add(k); unicos.push(p) } if (unicos.length === 5) break }
       campos['referencia1'] = ''; campos['distancia1'] = ''
