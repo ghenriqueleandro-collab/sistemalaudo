@@ -252,81 +252,91 @@ useEffect(() => {
           </div>
 
           {fotos.length > 0 && (
-  <div
-    ref={containerRef}
-    className="max-h-[500px] overflow-y-auto pr-2"
-  >
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-      {fotos.map((foto, index) => (
+            <div>
+              <p className="text-xs font-medium text-slate-500 mb-3">
+                {fotos.length} foto{fotos.length !== 1 ? 's' : ''} · arraste para reordenar
+              </p>
+              <div
+                ref={containerRef}
+                className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3"
+              >
+                {fotos.map((foto, index) => (
+                  <div
+                    key={foto.preview}
+                    draggable
+                    onDragStart={() => setDragIndex(index)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => {
+                      if (dragIndex === null || dragIndex === index) return
+                      onReordenarFotos(dragIndex, index)
+                      setDragIndex(null)
+                    }}
+                    onDragEnd={() => setDragIndex(null)}
+                    className="group rounded-2xl border border-slate-200 overflow-hidden bg-white hover:border-slate-300 transition-colors cursor-move"
+                  >
+                    {/* Thumbnail */}
+                    <div
+                      className="relative cursor-zoom-in"
+                      style={{ aspectRatio: '4/3' }}
+                      onClick={() => setFotoAmpliada({ preview: foto.preview, legenda: foto.legenda, index })}
+                    >
+                      <img
+                        src={foto.preview}
+                        alt={`Foto ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Número */}
+                      <span className="absolute top-2 left-2 bg-black/45 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      {/* Overlay ampliar */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center">
+                        <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/55 text-white text-xs font-medium px-3 py-1 rounded-full">
+                          Ampliar
+                        </span>
+                      </div>
+                    </div>
 
-                
-                <div
-   key={foto.preview}
-  draggable
-  onDragStart={() => setDragIndex(index)}
-  onDragOver={(e) => e.preventDefault()}
-  onDrop={() => {
-    if (dragIndex === null || dragIndex === index) return
-    onReordenarFotos(dragIndex, index)
-    setDragIndex(null)
-  }}
-  onDragEnd={() => setDragIndex(null)}
-  className="border rounded p-3 bg-gray-50 space-y-3 cursor-move"
->
-  <div className="flex justify-between items-center gap-3">
-    <span className="font-medium">Foto {index + 1}</span>
-
-    <div className="flex gap-2">
-      <button
-        type="button"
-        onClick={() => baixarFoto(foto.preview, foto.legenda, index)}
-        className="px-3 py-1 rounded border border-blue-200 text-blue-600 bg-white hover:bg-blue-50 text-sm"
-      >
-        ⬇
-      </button>
-      <button
-        type="button"
-        onClick={() => onRemoverFoto(index)}
-        className="px-3 py-1 rounded border border-red-300 text-red-600 bg-white hover:bg-red-50"
-      >
-        Excluir foto
-      </button>
-    </div>
-  </div>
-
-  <div
-    className="flex justify-center cursor-zoom-in relative group"
-    onClick={() => setFotoAmpliada({ preview: foto.preview, legenda: foto.legenda, index })}
-  >
-    <img
-      src={foto.preview}
-      alt={`Foto ${index + 1}`}
-      className="w-full h-48 object-cover rounded border"
-    />
-    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded flex items-center justify-center">
-      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-semibold bg-black/50 px-2 py-1 rounded">
-        Ampliar
-      </span>
-    </div>
-  </div>
-
-  <div>
-    <label className="block font-medium mb-1">
-      Legenda da foto {index + 1}
-    </label>
-    <input
-      type="text"
-      value={foto.legenda || ''}
-      onChange={(e) => handleLegenda(index, e.target.value)}
-      className="w-full border p-2 rounded bg-white"
-      placeholder="Digite a legenda da foto"
-    />
-  </div>
-</div>
-              ))}
-    </div>
-  </div>
-)}
+                    {/* Legenda + ações */}
+                    <div className="p-3 space-y-2">
+                      <input
+                        type="text"
+                        value={foto.legenda || ''}
+                        onChange={(e) => handleLegenda(index, e.target.value)}
+                        placeholder="Legenda da foto"
+                        className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 outline-none focus:border-blue-300 focus:bg-white"
+                      />
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => baixarFoto(foto.preview, foto.legenda, index)}
+                          className="flex-1 flex items-center justify-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1.5 text-[11px] font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                          </svg>
+                          Baixar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onRemoverFoto(index)}
+                          className="flex-1 flex items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1.5 text-[11px] font-medium text-rose-700 hover:bg-rose-100 transition-colors"
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-1 14H6L5 6"/>
+                          </svg>
+                          Excluir
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
