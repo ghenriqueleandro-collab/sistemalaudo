@@ -42,6 +42,14 @@ export default function EtapaAnexosAssinatura({
 }: Props) {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const [fotoAmpliada, setFotoAmpliada] = useState<{ preview: string; legenda: string; index: number } | null>(null)
+
+  function baixarFoto(preview: string, legenda: string, index: number) {
+    const a = document.createElement('a')
+    a.href = preview
+    a.download = legenda ? `${legenda.replace(/[^a-z0-9]/gi, '_')}.jpg` : `foto_${index + 1}.jpg`
+    a.click()
+  }
 
 useEffect(() => {
   function handleDragOver(e: DragEvent) {
@@ -71,6 +79,76 @@ useEffect(() => {
   
   return (
     <div className="space-y-6">
+
+      {/* Lightbox */}
+      {fotoAmpliada && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setFotoAmpliada(null)}
+        >
+          <div
+            className="relative max-w-4xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+              <span className="font-medium text-slate-800">
+                {fotoAmpliada.legenda || `Foto ${fotoAmpliada.index + 1}`}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => baixarFoto(fotoAmpliada.preview, fotoAmpliada.legenda, fotoAmpliada.index)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                >
+                  ⬇ Baixar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFotoAmpliada(null)}
+                  className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  ✕ Fechar
+                </button>
+              </div>
+            </div>
+            {/* Imagem */}
+            <div className="flex items-center justify-center bg-slate-50 p-4">
+              <img
+                src={fotoAmpliada.preview}
+                alt={fotoAmpliada.legenda || `Foto ${fotoAmpliada.index + 1}`}
+                className="max-h-[75vh] w-auto object-contain rounded"
+              />
+            </div>
+            {/* Navegação */}
+            <div className="flex justify-between items-center px-5 py-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  const prev = fotos[fotoAmpliada.index - 1]
+                  if (prev) setFotoAmpliada({ preview: prev.preview, legenda: prev.legenda, index: fotoAmpliada.index - 1 })
+                }}
+                disabled={fotoAmpliada.index === 0}
+                className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-30"
+              >
+                ← Anterior
+              </button>
+              <span className="text-xs text-slate-400">{fotoAmpliada.index + 1} de {fotos.length}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = fotos[fotoAmpliada.index + 1]
+                  if (next) setFotoAmpliada({ preview: next.preview, legenda: next.legenda, index: fotoAmpliada.index + 1 })
+                }}
+                disabled={fotoAmpliada.index === fotos.length - 1}
+                className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-30"
+              >
+                Próxima →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <h2 className="text-2xl font-bold">15. Anexos e assinatura</h2>
 
       <div className="border rounded p-4 bg-white space-y-4">
@@ -188,21 +266,38 @@ useEffect(() => {
   <div className="flex justify-between items-center gap-3">
     <span className="font-medium">Foto {index + 1}</span>
 
-    <button
-      type="button"
-      onClick={() => onRemoverFoto(index)}
-      className="px-3 py-1 rounded border border-red-300 text-red-600 bg-white hover:bg-red-50"
-    >
-      Excluir foto
-    </button>
+    <div className="flex gap-2">
+      <button
+        type="button"
+        onClick={() => baixarFoto(foto.preview, foto.legenda, index)}
+        className="px-3 py-1 rounded border border-blue-200 text-blue-600 bg-white hover:bg-blue-50 text-sm"
+      >
+        ⬇
+      </button>
+      <button
+        type="button"
+        onClick={() => onRemoverFoto(index)}
+        className="px-3 py-1 rounded border border-red-300 text-red-600 bg-white hover:bg-red-50"
+      >
+        Excluir foto
+      </button>
+    </div>
   </div>
 
-  <div className="flex justify-center">
+  <div
+    className="flex justify-center cursor-zoom-in relative group"
+    onClick={() => setFotoAmpliada({ preview: foto.preview, legenda: foto.legenda, index })}
+  >
     <img
       src={foto.preview}
       alt={`Foto ${index + 1}`}
       className="w-full h-48 object-cover rounded border"
     />
+    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded flex items-center justify-center">
+      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-semibold bg-black/50 px-2 py-1 rounded">
+        Ampliar
+      </span>
+    </div>
   </div>
 
   <div>
