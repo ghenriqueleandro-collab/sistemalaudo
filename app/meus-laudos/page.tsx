@@ -45,6 +45,7 @@ function CardResumo({ titulo, valor, classe }: { titulo: string; valor: number; 
 export default function MeusLaudosPage() {
   const { data: session } = useSession()
   const perfil = (session?.user as any)?.perfil
+  const permissoes = (session?.user as any)?.permissoes as Record<string, boolean> | undefined
   const usuarioEmail = session?.user?.email || ''
   const usuarioNome = session?.user?.name || usuarioEmail
 
@@ -133,11 +134,12 @@ export default function MeusLaudosPage() {
     setBusca(''); setStatus(''); setCidade(''); setTipoImovel(''); setFinalidade('')
   }
 
-  // Se perfil ainda não carregou, mostra tudo (evita piscar e sumir botões)
-  const perfilCarregado = !!perfil
-  const podeEditar = !perfilCarregado || perfil === 'admin' || perfil === 'editor'
-  const podeExcluirDireto = !perfilCarregado || perfil === 'admin'
-  const podeAgendar = !perfilCarregado || perfil === 'admin' || perfil === 'agendador'
+  // Flags de permissão — se perfil ainda não carregou, mostra tudo (evita piscar)
+  const perfilCarregado       = !!perfil
+  const isAdmin               = perfil === 'admin'
+  const podeEditar            = !perfilCarregado || isAdmin || !!permissoes?.editarLaudos
+  const podeExcluirDireto     = !perfilCarregado || isAdmin
+  const podeSolicitarExclusao = perfilCarregado && !isAdmin && !!permissoes?.excluirLaudos
 
   return (
     <AppShell>
@@ -154,7 +156,6 @@ export default function MeusLaudosPage() {
               <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por código, endereço ou proprietário" className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400" />
             </label>
             <button type="button" onClick={carregarLaudos} className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm">↻ Atualizar</button>
-
           </div>
         </div>
 
@@ -260,7 +261,7 @@ export default function MeusLaudosPage() {
                         {excluindoId === laudo.id ? 'Excluindo...' : 'Excluir'}
                       </button>
                     )}
-                    {perfil === 'editor' && (
+                    {podeSolicitarExclusao && (
                       <button type="button" onClick={() => handleSolicitarExclusao(laudo)} disabled={solicitandoId === laudo.id}
                         className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 disabled:opacity-60 hover:bg-amber-100">
                         {solicitandoId === laudo.id ? 'Enviando...' : 'Solicitar exclusão'}

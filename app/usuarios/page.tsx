@@ -9,36 +9,26 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import AppShell from '../components/AppShell'
 
-type Perfil = 'admin' | 'editor' | 'visualizador' | 'agendador'
+// Apenas admin é um perfil especial. Todos os demais são 'usuario'
+// com permissões individuais configuradas manualmente.
+type Perfil = 'admin' | 'usuario'
+
+type Permissoes = {
+  criarLaudos: boolean
+  editarLaudos: boolean
+  excluirLaudos: boolean
+  visualizarTodos: boolean
+  gerarPdf: boolean
+  realizarAgendamentos: boolean
+}
 
 type Usuario = {
   id: string
   nome: string
   email: string
-  perfil: Perfil
+  perfil: string // string para suportar valores legados em Redis
   ativo: boolean
-  permissoes: {
-    criarLaudos: boolean
-    editarLaudos: boolean
-    excluirLaudos: boolean
-    visualizarTodos: boolean
-    gerarPdf: boolean
-    realizarAgendamentos: boolean
-  }
-}
-
-const perfilLabel: Record<Perfil, string> = {
-  admin: 'Administrador',
-  editor: 'Editor',
-  visualizador: 'Visualizador',
-  agendador: 'Agendador',
-}
-
-const perfilClasse: Record<Perfil, string> = {
-  admin: 'bg-blue-50 text-blue-700 ring-blue-200',
-  editor: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-  visualizador: 'bg-slate-100 text-slate-600 ring-slate-200',
-  agendador: 'bg-amber-50 text-amber-700 ring-amber-200',
+  permissoes: Permissoes
 }
 
 const permissaoLabel: Record<string, string> = {
@@ -48,6 +38,25 @@ const permissaoLabel: Record<string, string> = {
   visualizarTodos: 'Visualizar todos os laudos',
   gerarPdf: 'Gerar PDF',
   realizarAgendamentos: 'Realizar agendamentos',
+}
+
+const PERMISSOES_PADRAO: Permissoes = {
+  criarLaudos: false,
+  editarLaudos: false,
+  excluirLaudos: false,
+  visualizarTodos: false,
+  gerarPdf: false,
+  realizarAgendamentos: false,
+}
+
+function badgePerfil(perfil: string) {
+  if (perfil === 'admin') return 'bg-blue-50 text-blue-700 ring-blue-200'
+  return 'bg-slate-100 text-slate-600 ring-slate-200'
+}
+
+function labelPerfil(perfil: string) {
+  if (perfil === 'admin') return 'Administrador'
+  return 'Usuário'
 }
 
 export default function UsuariosPage() {
@@ -66,9 +75,8 @@ export default function UsuariosPage() {
   const [novoNome, setNovoNome] = useState('')
   const [novoEmail, setNovoEmail] = useState('')
   const [novaSenha, setNovaSenha] = useState('')
-  const [novoPerfil, setNovoPerfil] = useState<Perfil>('editor')
+  const [novoEhAdmin, setNovoEhAdmin] = useState(false)
 
-  // Normaliza perfil para minúsculo para evitar problemas de capitalização
   const perfil = ((session?.user as any)?.perfil || '').toLowerCase()
 
   useEffect(() => {
@@ -85,7 +93,11 @@ export default function UsuariosPage() {
     try {
       const res = await fetch('/api/usuarios', { cache: 'no-store' })
       const dados = await res.json()
-      setUsuarios(dados)
+      // Garante que todos os usuários têm o campo permissoes
+      setUsuarios(dados.map((u: Usuario) => ({
+        ...u,
+        permissoes: { ...PERMISSOES_PADRAO, ...(u.permissoes || {}) },
+      })))
     } finally {
       setCarregando(false)
     }
@@ -102,13 +114,19 @@ export default function UsuariosPage() {
       const res = await fetch('/api/usuarios', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: novoNome, email: novoEmail, senha: novaSenha, perfil: novoPerfil }),
+        body: JSON.stringify({
+          nome: novoNome,
+          email: novoEmail,
+          senha: novaSenha,
+          perfil: novoEhAdmin ? 'admin' : 'usuario',
+          permissoes: PERMISSOES_PADRAO,
+        }),
       })
       const dados = await res.json()
       if (!res.ok) { setErro(dados.erro || 'Erro ao criar usuário.'); return }
-      setUsuarios((prev) => [...prev, dados])
+      setUsuarios((prev) => [...prev, { ...dados, permissoes: { ...PERMISSOES_PADRAO, ...(dados.permissoes || {}) } }])
       setMostrarForm(false)
-      setNovoNome(''); setNovoEmail(''); setNovaSenha(''); setNovoPerfil('editor')
+      setNovoNome(''); setNovoEmail(''); setNovaSenha(''); setNovoEhAdmin(false)
     } finally {
       setSalvando(false)
     }
@@ -157,12 +175,8 @@ export default function UsuariosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ senha: novaSenhaEdicao }),
       })
-      if (res.ok) {
-        setNovaSenhaEdicao('')
-        alert('Senha redefinida com sucesso.')
-      } else {
-        alert('Erro ao redefinir a senha.')
-      }
+      if (res.ok) { setNovaSenhaEdicao(''); alert('Senha redefinida com sucesso.') }
+      else alert('Erro ao redefinir a senha.')
     } finally {
       setRedefinindo(false)
     }
@@ -208,25 +222,66 @@ export default function UsuariosPage() {
           </button>
         </div>
 
+        {/* Modal novo usuário */}
         {mostrarForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-8 shadow-xl">
               <h2 className="text-xl font-semibold text-slate-950 mb-6">Novo usuário</h2>
-              {erro && <div className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 border border-rose-200">{erro}</div>}
+              {erro && (
+                <div className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 border border-rose-200">
+                  {erro}
+                </div>
+              )}
               <div className="space-y-4">
-                <input value={novoNome} onChange={(e) => setNovoNome(e.target.value)} placeholder="Nome completo" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white" />
-                <input type="email" value={novoEmail} onChange={(e) => setNovoEmail(e.target.value)} placeholder="E-mail" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white" />
-                <input type="password" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} placeholder="Senha inicial" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white" />
-                <select value={novoPerfil} onChange={(e) => setNovoPerfil(e.target.value as Perfil)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none">
-                  <option value="editor">Editor</option>
-                  <option value="visualizador">Visualizador</option>
-                  <option value="agendador">Agendador</option>
-                  <option value="admin">Administrador</option>
-                </select>
+                <input
+                  value={novoNome}
+                  onChange={(e) => setNovoNome(e.target.value)}
+                  placeholder="Nome completo"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white"
+                />
+                <input
+                  type="email"
+                  value={novoEmail}
+                  onChange={(e) => setNovoEmail(e.target.value)}
+                  placeholder="E-mail"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white"
+                />
+                <input
+                  type="password"
+                  value={novaSenha}
+                  onChange={(e) => setNovaSenha(e.target.value)}
+                  placeholder="Senha inicial"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white"
+                />
+                {/* Administrador toggle */}
+                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <span className="text-sm text-slate-700">Administrador</span>
+                  <button
+                    type="button"
+                    onClick={() => setNovoEhAdmin((v) => !v)}
+                    className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${novoEhAdmin ? 'bg-blue-600' : 'bg-slate-200'}`}
+                  >
+                    <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${novoEhAdmin ? 'translate-x-4' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+                {novoEhAdmin && (
+                  <p className="text-xs text-blue-600 px-1">
+                    Administradores têm acesso total ao sistema independente das permissões.
+                  </p>
+                )}
               </div>
               <div className="mt-6 flex gap-3">
-                <button onClick={() => { setMostrarForm(false); setErro('') }} className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700">Cancelar</button>
-                <button onClick={criarUsuario} disabled={salvando} className="flex-1 rounded-2xl bg-blue-600 py-3 text-sm font-semibold text-white disabled:opacity-60">
+                <button
+                  onClick={() => { setMostrarForm(false); setErro('') }}
+                  className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={criarUsuario}
+                  disabled={salvando}
+                  className="flex-1 rounded-2xl bg-blue-600 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                >
                   {salvando ? 'Criando...' : 'Criar usuário'}
                 </button>
               </div>
@@ -235,6 +290,7 @@ export default function UsuariosPage() {
         )}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+          {/* Tabela de usuários */}
           <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
             <table className="min-w-full text-left text-sm">
               <thead className="bg-slate-50 text-slate-500">
@@ -255,12 +311,16 @@ export default function UsuariosPage() {
                   </tr>
                 )}
                 {usuarios.map((u) => (
-                  <tr key={u.email} className={`hover:bg-slate-50/70 cursor-pointer ${usuarioSelecionado?.email === u.email ? 'bg-blue-50/50' : ''}`} onClick={() => setUsuarioSelecionado(u)}>
+                  <tr
+                    key={u.email}
+                    className={`hover:bg-slate-50/70 cursor-pointer ${usuarioSelecionado?.email === u.email ? 'bg-blue-50/50' : ''}`}
+                    onClick={() => setUsuarioSelecionado(u)}
+                  >
                     <td className="px-6 py-4 font-medium text-slate-950">{u.nome}</td>
                     <td className="px-6 py-4 text-slate-600">{u.email}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${perfilClasse[u.perfil] || 'bg-slate-100 text-slate-600 ring-slate-200'}`}>
-                        {perfilLabel[u.perfil] || u.perfil}
+                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${badgePerfil(u.perfil)}`}>
+                        {labelPerfil(u.perfil)}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -271,10 +331,16 @@ export default function UsuariosPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => toggleAtivo(u)} className={`rounded-xl border px-3 py-1.5 text-xs font-semibold ${u.ativo ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                        <button
+                          onClick={() => toggleAtivo(u)}
+                          className={`rounded-xl border px-3 py-1.5 text-xs font-semibold ${u.ativo ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}
+                        >
                           {u.ativo ? 'Desativar' : 'Ativar'}
                         </button>
-                        <button onClick={() => removerUsuario(u.email)} className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700">
+                        <button
+                          onClick={() => removerUsuario(u.email)}
+                          className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700"
+                        >
                           Remover
                         </button>
                       </div>
@@ -285,53 +351,64 @@ export default function UsuariosPage() {
             </table>
           </div>
 
+          {/* Painel de permissões */}
           {usuarioSelecionado ? (
             <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm h-fit">
               <h2 className="text-base font-semibold text-slate-950 mb-1">Permissões</h2>
               <p className="text-sm text-slate-500 mb-5">{usuarioSelecionado.nome}</p>
 
-              <div className="mb-4">
-                <label className="block text-xs font-semibold text-slate-500 mb-2">Perfil</label>
-                <select
-                  value={usuarioSelecionado.perfil}
-                  onChange={(e) => setUsuarioSelecionado({ ...usuarioSelecionado, perfil: e.target.value as Perfil })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none"
+              {/* Toggle administrador */}
+              <div className="mb-5 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <span className="text-sm font-medium text-slate-700">Administrador</span>
+                <button
+                  type="button"
+                  onClick={() => setUsuarioSelecionado({
+                    ...usuarioSelecionado,
+                    perfil: usuarioSelecionado.perfil === 'admin' ? 'usuario' : 'admin',
+                  })}
+                  className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${usuarioSelecionado.perfil === 'admin' ? 'bg-blue-600' : 'bg-slate-200'}`}
                 >
-                  <option value="editor">Editor</option>
-                  <option value="visualizador">Visualizador</option>
-                  <option value="agendador">Agendador</option>
-                  <option value="admin">Administrador</option>
-                </select>
+                  <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${usuarioSelecionado.perfil === 'admin' ? 'translate-x-4' : 'translate-x-0'}`} />
+                </button>
               </div>
 
-              <div className="space-y-3">
-                {Object.entries(
-                  (['criarLaudos','editarLaudos','excluirLaudos','visualizarTodos','gerarPdf','realizarAgendamentos'] as const)
-                    .reduce((acc, k) => ({ ...acc, [k]: (usuarioSelecionado.permissoes as any)?.[k] ?? false }), {} as Record<string, boolean>)
-                ).map(([chave, valor]) => (
-                  <div key={chave} className="flex items-center justify-between gap-3 py-2 border-t border-slate-100">
-                    <span className="text-sm text-slate-700">{permissaoLabel[chave] || chave}</span>
-                    <button
-                      onClick={() => setUsuarioSelecionado({
-                        ...usuarioSelecionado,
-                        permissoes: { ...usuarioSelecionado.permissoes, [chave]: !valor }
-                      })}
-                      className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${valor ? 'bg-blue-600' : 'bg-slate-200'}`}
-                    >
-                      <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${valor ? 'translate-x-4' : 'translate-x-0'}`} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+              {/* Permissões individuais — desabilitadas para admin */}
+              {usuarioSelecionado.perfil === 'admin' ? (
+                <p className="text-xs text-blue-600 mb-4 px-1">
+                  Administradores têm acesso total ao sistema.
+                </p>
+              ) : (
+                <div className="space-y-1 mb-5">
+                  {(Object.keys(permissaoLabel) as (keyof Permissoes)[]).map((chave) => {
+                    const valor = usuarioSelecionado.permissoes?.[chave] ?? false
+                    return (
+                      <div key={chave} className="flex items-center justify-between gap-3 py-2.5 border-t border-slate-100">
+                        <span className="text-sm text-slate-700">{permissaoLabel[chave]}</span>
+                        <button
+                          type="button"
+                          onClick={() => setUsuarioSelecionado({
+                            ...usuarioSelecionado,
+                            permissoes: { ...usuarioSelecionado.permissoes, [chave]: !valor },
+                          })}
+                          className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${valor ? 'bg-blue-600' : 'bg-slate-200'}`}
+                        >
+                          <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${valor ? 'translate-x-4' : 'translate-x-0'}`} />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
 
               <button
                 onClick={() => salvarPermissoes(usuarioSelecionado)}
                 disabled={salvando}
-                className="mt-6 w-full rounded-2xl bg-blue-600 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                className="w-full rounded-2xl bg-blue-600 py-3 text-sm font-semibold text-white disabled:opacity-60"
               >
                 {salvando ? 'Salvando...' : 'Salvar permissões'}
               </button>
 
+              {/* Redefinir senha */}
               <div className="mt-6 pt-5 border-t border-slate-100">
                 <p className="text-xs font-semibold text-slate-500 mb-3">Redefinir senha</p>
                 <input

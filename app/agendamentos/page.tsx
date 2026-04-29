@@ -92,6 +92,7 @@ export default function AgendamentosPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const perfil = (session?.user as any)?.perfil
+  const permissoes = (session?.user as any)?.permissoes as Record<string, boolean> | undefined
 
   const [laudos, setLaudos] = useState<LaudoAgendamento[]>([])
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
@@ -132,7 +133,7 @@ export default function AgendamentosPage() {
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/')
-    if (status === 'authenticated' && perfil && perfil !== 'admin' && perfil !== 'agendador') {
+    if (status === 'authenticated' && perfil && perfil !== 'admin' && !permissoes?.realizarAgendamentos) {
       router.push('/meus-laudos')
     }
   }, [status, perfil])

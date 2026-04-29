@@ -99,15 +99,33 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     setNotificacoes((prev) => prev.map((n) => ({ ...n, lida: true })))
   }
 
+  const permissoes = (session?.user as any)?.permissoes as Record<string, boolean> | undefined
+  const isAdmin = perfil === 'admin'
+
   const links = [
-    { href: '/meus-laudos', label: 'Meus laudos', perfis: ['admin', 'editor', 'visualizador', 'agendador'] },
-    { href: '/agendamentos', label: 'Agendamentos', perfis: ['admin', 'agendador', 'editor'] },
-    { href: '/aprovacoes', label: 'Aprovações', perfis: ['admin'] },
-    { href: '/usuarios', label: 'Usuários', perfis: ['admin'] },
+    {
+      href: '/meus-laudos',
+      label: 'Meus laudos',
+      visivel: true,
+    },
+    {
+      href: '/agendamentos',
+      label: 'Agendamentos',
+      visivel: isAdmin || !!permissoes?.realizarAgendamentos,
+    },
+    {
+      href: '/aprovacoes',
+      label: 'Aprovações',
+      visivel: isAdmin,
+    },
+    {
+      href: '/usuarios',
+      label: 'Usuários',
+      visivel: isAdmin,
+    },
   ].filter((link) => {
-    // Se perfil ainda não carregou, mostra todos os links
-    if (!perfil) return true
-    return link.perfis.includes(perfil)
+    if (!perfil) return true // ainda carregando
+    return link.visivel
   })
 
   function classeLink(ativo: boolean) {

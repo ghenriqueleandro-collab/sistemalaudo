@@ -55,6 +55,7 @@ const handler = NextAuth({
           name: usuario.nome,
           email: usuario.email,
           perfil: usuario.perfil,
+          permissoes: usuario.permissoes ?? {},
         }
       },
     }),
@@ -66,6 +67,7 @@ const handler = NextAuth({
         token.name = user.name
         token.email = user.email
         token.perfil = (user as any).perfil
+        token.permissoes = (user as any).permissoes ?? {}
       }
       return token
     },
@@ -75,6 +77,7 @@ const handler = NextAuth({
         session.user.name = token.name
         session.user.email = token.email as string
         ;(session.user as any).perfil = token.perfil
+        ;(session.user as any).permissoes = token.permissoes ?? {}
       }
       return session
     },
