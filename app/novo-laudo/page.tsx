@@ -931,7 +931,15 @@ try {
                 valorFinalImovel={valorFinalImovel}
                 formatarMoeda={formatarMoeda}
                 modoValorImovel={form.modoValorImovel || 'separado'}
-                onModoChange={(modo) => setForm((prev: any) => ({ ...prev, modoValorImovel: modo }))}
+                onModoChange={(modo) => setForm((prev: any) => ({
+                  ...prev,
+                  modoValorImovel: modo,
+                  // Limpa os campos do modo anterior ao trocar
+                  ...(modo === 'total'
+                    ? { valorTerreno: '', valorBenfeitorias: '' }
+                    : { valorTotal: '' }
+                  ),
+                }))}
               />
             )}
             {etapaAtual === '11' && (

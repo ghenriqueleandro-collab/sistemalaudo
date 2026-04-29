@@ -75,6 +75,8 @@ export type DadosLaudo = {
   imagemBenfeitorias: string
   valorTerreno: string
   valorBenfeitorias: string
+  valorTotal?: string
+  modoValorImovel?: 'separado' | 'total'
   fatorComercializacao: string
   valorLiquidezForcada?: string
   garantiaClassificacao?: string
@@ -473,11 +475,14 @@ export function LaudoPdf({
 }) {
   const valorTerrenoN = cn(dados.valorTerreno)
   const valorBenfeitoriasN = cn(dados.valorBenfeitorias)
+  const valorTotalN = cn(dados.valorTotal || '')
+  const modoTotal = dados.modoValorImovel === 'total'
   const fatorComerc = cn(dados.fatorComercializacao)
   const prodOutros = (dados.outrosFatoresImovel || []).reduce(
     (t, i) => t * (cn(i.valor) || 1), 1
   )
-  const subtotal = (valorTerrenoN + valorBenfeitoriasN) * fatorComerc
+  const baseCalculo = modoTotal ? valorTotalN : (valorTerrenoN + valorBenfeitoriasN)
+  const subtotal = baseCalculo * fatorComerc
   const valorFinal = subtotal * prodOutros
   const valorArredondado = arredondar(valorFinal)
   const valorExtenso = numeroPorExtenso(valorArredondado)
@@ -1100,9 +1105,15 @@ export function LaudoPdf({
             SEÇÃO 11 — VALOR DO IMÓVEL
         ──────────────────────────────────────────────────── */}
         <H2 id="s-11">11. VALOR DO IMÓVEL</H2>
-        <P>a. <Text style={s.bold}>Valor do Terreno:</Text> {fm(valorTerrenoN)}</P>
-        <P>b. <Text style={s.bold}>Valor das Benfeitorias:</Text> {fm(valorBenfeitoriasN)}</P>
-        <P>c. <Text style={s.bold}>Fator de Comercialização:</Text> {dados.fatorComercializacao || '1,00'}</P>
+        {modoTotal ? (
+          <P>a. <Text style={s.bold}>Valor do Imóvel:</Text> {fm(valorTotalN)}</P>
+        ) : (
+          <>
+            <P>a. <Text style={s.bold}>Valor do Terreno:</Text> {fm(valorTerrenoN)}</P>
+            <P>b. <Text style={s.bold}>Valor das Benfeitorias:</Text> {fm(valorBenfeitoriasN)}</P>
+          </>
+        )}
+        <P>{modoTotal ? 'b.' : 'c.'} <Text style={s.bold}>Fator de Comercialização:</Text> {dados.fatorComercializacao || '1,00'}</P>
         {(() => {
           const fatoresValidos = (dados.outrosFatoresImovel || []).filter(
             f => f.descricao?.trim() || f.valor?.trim()
