@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import AppShell from '../components/AppShell'
 import dynamic from 'next/dynamic'
 import { obterLaudoAtual, buscarLaudo } from '@/lib/laudos-storage'
@@ -411,6 +412,9 @@ export default function VisualizarLaudoPage() {
     return String(contadorPagina)
   }
 
+  const searchParams = useSearchParams()
+  const laudoId = searchParams.get('id')
+
   const [dados, setDados] = useState<DadosLaudo | null>(null)
   const [sumario, setSumario] = useState<ItemSumario[]>([])
   const [documentacaoNumPages, setDocumentacaoNumPages] = useState(0)
@@ -694,7 +698,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
             <div className="flex flex-wrap gap-2">
               <Link href="/" className="border px-3 py-2 rounded-xl">Início</Link>
               <Link href="/meus-laudos" className="border px-3 py-2 rounded-xl">Meus laudos</Link>
-              <Link href="/novo-laudo" className="bg-blue-50 px-3 py-2 rounded-xl text-blue-700">Editar laudo</Link>
+              <Link href={laudoId ? `/novo-laudo?id=${laudoId}` : '/novo-laudo'} className="bg-blue-50 px-3 py-2 rounded-xl text-blue-700">Editar laudo</Link>
               <button type="button" onClick={baixarLaudoPdf} disabled={baixandoPdf} className="rounded-xl bg-emerald-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60">
                 {baixandoPdf ? 'Abrindo impressão...' : 'Baixar PDF'}
               </button>
