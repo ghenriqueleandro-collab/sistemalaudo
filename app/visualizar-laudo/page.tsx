@@ -292,6 +292,8 @@ type DadosLaudo = {
   imagemBenfeitorias: string
   valorTerreno: string
   valorBenfeitorias: string
+  valorTotal?: string
+  modoValorImovel?: 'separado' | 'total'
   fatorComercializacao: string
   valorLiquidezForcada?: string
   garantiaClassificacao?: string
@@ -500,6 +502,8 @@ function VisualizarLaudoContent() {
             imagemBenfeitorias: parsed.imagemBenfeitorias || '',
             valorTerreno: parsed.valorTerreno || '',
             valorBenfeitorias: parsed.valorBenfeitorias || '',
+            valorTotal: parsed.valorTotal || '',
+            modoValorImovel: parsed.modoValorImovel || 'separado',
             fatorComercializacao: parsed.fatorComercializacao || '1,00',
             valorLiquidezForcada: parsed.valorLiquidezForcada || '',
             outrosFatoresImovel: parsed.outrosFatoresImovel || [],
@@ -580,9 +584,12 @@ function VisualizarLaudoContent() {
 
   const valorTerrenoNumero = converterNumero(dados.valorTerreno)
   const valorBenfeitoriasNumero = converterNumero(dados.valorBenfeitorias)
+  const valorTotalNumero = converterNumero(dados.valorTotal || '')
+  const modoTotal = dados.modoValorImovel === 'total'
   const fatorComercializacaoNumero = converterNumero(dados.fatorComercializacao)
   const produtoOutrosFatores = (dados.outrosFatoresImovel || []).reduce((total, item) => total * (converterNumero(item.valor) || 1), 1)
-  const subtotalImovel = (valorTerrenoNumero + valorBenfeitoriasNumero) * fatorComercializacaoNumero
+  const baseCalculo = modoTotal ? valorTotalNumero : (valorTerrenoNumero + valorBenfeitoriasNumero)
+  const subtotalImovel = baseCalculo * fatorComercializacaoNumero
   const valorFinalCalculado = subtotalImovel * produtoOutrosFatores
   const valorArredondadoLaudo = arredondarValorLaudo(valorFinalCalculado)
   const valorArredondadoExtenso = numeroPorExtenso(valorArredondadoLaudo)
@@ -1237,9 +1244,15 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               <div className="mb-8 mt-8">
                 <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.valor}. VALOR DO IMÓVEL</h2>
                 <div className="space-y-3">
-                  <p>a. <strong>Valor do Terreno:</strong> {formatarMoeda(valorTerrenoNumero)}</p>
-                  <p>b. <strong>Valor das Benfeitorias:</strong> {formatarMoeda(valorBenfeitoriasNumero)}</p>
-                  <p>c. <strong>Fator de Comercialização:</strong> {dados.fatorComercializacao || '1,00'}</p>
+                  {modoTotal ? (
+                    <p>a. <strong>Valor do Imóvel:</strong> {formatarMoeda(valorTotalNumero)}</p>
+                  ) : (
+                    <>
+                      <p>a. <strong>Valor do Terreno:</strong> {formatarMoeda(valorTerrenoNumero)}</p>
+                      <p>b. <strong>Valor das Benfeitorias:</strong> {formatarMoeda(valorBenfeitoriasNumero)}</p>
+                    </>
+                  )}
+                  <p>{modoTotal ? 'b.' : 'c.'} <strong>Fator de Comercialização:</strong> {dados.fatorComercializacao || '1,00'}</p>
                   {produtoOutrosFatores !== 1 && <p><strong>Produto dos outros fatores:</strong> {produtoOutrosFatores.toLocaleString('pt-BR')}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-4 evitar-quebra">
