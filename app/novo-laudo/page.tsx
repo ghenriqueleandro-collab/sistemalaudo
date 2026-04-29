@@ -99,6 +99,8 @@ export default function NovoLaudoPage() {
     imagemBenfeitorias: '',
     valorTerreno: '',
     valorBenfeitorias: '',
+    valorTotal: '',
+    modoValorImovel: 'separado' as 'separado' | 'total',
     fatorComercializacao: '1,00',
     valorLiquidezForcada: '',
     garantiaClassificacao: '',
@@ -593,6 +595,7 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
 
   const valorTerrenoNumero = converterNumero(form.valorTerreno)
   const valorBenfeitoriasNumero = converterNumero(form.valorBenfeitorias)
+  const valorTotalNumero = converterNumero(form.valorTotal)
   const fatorComercializacaoNumero = converterNumero(form.fatorComercializacao)
   const areaConstruidaTotalNumero = converterNumero(form.areaConstruidaTotal)
   const areaConstruidaAverbadaNumero = converterNumero(form.areaConstruidaAverbada)
@@ -605,7 +608,10 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
   const somaFundamentacaoInferencia = fundamentacaoInferencia.reduce((total, item) => (item.grau ? total + item.pontos : total), 0)
   const somaFundamentacaoEvolutivo = fundamentacaoEvolutivo.reduce((total, item) => (item.grau ? total + item.pontos : total), 0)
   const produtoOutrosFatores = outrosFatoresImovel.reduce((total, item) => total * (converterNumero(item.valor) || 1), 1)
-  const subtotalImovel = (valorTerrenoNumero + valorBenfeitoriasNumero) * fatorComercializacaoNumero
+  const baseCalculo = form.modoValorImovel === 'total'
+    ? valorTotalNumero
+    : (valorTerrenoNumero + valorBenfeitoriasNumero)
+  const subtotalImovel = baseCalculo * fatorComercializacaoNumero
   const valorFinalImovel = subtotalImovel * produtoOutrosFatores
 
   async function handleCroqui(e: React.ChangeEvent<HTMLInputElement>) {
@@ -714,10 +720,9 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
         return Boolean(form.imagemBenfeitorias)
       case '10':
   return Boolean(
-    form.valorTerreno.trim() &&
-      form.valorBenfeitorias.trim() &&
-      form.fatorComercializacao.trim() &&
-      (form.valorLiquidezForcada || '').trim()
+    form.modoValorImovel === 'total'
+      ? (form.valorTotal || '').trim() && form.fatorComercializacao.trim()
+      : form.valorTerreno.trim() && form.valorBenfeitorias.trim() && form.fatorComercializacao.trim()
   )
       case '11':
         return Boolean(
@@ -925,6 +930,8 @@ try {
                 produtoOutrosFatores={produtoOutrosFatores}
                 valorFinalImovel={valorFinalImovel}
                 formatarMoeda={formatarMoeda}
+                modoValorImovel={form.modoValorImovel || 'separado'}
+                onModoChange={(modo) => setForm((prev: any) => ({ ...prev, modoValorImovel: modo }))}
               />
             )}
             {etapaAtual === '11' && (
