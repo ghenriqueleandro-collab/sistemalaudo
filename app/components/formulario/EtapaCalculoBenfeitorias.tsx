@@ -58,7 +58,7 @@ export default function EtapaCalculoBenfeitorias({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">10.1 CÁLCULO DAS BENFEITORIAS</h2>
+      <h2 className="text-2xl font-bold">10.2. CÁLCULO DAS BENFEITORIAS</h2>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-4">
         <div>
