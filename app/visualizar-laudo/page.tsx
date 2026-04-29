@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, Suspense } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -405,7 +405,7 @@ function obterPontosFundamentacao(grau?: string) {
 
 
 
-export default function VisualizarLaudoPage() {
+function VisualizarLaudoContent() {
   let contadorPagina = 0
   const proximaPagina = () => {
     contadorPagina += 1
@@ -1752,3 +1752,10 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
   )
 }
 
+export default function VisualizarLaudoPage() {
+  return (
+    <Suspense fallback={null}>
+      <VisualizarLaudoContent />
+    </Suspense>
+  )
+}
