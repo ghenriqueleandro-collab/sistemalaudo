@@ -114,7 +114,7 @@ export default function NovoLaudoPage() {
   const [acabamentos, setAcabamentos] = useState([{ ambiente: '', acabamento: '' }])
   const [resumoMercado, setResumoMercado] = useState([{ campo: '', descricao: '' }])
   const [outrosFatoresImovel, setOutrosFatoresImovel] = useState([{ descricao: '', valor: '' }])
-  const [modoValorImovel, setModoValorImovel] = useState<string>('terreno')
+  const [modoValorImovel, setModoValorImovel] = useState<'separado' | 'total'>('separado')
   const [etapaAtual, setEtapaAtual] = useState<EtapaId>('1-6')
   const [laudoId, setLaudoId] = useState('')
   const [editandoLaudoExistente, setEditandoLaudoExistente] = useState(false)
@@ -253,12 +253,12 @@ export default function NovoLaudoPage() {
     }
   }
 
-  async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>, campo: 'documentacaoPdf' | 'calculoPdf') {
     const file = e.target.files?.[0]
     if (!file) return
     try {
       const url = await uploadArquivo(file)
-      setForm((prev) => ({ ...prev, documentacaoPdf: url }))
+      setForm((prev) => ({ ...prev, [campo]: url }))
     } catch (error) {
       console.error(error)
       alert('Erro ao fazer upload do PDF.')
@@ -291,8 +291,13 @@ export default function NovoLaudoPage() {
     setFotos((prev) => prev.filter((_, i) => i !== index))
   }
 
-  function reordenarFotos(novaOrdem: any[]) {
-    setFotos(novaOrdem)
+  function reordenarFotos(origem: number, destino: number) {
+    setFotos((prev) => {
+      const novas = [...prev]
+      const [item] = novas.splice(origem, 1)
+      novas.splice(destino, 0, item)
+      return novas
+    })
   }
 
   function handleOutroFatorImovelChange(index: number, campo: string, valor: string) {
@@ -308,19 +313,19 @@ export default function NovoLaudoPage() {
     setOutrosFatoresImovel(outrosFatoresImovel.filter((_, i) => i !== index))
   }
 
-  function selecionarGrauFundamentacao(item: number, grau: string) {
+  function selecionarGrauFundamentacao(item: number, grau: 'III' | 'II' | 'I') {
     setFundamentacao((prev) => prev.map((f) => f.item === item ? { ...f, grau } : f))
   }
 
-  function selecionarGrauFundamentacaoInferencia(item: number, grau: string) {
+  function selecionarGrauFundamentacaoInferencia(item: number, grau: 'III' | 'II' | 'I') {
     setFundamentacaoInferencia((prev) => prev.map((f) => f.item === item ? { ...f, grau } : f))
   }
 
-  function selecionarGrauFundamentacaoEvolutivo(item: number, grau: string) {
+  function selecionarGrauFundamentacaoEvolutivo(item: number, grau: 'III' | 'II' | 'I') {
     setFundamentacaoEvolutivo((prev) => prev.map((f) => f.item === item ? { ...f, grau } : f))
   }
 
-  function selecionarGrauPrecisao(item: number, grau: string) {
+  function selecionarGrauPrecisao(item: number, grau: 'III' | 'II' | 'I') {
     setPrecisao((prev) => prev.map((p) => p.item === item ? { ...p, grau } : p))
   }
 
@@ -632,7 +637,7 @@ export default function NovoLaudoPage() {
               valorFinalImovel={valorFinalImovel}
               formatarMoeda={formatarMoeda}
               modoValorImovel={modoValorImovel}
-              onModoChange={(modo: string) => setModoValorImovel(modo)}
+              onModoChange={(modo: 'separado' | 'total') => setModoValorImovel(modo)}
             />
           )}
 
