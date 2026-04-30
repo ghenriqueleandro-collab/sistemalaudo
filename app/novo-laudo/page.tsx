@@ -114,6 +114,7 @@ export default function NovoLaudoPage() {
   const [acabamentos, setAcabamentos] = useState([{ ambiente: '', acabamento: '' }])
   const [resumoMercado, setResumoMercado] = useState([{ campo: '', descricao: '' }])
   const [outrosFatoresImovel, setOutrosFatoresImovel] = useState([{ descricao: '', valor: '' }])
+  const [modoValorImovel, setModoValorImovel] = useState<string>('terreno')
   const [etapaAtual, setEtapaAtual] = useState<EtapaId>('1-6')
   const [laudoId, setLaudoId] = useState('')
   const [editandoLaudoExistente, setEditandoLaudoExistente] = useState(false)
@@ -630,6 +631,8 @@ export default function NovoLaudoPage() {
               produtoOutrosFatores={produtoOutrosFatores}
               valorFinalImovel={valorFinalImovel}
               formatarMoeda={formatarMoeda}
+              modoValorImovel={modoValorImovel}
+              onModoChange={(modo: string) => setModoValorImovel(modo)}
             />
           )}
 
