@@ -225,8 +225,8 @@ export default function NovoLaudoPage() {
     setDivisoes(divisoes.filter((_, i) => i !== index))
   }
 
-  function handleAcabamentoChange(index: number, campo: string, valor: string) {
-    const novos = acabamentos.map((a, i) => i === index ? { ...a, [campo]: valor } : a)
+  function handleAcabamentoChange(index: number, valor: string) {
+    const novos = acabamentos.map((a, i) => i === index ? { ...a, acabamento: valor } : a)
     setAcabamentos(novos)
   }
 
