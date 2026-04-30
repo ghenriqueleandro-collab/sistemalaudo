@@ -65,6 +65,8 @@ export default function NovoLaudoPage() {
     observacoesConfrontacaoCursoAgua: '',
     condicoesAvaliacao: '',
     consideracoesMercado: '',
+    liquidez: '',
+    desempenhoMercado: '',
     metodologiaCalculos: '',
     periodoPesquisaInicio: '',
     periodoPesquisaFim: '',
