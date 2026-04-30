@@ -33,62 +33,37 @@ export default function NovoLaudoPage() {
   ]
 
   const [form, setForm] = useState({
-    melhoramentosPublicos: {
-      redeAgua: '',
-      gasCanalizado: '',
-      esgotoSanitario: '',
-      esgotoPluvial: '',
-      fossa: '',
-      coletaLixo: '',
-      lazer: '',
-      redeEletrica: '',
-      redeTelefonica: '',
-      iluminacaoPublica: '',
-      pavimentacao: '',
-      passeio: '',
-      guias: '',
-      sarjetas: '',
-    },
+    coordenadasImovel: '',
     endereco: '',
-    liquidez: '',
-    desempenhoMercado: '',
     proprietario: '',
-    tipo: '',
-    matricula: '',
     solicitante: '',
-    idadeAparente: '',
-    estadoConservacao: '',
-    iptu: '',
-    padrao: '',
-    quantidadeDivisoes: '',
-    especificacoesDivisoes: '',
+    tipo: '',
+    finalidade: '',
+    metodoAvaliacao: '',
+    tratamentoDados: '',
     areaConstruidaTotal: '',
     areaConstruidaAverbada: '',
     areaTerrenoTotal: '',
     areaTerrenoAverbada: '',
+    matricula: '',
+    iptu: '',
+    padrao: '',
+    idadeAparente: '',
+    estadoConservacao: '',
     cidadePrincipal: '',
     distanciaCidadePrincipal: '',
-    referencia1: '',
-    distancia1: '',
-    referencia2: '',
-    distancia2: '',
-    referencia3: '',
-    distancia3: '',
-    referencia4: '',
-    distancia4: '',
-    referencia5: '',
-    distancia5: '',
-    coordenadasImovel: '',
-    terrenoEncravado: false,
-    confrontacaoCursoAgua: false,
-    observacoesTerrenoEncravado: '',
-    observacoesConfrontacaoCursoAgua: '',
-    finalidade: '',
-    metodoAvaliacao: '',
-    tratamentoDados: '',
-    condicoesAvaliacao: '',
-    croqui: '',
+    referencia1: '', distancia1: '',
+    referencia2: '', distancia2: '',
+    referencia3: '', distancia3: '',
+    referencia4: '', distancia4: '',
+    referencia5: '', distancia5: '',
+    melhoramentosPublicos: {} as Record<string, string>,
     croquis: [] as { preview: string }[],
+    terrenoEncravado: false,
+    observacoesTerrenoEncravado: '',
+    confrontacaoCursoAgua: false,
+    observacoesConfrontacaoCursoAgua: '',
+    condicoesAvaliacao: '',
     consideracoesMercado: '',
     metodologiaCalculos: '',
     periodoPesquisaInicio: '',
@@ -99,8 +74,6 @@ export default function NovoLaudoPage() {
     imagemBenfeitorias: '',
     valorTerreno: '',
     valorBenfeitorias: '',
-    valorTotal: '',
-    modoValorImovel: 'separado' as 'separado' | 'total',
     fatorComercializacao: '1,00',
     valorLiquidezForcada: '',
     garantiaClassificacao: '',
@@ -142,181 +115,94 @@ export default function NovoLaudoPage() {
   const [resumoMercado, setResumoMercado] = useState([{ campo: '', descricao: '' }])
   const [outrosFatoresImovel, setOutrosFatoresImovel] = useState([{ descricao: '', valor: '' }])
   const [etapaAtual, setEtapaAtual] = useState<EtapaId>('1-6')
-const [laudoId, setLaudoId] = useState('')
-const [editandoLaudoExistente, setEditandoLaudoExistente] = useState(false)
-const [formPronto, setFormPronto] = useState(false)
-const [salvando, setSalvando] = useState(false)
-// UUID gerado uma vez na criação e reutilizado em todos os saves do mesmo laudo
-const [laudoUuid, setLaudoUuid] = useState(() => crypto.randomUUID())
-
-  // Remove base64 do payload antes de salvar no Redis.
-  // Qualquer valor que comece com "data:" é base64 — substitui por string vazia.
-  // Imagens e PDFs devem ser URLs do Blob (vindas de uploadArquivo).
-  function limparBase64(dados: any): any {
-    const isBase64 = (v: any) => typeof v === 'string' && v.startsWith('data:')
-    const resultado = { ...dados }
-    const camposDirectos = [
-      'croqui', 'imagemBenfeitorias',
-      'documentacaoPdf', 'calculoPdf', 'localizacaoComparativos',
-    ]
-    for (const campo of camposDirectos) {
-      if (isBase64(resultado[campo])) resultado[campo] = ''
-    }
-    if (Array.isArray(resultado.croquis)) {
-      resultado.croquis = resultado.croquis.filter((c: any) => !isBase64(c?.preview))
-    }
-    if (Array.isArray(resultado.fotos)) {
-      resultado.fotos = resultado.fotos.filter((f: any) => !isBase64(f?.preview))
-    }
-    return resultado
-  }
+  const [laudoId, setLaudoId] = useState('')
+  const [editandoLaudoExistente, setEditandoLaudoExistente] = useState(false)
+  const [formPronto, setFormPronto] = useState(false)
+  const [salvando, setSalvando] = useState(false)
+  const [laudoUuid, setLaudoUuid] = useState(() => crypto.randomUUID())
 
   useEffect(() => {
-  if (!formPronto) return
+    async function carregarLaudoParaEdicao() {
+      try {
+        const params = new URLSearchParams(window.location.search)
+        const idParam = params.get('id')
 
-  const timeout = setTimeout(() => {
-    const dadosAutoSave = limparBase64({
-      id: laudoUuid,
-      ...form,
-      matricula: form.matricula,
-      caracteristicasTerreno:
-        form.caracteristicasTerreno?.trim() ||
-        `Foram coletados ${form.quantidadeElementos || 0} elementos comparativos, de porte e características o mais semelhante possível ao avaliando, com alguns fatores contemplados no cálculo.`,
-      status: obterStatusLaudo(),
-      atualizadoEm: new Date().toISOString(),
-    })
-    salvarLaudo(dadosAutoSave)
-  }, 800)
+        const laudoSalvo = !idParam
+          ? null
+          : idParam
+          ? await buscarLaudo(idParam)
+          : await obterLaudoAtual()
 
-  return () => clearTimeout(timeout)
-}, [form, formPronto, laudoUuid])
+        if (!laudoSalvo) {
+          setEditandoLaudoExistente(false)
+          setLaudoId('')
+          setFormPronto(true)
+          return
+        }
 
-  const exibirTabelaFatoresTerreno =
-    form.metodoAvaliacao === 'comparativo' ||
-    (form.metodoAvaliacao === 'evolutivo' &&
-      form.tratamentoDados === 'tratamento_por_fatores')
+        setEditandoLaudoExistente(true)
+        setLaudoId(String(laudoSalvo.matricula || laudoSalvo.id || '').trim())
+        if (laudoSalvo.id) setLaudoUuid(laudoSalvo.id)
 
-  const exibirTabelaInferencia =
-    form.tratamentoDados === 'inferencia_estatistica'
+        setForm((prev) => ({
+          ...prev,
+          ...laudoSalvo,
+          melhoramentosPublicos: laudoSalvo.melhoramentosPublicos || prev.melhoramentosPublicos,
+          croquis: laudoSalvo.croquis || [],
+        }))
 
-  const exibirTabelaMetodoEvolutivo = form.metodoAvaliacao === 'evolutivo'
-
-  useEffect(() => {
-    const isNovo = window.location.pathname.includes('novo-laudo')
-  async function carregarLaudoParaEdicao() {
-    try {
-      
-      const url = new URL(window.location.href)
-const modo = url.searchParams.get('modo')
-const idParam = url.searchParams.get('id')
-const laudoSalvo = modo === 'novo' ? null : (idParam ? await buscarLaudo(idParam) : await obterLaudoAtual())
-
-if (!laudoSalvo) {
-  setEditandoLaudoExistente(false)
-  setLaudoId('')
-  setFormPronto(true)
-  return
-}
-
-      setEditandoLaudoExistente(true)
-      setLaudoId(String(laudoSalvo.matricula || laudoSalvo.id || '').trim())
-      // Restaura o UUID original do laudo para não criar duplicata ao salvar
-      if (laudoSalvo.id) setLaudoUuid(laudoSalvo.id)
-
-      setForm((prev) => ({
-        ...prev,
-        ...laudoSalvo,
-        melhoramentosPublicos: laudoSalvo.melhoramentosPublicos || prev.melhoramentosPublicos,
-        croquis: laudoSalvo.croquis || [],
-      }))
-
-      setFatoresSelecionados(laudoSalvo.fatoresSelecionados || [])
-      setFundamentacao(
-        laudoSalvo.fundamentacao || [
+        setFatoresSelecionados(laudoSalvo.fatoresSelecionados || [])
+        setFundamentacao(laudoSalvo.fundamentacao || [
           { item: 1, grau: '', pontos: 2 },
           { item: 2, grau: '', pontos: 2 },
           { item: 3, grau: '', pontos: 2 },
           { item: 4, grau: '', pontos: 2 },
-        ]
-      )
-      setFundamentacaoInferencia(
-        laudoSalvo.fundamentacaoInferencia || [
+        ])
+        setFundamentacaoInferencia(laudoSalvo.fundamentacaoInferencia || [
           { item: 1, grau: '', pontos: 0 },
           { item: 2, grau: '', pontos: 0 },
           { item: 3, grau: '', pontos: 0 },
           { item: 4, grau: '', pontos: 0 },
           { item: 5, grau: '', pontos: 0 },
           { item: 6, grau: '', pontos: 0 },
-        ]
-      )
-      setFundamentacaoEvolutivo(
-        laudoSalvo.fundamentacaoEvolutivo || [
+        ])
+        setFundamentacaoEvolutivo(laudoSalvo.fundamentacaoEvolutivo || [
           { item: 1, grau: '', pontos: 0 },
           { item: 2, grau: '', pontos: 0 },
           { item: 3, grau: '', pontos: 0 },
-        ]
-      )
-      setPrecisao(laudoSalvo.precisao || [{ item: 1, grau: '', pontos: 0 }])
-      setDivisoes(laudoSalvo.divisoes || [{ quantidade: '1', ambiente: '' }])
-      setAcabamentos(laudoSalvo.acabamentos || [{ ambiente: '', acabamento: '' }])
-      setResumoMercado(laudoSalvo.resumoMercado || [{ campo: '', descricao: '' }])
-      setOutrosFatoresImovel(laudoSalvo.outrosFatoresImovel || [{ descricao: '', valor: '' }])
-      setFotos(laudoSalvo.fotos || [])
-
-      setUsarCidadeReferencia(
-        Boolean(laudoSalvo.cidadePrincipal || laudoSalvo.distanciaCidadePrincipal)
-      )
-    } catch (error) {
-      console.error(error)
-      setEditandoLaudoExistente(false)
-      setLaudoId('')
-    } finally {
-      setFormPronto(true)
+        ])
+        setPrecisao(laudoSalvo.precisao || [{ item: 1, grau: '', pontos: 0 }])
+        setDivisoes(laudoSalvo.divisoes || [{ quantidade: '1', ambiente: '' }])
+        setAcabamentos(laudoSalvo.acabamentos || [{ ambiente: '', acabamento: '' }])
+        setResumoMercado(laudoSalvo.resumoMercado || [{ campo: '', descricao: '' }])
+        setOutrosFatoresImovel(laudoSalvo.outrosFatoresImovel || [{ descricao: '', valor: '' }])
+        setFotos(laudoSalvo.fotos || [])
+        setUsarCidadeReferencia(Boolean(laudoSalvo.cidadePrincipal || laudoSalvo.distanciaCidadePrincipal))
+      } catch (error) {
+        console.error(error)
+        setEditandoLaudoExistente(false)
+        setLaudoId('')
+      } finally {
+        setFormPronto(true)
+      }
     }
-  }
 
-  carregarLaudoParaEdicao()
-}, [])
+    carregarLaudoParaEdicao()
+  }, [])
 
-        function handleChange(
+  function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) {
     const { name, value, type } = e.target
-
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked
       setForm({ ...form, [name]: checked })
-      return
+    } else {
+      setForm({ ...form, [name]: value })
     }
+  }
 
-    const camposArea = [
-      'areaConstruidaTotal',
-      'areaConstruidaAverbada',
-      'areaTerrenoTotal',
-      'areaTerrenoAverbada',
-    ]
-
-    if (camposArea.includes(name)) {
-  setForm({
-    ...form,
-    [name]: formatarAreaInput(removerMetroQuadrado(value)),
-  })
-  return
-}
-
-if (name === 'quantidadeElementos') {
-  setForm({
-    ...form,
-    quantidadeElementos: value,
-    caracteristicasTerreno: `Foram coletados ${value || 0} elementos comparativos, de porte e características o mais semelhante possível ao avaliando, com alguns fatores contemplados no cálculo.`,
-  })
-  return
-}
-
-setForm({ ...form, [name]: value })
-}
- 
-function handleMelhoramentosPublicosChange(campo: string, valor: string) {
+  function handleMelhoramentosPublicosChange(campo: string, valor: string) {
     setForm((prev) => ({
       ...prev,
       melhoramentosPublicos: {
@@ -326,347 +212,52 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
     }))
   }
 
-  function carregarImagem(src: string): Promise<HTMLImageElement> {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      img.onload = () => resolve(img)
-      img.onerror = reject
-      img.src = src
-    })
-  }
-
-  function dataURLParaFile(dataUrl: string, nomeArquivo: string): File {
-    const arr = dataUrl.split(',')
-    const mimeMatch = arr[0].match(/:(.*?);/)
-    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg'
-    const bstr = atob(arr[1])
-    let n = bstr.length
-    const u8arr = new Uint8Array(n)
-
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n)
-    }
-
-    return new File([u8arr], nomeArquivo, { type: mime })
-  }
-
-  async function comprimirImagem(
-    file: File,
-    maxLargura = 1600,
-    qualidade = 0.75
-  ): Promise<{ file: File; preview: string }> {
-    const originalUrl = URL.createObjectURL(file)
-
-    try {
-      const img = await carregarImagem(originalUrl)
-      let { width, height } = img
-
-      if (width > maxLargura) {
-        height = Math.round((height * maxLargura) / width)
-        width = maxLargura
-      }
-
-      const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
-
-      const ctx = canvas.getContext('2d')
-      if (!ctx) throw new Error('Não foi possível comprimir a imagem.')
-
-      ctx.drawImage(img, 0, 0, width, height)
-
-      const preview = canvas.toDataURL('image/jpeg', qualidade)
-      const nomeSemExtensao = file.name.replace(/\.[^/.]+$/, '')
-      const arquivoComprimido = dataURLParaFile(preview, `${nomeSemExtensao}.jpg`)
-
-      return { file: arquivoComprimido, preview }
-    } finally {
-      URL.revokeObjectURL(originalUrl)
-    }
-  }
-
-  // ─── Upload para Vercel Blob ─────────────────────────────────────────────
-  // Envia o arquivo para a API e retorna a URL pública permanente.
-  // Assim nenhum base64 é salvo no Redis — apenas URLs pequenas.
-  async function uploadArquivo(file: File): Promise<string> {
-    const formData = new FormData()
-    formData.append('file', file)
-    const res = await fetch('/api/upload', { method: 'POST', body: formData })
-    if (!res.ok) throw new Error('Erro ao fazer upload do arquivo.')
-    const { url } = await res.json()
-    return url
-  }
-
-  async function handleFotos(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files || [])
-    if (!files.length) return
-
-    try {
-      // Processa sequencialmente para evitar sobrecarga no servidor
-      const novasFotos: { preview: string; legenda: string }[] = []
-      for (const file of files) {
-        const comprimida = await comprimirImagem(file, 1600, 0.75)
-        const url = await uploadArquivo(comprimida.file)
-        novasFotos.push({
-          preview: url,
-          legenda: file.name.replace(/\.[^/.]+$/, ''),
-        })
-      }
-
-      setFotos((prev) => [...prev, ...novasFotos])
-      e.target.value = ''
-    } catch (error) {
-      console.error(error)
-      alert('Erro ao fazer upload de uma ou mais imagens.')
-    }
-  }
-
-  function handleLegenda(index: number, valor: string) {
-    const novasFotos = [...fotos]
-    novasFotos[index].legenda = valor
-    setFotos(novasFotos)
-  }
-
-  function removerFoto(index: number) {
-    setFotos((fotosAnteriores) => fotosAnteriores.filter((_, i) => i !== index))
-  }
-
-  function reordenarFotos(origem: number, destino: number) {
-  setFotos((fotosAnteriores) => {
-    const novasFotos = [...fotosAnteriores]
-
-    const fotoOrigem = novasFotos[origem]
-    const fotoDestino = novasFotos[destino]
-
-    novasFotos[origem] = fotoDestino
-    novasFotos[destino] = fotoOrigem
-
-    return novasFotos
-  })
-}
-
-  function handleDivisaoChange(
-    index: number,
-    campo: 'quantidade' | 'ambiente',
-    valor: string
-  ) {
-    const novaLista = [...divisoes]
-    novaLista[index][campo] = valor
-    setDivisoes(novaLista)
-
-    if (campo === 'ambiente') sincronizarAcabamentosComDivisoes(novaLista)
+  function handleDivisaoChange(index: number, campo: 'quantidade' | 'ambiente', valor: string) {
+    const novasDivisoes = divisoes.map((d, i) => i === index ? { ...d, [campo]: valor } : d)
+    setDivisoes(novasDivisoes)
   }
 
   function adicionarLinhaDivisao() {
-    const novaLista = [...divisoes, { quantidade: '1', ambiente: '' }]
-    setDivisoes(novaLista)
-    sincronizarAcabamentosComDivisoes(novaLista)
+    setDivisoes([...divisoes, { quantidade: '1', ambiente: '' }])
   }
 
   function removerLinhaDivisao(index: number) {
-    const novaLista = divisoes.filter((_, i) => i !== index)
-    const listaFinal = novaLista.length > 0 ? novaLista : [{ quantidade: '1', ambiente: '' }]
-    setDivisoes(listaFinal)
-    sincronizarAcabamentosComDivisoes(listaFinal)
+    setDivisoes(divisoes.filter((_, i) => i !== index))
   }
 
-  function sincronizarAcabamentosComDivisoes(listaDivisoes: { quantidade: string; ambiente: string }[]) {
-    setAcabamentos((anterior) => {
-      return listaDivisoes.map((divisao, index) => ({
-        ambiente: divisao.quantidade && divisao.ambiente ? `${divisao.quantidade} ${divisao.ambiente}` : '',
-        acabamento: anterior[index]?.acabamento || '',
-      }))
-    })
+  function handleAcabamentoChange(index: number, campo: string, valor: string) {
+    const novos = acabamentos.map((a, i) => i === index ? { ...a, [campo]: valor } : a)
+    setAcabamentos(novos)
   }
 
-  function handleAcabamentoChange(index: number, valor: string) {
-    const novaLista = [...acabamentos]
-    novaLista[index].acabamento = valor
-    setAcabamentos(novaLista)
-  }
-
-  function handleOutroFatorImovelChange(
-    index: number,
-    campo: 'descricao' | 'valor',
-    valor: string
-  ) {
-    const novaLista = [...outrosFatoresImovel]
-    novaLista[index][campo] = valor
-    setOutrosFatoresImovel(novaLista)
-  }
-
-  function adicionarLinhaOutroFatorImovel() {
-    setOutrosFatoresImovel([...outrosFatoresImovel, { descricao: '', valor: '' }])
-  }
-
-  function removerLinhaOutroFatorImovel(index: number) {
-    const novaLista = outrosFatoresImovel.filter((_, i) => i !== index)
-    setOutrosFatoresImovel(novaLista.length > 0 ? novaLista : [{ descricao: '', valor: '' }])
-  }
-
-  function selecionarGrauFundamentacao(index: number, grau: 'III' | 'II' | 'I') {
-    const novaLista = [...fundamentacao]
-    let pontos = 0
-    if (grau === 'III') pontos = 3
-    if (grau === 'II') pontos = 2
-    if (grau === 'I') pontos = 1
-    novaLista[index] = { ...novaLista[index], grau, pontos }
-    setFundamentacao(novaLista)
-  }
-
-  function selecionarGrauFundamentacaoInferencia(index: number, grau: 'III' | 'II' | 'I') {
-    const novaLista = [...fundamentacaoInferencia]
-    let pontos = 0
-    if (grau === 'III') pontos = 3
-    if (grau === 'II') pontos = 2
-    if (grau === 'I') pontos = 1
-    novaLista[index] = { ...novaLista[index], grau, pontos }
-    setFundamentacaoInferencia(novaLista)
-  }
-
-  function selecionarGrauFundamentacaoEvolutivo(index: number, grau: 'III' | 'II' | 'I') {
-    const novaLista = [...fundamentacaoEvolutivo]
-    let pontos = 0
-    if (grau === 'III') pontos = 3
-    if (grau === 'II') pontos = 2
-    if (grau === 'I') pontos = 1
-    novaLista[index] = { ...novaLista[index], grau, pontos }
-    setFundamentacaoEvolutivo(novaLista)
-  }
-
-  function selecionarGrauPrecisao(index: number, grau: 'III' | 'II' | 'I') {
-    const novaLista = [...precisao]
-    let pontos = 0
-    if (grau === 'III') pontos = 3
-    if (grau === 'II') pontos = 2
-    if (grau === 'I') pontos = 1
-    novaLista[index] = { ...novaLista[index], grau, pontos }
-    setPrecisao(novaLista)
-  }
-
-  function converterNumero(valor: string) {
-    if (!valor) return 0
-    return Number(valor.replace(/\s/g, '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0
-  }
-
-  function formatarMoeda(valor: number) {
-    return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-  }
-
-  function formatarAreaInput(valor: string) {
-    const limpo = valor.replace(/[^\d,.-]/g, '').trim()
-    if (!limpo) return ''
-    return `${limpo} m²`
-  }
-
-  function removerMetroQuadrado(valor: string) {
-    return valor.replace(/m²/g, '').trim()
-  }
-
-  useEffect(() => {
-    if (!exibirTabelaFatoresTerreno) {
-      setFundamentacao([
-        { item: 1, grau: '', pontos: 0 },
-        { item: 2, grau: '', pontos: 0 },
-        { item: 3, grau: '', pontos: 0 },
-        { item: 4, grau: '', pontos: 0 },
-      ])
-    }
-
-    if (!exibirTabelaInferencia) {
-      setFundamentacaoInferencia([
-        { item: 1, grau: '', pontos: 0 },
-        { item: 2, grau: '', pontos: 0 },
-        { item: 3, grau: '', pontos: 0 },
-        { item: 4, grau: '', pontos: 0 },
-        { item: 5, grau: '', pontos: 0 },
-        { item: 6, grau: '', pontos: 0 },
-      ])
-    }
-
-    if (!exibirTabelaMetodoEvolutivo) {
-      setFundamentacaoEvolutivo([
-        { item: 1, grau: '', pontos: 0 },
-        { item: 2, grau: '', pontos: 0 },
-        { item: 3, grau: '', pontos: 0 },
-      ])
-    }
-  }, [exibirTabelaFatoresTerreno, exibirTabelaInferencia, exibirTabelaMetodoEvolutivo])
-
-  const valorTerrenoNumero = converterNumero(form.valorTerreno)
-  const valorBenfeitoriasNumero = converterNumero(form.valorBenfeitorias)
-  const valorTotalNumero = converterNumero(form.valorTotal)
-  const fatorComercializacaoNumero = converterNumero(form.fatorComercializacao)
-  const areaConstruidaTotalNumero = converterNumero(form.areaConstruidaTotal)
-  const areaConstruidaAverbadaNumero = converterNumero(form.areaConstruidaAverbada)
-  const areaTerrenoTotalNumero = converterNumero(form.areaTerrenoTotal)
-  const areaTerrenoAverbadaNumero = converterNumero(form.areaTerrenoAverbada)
-
-  const areaConstruidaNaoAverbada = Math.max(areaConstruidaTotalNumero - areaConstruidaAverbadaNumero, 0)
-  const areaTerrenoNaoAverbada = Math.max(areaTerrenoTotalNumero - areaTerrenoAverbadaNumero, 0)
-  const somaFundamentacao = fundamentacao.reduce((total, item) => (item.grau ? total + item.pontos : total), 0)
-  const somaFundamentacaoInferencia = fundamentacaoInferencia.reduce((total, item) => (item.grau ? total + item.pontos : total), 0)
-  const somaFundamentacaoEvolutivo = fundamentacaoEvolutivo.reduce((total, item) => (item.grau ? total + item.pontos : total), 0)
-  const produtoOutrosFatores = outrosFatoresImovel.reduce((total, item) => total * (converterNumero(item.valor) || 1), 1)
-  const baseCalculo = form.modoValorImovel === 'total'
-    ? valorTotalNumero
-    : (valorTerrenoNumero + valorBenfeitoriasNumero)
-  const subtotalImovel = baseCalculo * fatorComercializacaoNumero
-  const valorFinalImovel = subtotalImovel * produtoOutrosFatores
-
-  async function handleCroqui(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleCroqui(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
-    if (!files.length) return
+    const novosCroquis = files.map((file) => ({ preview: URL.createObjectURL(file) }))
+    setForm((prev) => ({ ...prev, croquis: [...(prev.croquis || []), ...novosCroquis] }))
+  }
 
-    try {
-      const novosCroquis = await Promise.all(
-        files.map(async (file) => {
-          const comprimida = await comprimirImagem(file, 1600, 0.75)
-          const url = await uploadArquivo(comprimida.file)
-          return { preview: url }
-        })
-      )
-
-      setForm((prev) => ({
-        ...prev,
-        croquis: [...(prev.croquis || []), ...novosCroquis],
-        croqui: prev.croqui || novosCroquis[0]?.preview || '',
-      }))
-
-      e.target.value = ''
-    } catch (error) {
-      console.error(error)
-      alert('Erro ao fazer upload de uma ou mais imagens do croqui.')
-    }
+  function removerCroqui(index: number) {
+    setForm((prev) => ({ ...prev, croquis: prev.croquis.filter((_: any, i: number) => i !== index) }))
   }
 
   async function handleImagemBenfeitorias(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-
     try {
       const url = await uploadArquivo(file)
       setForm((prev) => ({ ...prev, imagemBenfeitorias: url }))
     } catch (error) {
       console.error(error)
-      alert('Erro ao fazer upload da imagem das benfeitorias.')
+      alert('Erro ao fazer upload da imagem.')
     }
   }
 
-  function removerCroqui(index: number) {
-    setForm((prev) => {
-      const novosCroquis = (prev.croquis || []).filter((_: any, i: number) => i !== index)
-      return { ...prev, croquis: novosCroquis, croqui: novosCroquis[0]?.preview || '' }
-    })
-  }
-
-  async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>, campo: 'documentacaoPdf' | 'calculoPdf') {
+  async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-
     try {
       const url = await uploadArquivo(file)
-      setForm((prev) => ({ ...prev, [campo]: url }))
+      setForm((prev) => ({ ...prev, documentacaoPdf: url }))
     } catch (error) {
       console.error(error)
       alert('Erro ao fazer upload do PDF.')
@@ -676,7 +267,6 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
   async function handleLocalizacaoComparativos(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-
     try {
       const url = await uploadArquivo(file)
       setForm((prev) => ({ ...prev, localizacaoComparativos: url }))
@@ -686,6 +276,53 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
     }
   }
 
+  function handleFotos(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || [])
+    const novasFotos = files.map((file) => ({ preview: URL.createObjectURL(file), legenda: '' }))
+    setFotos((prev) => [...prev, ...novasFotos])
+  }
+
+  function handleLegenda(index: number, legenda: string) {
+    setFotos((prev) => prev.map((f, i) => i === index ? { ...f, legenda } : f))
+  }
+
+  function removerFoto(index: number) {
+    setFotos((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function reordenarFotos(novaOrdem: any[]) {
+    setFotos(novaOrdem)
+  }
+
+  function handleOutroFatorImovelChange(index: number, campo: string, valor: string) {
+    const novos = outrosFatoresImovel.map((o, i) => i === index ? { ...o, [campo]: valor } : o)
+    setOutrosFatoresImovel(novos)
+  }
+
+  function adicionarLinhaOutroFatorImovel() {
+    setOutrosFatoresImovel([...outrosFatoresImovel, { descricao: '', valor: '' }])
+  }
+
+  function removerLinhaOutroFatorImovel(index: number) {
+    setOutrosFatoresImovel(outrosFatoresImovel.filter((_, i) => i !== index))
+  }
+
+  function selecionarGrauFundamentacao(item: number, grau: string) {
+    setFundamentacao((prev) => prev.map((f) => f.item === item ? { ...f, grau } : f))
+  }
+
+  function selecionarGrauFundamentacaoInferencia(item: number, grau: string) {
+    setFundamentacaoInferencia((prev) => prev.map((f) => f.item === item ? { ...f, grau } : f))
+  }
+
+  function selecionarGrauFundamentacaoEvolutivo(item: number, grau: string) {
+    setFundamentacaoEvolutivo((prev) => prev.map((f) => f.item === item ? { ...f, grau } : f))
+  }
+
+  function selecionarGrauPrecisao(item: number, grau: string) {
+    setPrecisao((prev) => prev.map((p) => p.item === item ? { ...p, grau } : p))
+  }
+
   function formatarDataBR(data: string) {
     if (!data) return ''
     const [ano, mes, dia] = data.split('-')
@@ -693,21 +330,71 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
   }
 
   function toggleFator(fator: string) {
-    setFatoresSelecionados((prev) => (prev.includes(fator) ? prev.filter((f) => f !== fator) : [...prev, fator]))
+    setFatoresSelecionados((prev) =>
+      prev.includes(fator) ? prev.filter((f) => f !== fator) : [...prev, fator]
+    )
   }
+
+  const areaConstruidaNaoAverbada = Math.max(
+    0,
+    parseFloat((form.areaConstruidaTotal || '0').replace(',', '.')) -
+      parseFloat((form.areaConstruidaAverbada || '0').replace(',', '.'))
+  )
+
+  const areaTerrenoNaoAverbada = Math.max(
+    0,
+    parseFloat((form.areaTerrenoTotal || '0').replace(',', '.')) -
+      parseFloat((form.areaTerrenoAverbada || '0').replace(',', '.'))
+  )
+
+  const produtoOutrosFatores = outrosFatoresImovel.reduce((acc, item) => {
+    const v = parseFloat(item.valor.replace(',', '.'))
+    return acc * (isNaN(v) ? 1 : v)
+  }, 1)
+
+  const subtotalImovel =
+    (parseFloat((form.valorTerreno || '0').replace(',', '.')) +
+      parseFloat((form.valorBenfeitorias || '0').replace(',', '.'))) *
+    produtoOutrosFatores
+
+  const valorFinalImovel =
+    subtotalImovel * parseFloat((form.fatorComercializacao || '1').replace(',', '.'))
+
+  function formatarMoeda(valor: number) {
+    return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  }
+
+  const exibirTabelaFatoresTerreno = form.metodoAvaliacao === 'comparativo' && form.tratamentoDados === 'tratamento_por_fatores'
+  const exibirTabelaInferencia = form.metodoAvaliacao === 'comparativo' && form.tratamentoDados === 'inferencia_estatistica'
+  const exibirTabelaMetodoEvolutivo = form.metodoAvaliacao === 'evolutivo'
+
+  const somaFundamentacao = fundamentacao.reduce((acc, f) => {
+    const map: Record<string, number> = { III: 1, II: 2, I: 3 }
+    return acc + (map[f.grau] || 0)
+  }, 0)
+
+  const somaFundamentacaoInferencia = fundamentacaoInferencia.reduce((acc, f) => {
+    const map: Record<string, number> = { III: 1, II: 2, I: 3 }
+    return acc + (map[f.grau] || 0)
+  }, 0)
+
+  const somaFundamentacaoEvolutivo = fundamentacaoEvolutivo.reduce((acc, f) => {
+    const map: Record<string, number> = { III: 1, II: 2, I: 3 }
+    return acc + (map[f.grau] || 0)
+  }, 0)
 
   function etapaConcluida(etapa: EtapaId) {
     switch (etapa) {
       case '1-6':
         return Boolean(
-  form.endereco.trim() &&
-    form.proprietario.trim() &&
-    (form.solicitante || '').trim() &&
-    form.tipo.trim() &&
-    form.finalidade.trim() &&
-    form.metodoAvaliacao.trim() &&
-    form.tratamentoDados.trim()
-)
+          form.endereco.trim() &&
+            form.proprietario.trim() &&
+            (form.solicitante || '').trim() &&
+            form.tipo.trim() &&
+            form.finalidade.trim() &&
+            form.metodoAvaliacao.trim() &&
+            form.tratamentoDados.trim()
+        )
       case '7':
         return acabamentos.some((item) => item.acabamento.trim())
       case '8':
@@ -715,15 +402,21 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
       case '9':
         return true
       case '9.1':
-        return Boolean(form.periodoPesquisaInicio && form.periodoPesquisaFim && form.tipoInformacoesObtidas && form.caracteristicasTerreno)
+        return Boolean(
+          form.periodoPesquisaInicio &&
+            form.periodoPesquisaFim &&
+            form.tipoInformacoesObtidas &&
+            form.caracteristicasTerreno
+        )
       case '9.2':
         return Boolean(form.imagemBenfeitorias)
       case '10':
-  return Boolean(
-    form.modoValorImovel === 'total'
-      ? (form.valorTotal || '').trim() && form.fatorComercializacao.trim()
-      : form.valorTerreno.trim() && form.valorBenfeitorias.trim() && form.fatorComercializacao.trim()
-  )
+        return Boolean(
+          form.valorTerreno.trim() &&
+            form.valorBenfeitorias.trim() &&
+            form.fatorComercializacao.trim() &&
+            (form.valorLiquidezForcada || '').trim()
+        )
       case '11':
         return Boolean(
           fundamentacao.some((item) => item.grau) ||
@@ -736,30 +429,33 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
       case '13':
         return Boolean(form.garantiaClassificacao)
       case '14':
-        return Boolean(form.dataLaudo && form.responsavelNome.trim() && form.responsavelCpf.trim() && form.responsavelRegistro.trim())
+        return Boolean(
+          form.dataLaudo &&
+            form.responsavelNome.trim() &&
+            form.responsavelCpf.trim() &&
+            form.responsavelRegistro.trim()
+        )
       default:
         return false
     }
   }
 
   function obterStatusLaudo(): 'em_preenchimento' | 'finalizado' {
-  const etapasObrigatorias: EtapaId[] = [
-    '1-6',
-    '7',
-    '8',
-    '9',
-    '9.1',
-    '9.2',
-    '10',
-    '11',
-    '12',
-    '13',
-    '14',
-  ]
+    const etapasObrigatorias: EtapaId[] = [
+      '1-6', '7', '8', '9', '9.1', '9.2', '10', '11', '12', '13', '14',
+    ]
+    const todasConcluidas = etapasObrigatorias.every((etapa) => etapaConcluida(etapa))
+    return todasConcluidas ? 'finalizado' : 'em_preenchimento'
+  }
 
-  const todasConcluidas = etapasObrigatorias.every((etapa) => etapaConcluida(etapa))
-  return todasConcluidas ? 'finalizado' : 'em_preenchimento'
-}
+  async function uploadArquivo(file: File): Promise<string> {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await fetch('/api/upload', { method: 'POST', body: formData })
+    if (!res.ok) throw new Error('Falha no upload')
+    const { url } = await res.json()
+    return url
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -769,228 +465,238 @@ function handleMelhoramentosPublicosChange(campo: string, valor: string) {
       return
     }
 
-    if ((form.garantiaClassificacao === 'observacoes' || form.garantiaClassificacao === 'negativa') && !form.garantiaObservacoes.trim()) {
-      alert('Preencha as observações da garantia.')
-      return
+    setSalvando(true)
+    try {
+      const status = obterStatusLaudo()
+      const payload = {
+        ...form,
+        id: laudoUuid,
+        fatoresSelecionados,
+        fundamentacao,
+        fundamentacaoInferencia,
+        fundamentacaoEvolutivo,
+        precisao,
+        divisoes,
+        acabamentos,
+        resumoMercado,
+        outrosFatoresImovel,
+        fotos,
+        status,
+        atualizadoEm: new Date().toISOString(),
+      }
+
+      const idSalvo = await salvarLaudo(payload)
+
+      if (!idSalvo) {
+        alert('Verifique sua conexão e tente novamente.')
+        return
+      }
+
+      await definirLaudoAtual(idSalvo)
+      window.open('/visualizar-laudo?id=' + encodeURIComponent(laudoUuid), '_blank')
+    } catch (error) {
+      console.error(error)
+      alert('Erro ao salvar o laudo.')
+    } finally {
+      setSalvando(false)
     }
-
-    const formAjustado = {
-      ...form,
-      cidadePrincipal: usarCidadeReferencia ? form.cidadePrincipal : '',
-      distanciaCidadePrincipal: usarCidadeReferencia ? form.distanciaCidadePrincipal : '',
-      caracteristicasTerreno:
-        form.caracteristicasTerreno?.trim() ||
-        `Foram coletados ${form.quantidadeElementos || 0} elementos comparativos, de porte e características o mais semelhante possível ao avaliando, com alguns fatores contemplados no cálculo.`,
-    }
-
-    const dadosLaudo = {
-      ...formAjustado,
-      divisoes,
-      fatoresSelecionados,
-      melhoramentosPublicos: form.melhoramentosPublicos,
-      croquis: form.croquis,
-      areaConstruidaNaoAverbada,
-      areaTerrenoNaoAverbada,
-      acabamentos,
-      resumoMercado,
-      outrosFatoresImovel,
-      valorFinalImovel,
-      fundamentacao,
-      fundamentacaoInferencia,
-      precisao,
-      fundamentacaoEvolutivo,
-      fotos: fotos.map((foto) => ({ preview: foto.preview, legenda: foto.legenda })),
-    }
-
-    const matricula = String(form.matricula || '').trim()
-
-if (!matricula) {
-  alert('Preencha a matrícula do imóvel antes de salvar.')
-  return
-}
-
-try {
-  setSalvando(true)
-
-  const dadosParaSalvar = limparBase64({
-    id: laudoUuid,   // UUID único — nunca colide com outro laudo
-    ...dadosLaudo,
-    matricula,       // Matrícula é só um campo de texto, não o ID
-    status: obterStatusLaudo(),
-    atualizadoEm: new Date().toISOString(),
-  })
-
-  const idSalvo = await salvarLaudo(dadosParaSalvar)
-
-  if (!idSalvo) {
-    alert('Erro ao salvar o laudo. Verifique sua conexão e tente novamente.')
-    return
   }
 
-  await definirLaudoAtual(idSalvo)
-  window.open('/visualizar-laudo?id=' + encodeURIComponent(laudoUuid), '_blank')
-} catch (error) {
-  console.error(error)
-  alert('Erro ao salvar o laudo.')
-} finally {
-  setSalvando(false)
-}
-  }
+  // ─── RENDER ───────────────────────────────────────────────────────────────────
 
   return (
     <AppShell>
-      <section className="mx-auto max-w-7xl px-6 pb-16 pt-10 lg:px-10 lg:pt-14">
-      <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_24px_70px_-42px_rgba(15,23,42,0.45)] lg:p-8 mb-8">
-  <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-    <div>
-      <div className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-400">
-        elaboração do laudo
-      </div>
-      <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-950 md:text-5xl">
-        Novo laudo
-      </h1>
-    </div>
 
-    <div className="flex flex-wrap gap-3">
-  <Link href="/" className="rounded-2xl border px-4 py-2 text-sm">
-    Início
-  </Link>
+      {/* ── STEPPER HORIZONTAL STICKY NO TOPO ── */}
+      <MenuEtapas
+        etapaAtual={etapaAtual}
+        setEtapaAtual={setEtapaAtual}
+        etapaConcluida={etapaConcluida}
+      />
 
-  <Link href="/meus-laudos" className="rounded-2xl border px-4 py-2 text-sm">
-    Meus laudos
-  </Link>
+      {/* ── CONTEÚDO FULL-WIDTH ── */}
+      <section className="mx-auto max-w-4xl px-4 sm:px-6 py-8 pb-28">
 
-  <button
-    type="button"
-    onClick={async () => {
-      await limparLaudoAtual()
-      window.location.href = '/novo-laudo?modo=novo'
-    }}
-    className="rounded-2xl border px-4 py-2 text-sm"
-  >
-    Novo laudo em branco
-  </button>
-
-  <Link
-    href="/visualizar-laudo"
-    className="rounded-2xl border bg-blue-50 px-4 py-2 text-sm text-blue-700"
-  >
-    Visualizar laudo
-  </Link>
-</div>
-  </div>
-</div>
-
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
-        <MenuEtapas etapaAtual={etapaAtual} setEtapaAtual={setEtapaAtual} etapaConcluida={etapaConcluida} />
-
-        <div className="flex-1 w-full">
-          <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl shadow space-y-6">
-            {etapaAtual === '1-6' && (
-              <Etapa01A06
-                form={form}
-                handleChange={handleChange}
-                handleMelhoramentosPublicosChange={handleMelhoramentosPublicosChange}
-                areaConstruidaNaoAverbada={areaConstruidaNaoAverbada}
-                areaTerrenoNaoAverbada={areaTerrenoNaoAverbada}
-                usarCidadeReferencia={usarCidadeReferencia}
-                setUsarCidadeReferencia={setUsarCidadeReferencia}
-                divisoes={divisoes}
-                handleDivisaoChange={handleDivisaoChange}
-                adicionarLinhaDivisao={adicionarLinhaDivisao}
-                removerLinhaDivisao={removerLinhaDivisao}
-                handleCroqui={handleCroqui}
-                removerCroqui={removerCroqui}
-                setForm={setForm}
-              />
-            )}
-
-            {etapaAtual === '7' && <EtapaAcabamentos acabamentos={acabamentos} handleAcabamentoChange={handleAcabamentoChange} />}
-            {etapaAtual === '8' && <EtapaConsideracoesMercado form={form} handleChange={handleChange} />}
-            {etapaAtual === '9' && <EtapaGlossario />}
-            {etapaAtual === '9.1' && (
-              <EtapaMetodologiaCalculos
-                form={form}
-                handleChange={handleChange}
-                fatoresDisponiveis={fatoresDisponiveis}
-                fatoresSelecionados={fatoresSelecionados}
-                toggleFator={toggleFator}
-              />
-            )}
-            {etapaAtual === '9.2' && <EtapaCalculoBenfeitorias form={form} handleImagemBenfeitorias={handleImagemBenfeitorias} />}
-            {etapaAtual === '10' && (
-              <EtapaValorImovel
-                form={form}
-                handleChange={handleChange}
-                outrosFatoresImovel={outrosFatoresImovel}
-                handleOutroFatorImovelChange={handleOutroFatorImovelChange}
-                adicionarLinhaOutroFatorImovel={adicionarLinhaOutroFatorImovel}
-                removerLinhaOutroFatorImovel={removerLinhaOutroFatorImovel}
-                subtotalImovel={subtotalImovel}
-                produtoOutrosFatores={produtoOutrosFatores}
-                valorFinalImovel={valorFinalImovel}
-                formatarMoeda={formatarMoeda}
-                modoValorImovel={form.modoValorImovel || 'separado'}
-                onModoChange={(modo) => setForm((prev: any) => ({
-                  ...prev,
-                  modoValorImovel: modo,
-                  // Limpa os campos do modo anterior ao trocar
-                  ...(modo === 'total'
-                    ? { valorTerreno: '', valorBenfeitorias: '' }
-                    : { valorTotal: '' }
-                  ),
-                }))}
-              />
-            )}
-            {etapaAtual === '11' && (
-              <EtapaFundamentacaoPrecisao
-                exibirTabelaFatoresTerreno={exibirTabelaFatoresTerreno}
-                exibirTabelaInferencia={exibirTabelaInferencia}
-                exibirTabelaMetodoEvolutivo={exibirTabelaMetodoEvolutivo}
-                fundamentacao={fundamentacao}
-                fundamentacaoInferencia={fundamentacaoInferencia}
-                fundamentacaoEvolutivo={fundamentacaoEvolutivo}
-                precisao={precisao}
-                selecionarGrauFundamentacao={selecionarGrauFundamentacao}
-                selecionarGrauFundamentacaoInferencia={selecionarGrauFundamentacaoInferencia}
-                selecionarGrauFundamentacaoEvolutivo={selecionarGrauFundamentacaoEvolutivo}
-                selecionarGrauPrecisao={selecionarGrauPrecisao}
-                somaFundamentacao={somaFundamentacao}
-                somaFundamentacaoInferencia={somaFundamentacaoInferencia}
-                somaFundamentacaoEvolutivo={somaFundamentacaoEvolutivo}
-              />
-            )}
-            {etapaAtual === '12' && <EtapaConclusao valorFinalImovel={valorFinalImovel} formatarMoeda={formatarMoeda} />}
-            {etapaAtual === '13' && <EtapaGarantia form={form} setForm={setForm} />}
-            {etapaAtual === '14' && (
-              <EtapaAnexosAssinatura
-  form={form}
-  handleChange={handleChange}
-  formatarDataBR={formatarDataBR}
-  handlePdfUpload={handlePdfUpload}
-  handleLocalizacaoComparativos={handleLocalizacaoComparativos}
-  handleFotos={handleFotos}
-  fotos={fotos}
-  handleLegenda={handleLegenda}
-  onRemoverFoto={removerFoto}
-  onReordenarFotos={reordenarFotos}
-/>
-            )}
-
-            <NavegacaoEtapas etapaAtual={etapaAtual} setEtapaAtual={setEtapaAtual} />
-
-            <div className="pt-4 border-t">
-              <button
-                disabled={salvando}
-                className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {salvando ? 'Salvando...' : 'Salvar Laudo'}
-              </button>
+        {/* Cabeçalho compacto com ações */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
+              elaboração do laudo
             </div>
-          </form>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
+              Novo laudo
+            </h1>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/"
+              className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 transition"
+            >
+              Início
+            </Link>
+
+            <Link
+              href="/meus-laudos"
+              className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 transition"
+            >
+              Meus laudos
+            </Link>
+
+            <button
+              type="button"
+              onClick={async () => {
+                await limparLaudoAtual()
+                window.location.href = '/novo-laudo?modo=novo'
+              }}
+              className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 transition"
+            >
+              Novo laudo em branco
+            </button>
+
+            <Link
+              href="/visualizar-laudo"
+              className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 transition"
+            >
+              Visualizar laudo
+            </Link>
+          </div>
         </div>
-      </div>
+
+        {/* ── FORMULÁRIO FULL-WIDTH ── */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+
+          {etapaAtual === '1-6' && (
+            <Etapa01A06
+              form={form}
+              handleChange={handleChange}
+              handleMelhoramentosPublicosChange={handleMelhoramentosPublicosChange}
+              areaConstruidaNaoAverbada={areaConstruidaNaoAverbada}
+              areaTerrenoNaoAverbada={areaTerrenoNaoAverbada}
+              usarCidadeReferencia={usarCidadeReferencia}
+              setUsarCidadeReferencia={setUsarCidadeReferencia}
+              divisoes={divisoes}
+              handleDivisaoChange={handleDivisaoChange}
+              adicionarLinhaDivisao={adicionarLinhaDivisao}
+              removerLinhaDivisao={removerLinhaDivisao}
+              handleCroqui={handleCroqui}
+              removerCroqui={removerCroqui}
+              setForm={setForm}
+            />
+          )}
+
+          {etapaAtual === '7' && (
+            <EtapaAcabamentos
+              acabamentos={acabamentos}
+              handleAcabamentoChange={handleAcabamentoChange}
+            />
+          )}
+
+          {etapaAtual === '8' && (
+            <EtapaConsideracoesMercado
+              form={form}
+              handleChange={handleChange}
+            />
+          )}
+
+          {etapaAtual === '9' && <EtapaGlossario />}
+
+          {etapaAtual === '9.1' && (
+            <EtapaMetodologiaCalculos
+              form={form}
+              handleChange={handleChange}
+              fatoresDisponiveis={fatoresDisponiveis}
+              fatoresSelecionados={fatoresSelecionados}
+              toggleFator={toggleFator}
+            />
+          )}
+
+          {etapaAtual === '9.2' && (
+            <EtapaCalculoBenfeitorias
+              form={form}
+              handleImagemBenfeitorias={handleImagemBenfeitorias}
+            />
+          )}
+
+          {etapaAtual === '10' && (
+            <EtapaValorImovel
+              form={form}
+              handleChange={handleChange}
+              outrosFatoresImovel={outrosFatoresImovel}
+              handleOutroFatorImovelChange={handleOutroFatorImovelChange}
+              adicionarLinhaOutroFatorImovel={adicionarLinhaOutroFatorImovel}
+              removerLinhaOutroFatorImovel={removerLinhaOutroFatorImovel}
+              subtotalImovel={subtotalImovel}
+              produtoOutrosFatores={produtoOutrosFatores}
+              valorFinalImovel={valorFinalImovel}
+              formatarMoeda={formatarMoeda}
+            />
+          )}
+
+          {etapaAtual === '11' && (
+            <EtapaFundamentacaoPrecisao
+              exibirTabelaFatoresTerreno={exibirTabelaFatoresTerreno}
+              exibirTabelaInferencia={exibirTabelaInferencia}
+              exibirTabelaMetodoEvolutivo={exibirTabelaMetodoEvolutivo}
+              fundamentacao={fundamentacao}
+              fundamentacaoInferencia={fundamentacaoInferencia}
+              fundamentacaoEvolutivo={fundamentacaoEvolutivo}
+              precisao={precisao}
+              selecionarGrauFundamentacao={selecionarGrauFundamentacao}
+              selecionarGrauFundamentacaoInferencia={selecionarGrauFundamentacaoInferencia}
+              selecionarGrauFundamentacaoEvolutivo={selecionarGrauFundamentacaoEvolutivo}
+              selecionarGrauPrecisao={selecionarGrauPrecisao}
+              somaFundamentacao={somaFundamentacao}
+              somaFundamentacaoInferencia={somaFundamentacaoInferencia}
+              somaFundamentacaoEvolutivo={somaFundamentacaoEvolutivo}
+            />
+          )}
+
+          {etapaAtual === '12' && (
+            <EtapaConclusao
+              valorFinalImovel={valorFinalImovel}
+              formatarMoeda={formatarMoeda}
+            />
+          )}
+
+          {etapaAtual === '13' && (
+            <EtapaGarantia form={form} setForm={setForm} />
+          )}
+
+          {etapaAtual === '14' && (
+            <EtapaAnexosAssinatura
+              form={form}
+              handleChange={handleChange}
+              formatarDataBR={formatarDataBR}
+              handlePdfUpload={handlePdfUpload}
+              handleLocalizacaoComparativos={handleLocalizacaoComparativos}
+              handleFotos={handleFotos}
+              fotos={fotos}
+              handleLegenda={handleLegenda}
+              onRemoverFoto={removerFoto}
+              onReordenarFotos={reordenarFotos}
+            />
+          )}
+
+          {/* Botão salvar */}
+          <div className="pt-4 border-t border-slate-200">
+            <button
+              disabled={salvando}
+              className="w-full sm:w-auto rounded-xl bg-blue-600 text-white px-6 py-2.5 text-sm font-semibold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
+            >
+              {salvando ? 'Salvando...' : 'Salvar Laudo'}
+            </button>
+          </div>
+
+        </form>
       </section>
+
+      {/* ── NAVEGAÇÃO STICKY NO RODAPÉ ── */}
+      <NavegacaoEtapas
+        etapaAtual={etapaAtual}
+        setEtapaAtual={setEtapaAtual}
+      />
+
     </AppShell>
   )
 }

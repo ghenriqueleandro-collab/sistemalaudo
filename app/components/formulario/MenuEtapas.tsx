@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { ETAPAS, EtapaId } from './etapas'
 
 type MenuEtapasProps = {
@@ -13,44 +14,86 @@ export default function MenuEtapas({
   setEtapaAtual,
   etapaConcluida,
 }: MenuEtapasProps) {
+  const indiceAtual = ETAPAS.findIndex((e) => e.id === etapaAtual)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
+
+  // Centraliza a etapa ativa no scroll horizontal
+  useEffect(() => {
+    const el = itemRefs.current[indiceAtual]
+    if (el && scrollRef.current) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+    }
+  }, [indiceAtual])
+
+  const pct = Math.round(((indiceAtual + 1) / ETAPAS.length) * 100)
+
   return (
-    <aside className="w-full lg:w-80 bg-white rounded-2xl shadow p-4 h-fit lg:sticky lg:top-6">
-      <h2 className="text-xl font-bold mb-4">Etapas do laudo</h2>
+    <div className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
+      {/* Faixa de etapas com scroll horizontal */}
+      <div
+        ref={scrollRef}
+        className="overflow-x-auto scrollbar-none"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        <div className="flex items-stretch min-w-max px-6">
+          {ETAPAS.map((etapa, i) => {
+            const ativa = etapaAtual === etapa.id
+            const concluida = etapaConcluida(etapa.id)
 
-      <div className="space-y-2">
-        {ETAPAS.map((etapa) => {
-          const ativa = etapaAtual === etapa.id
-          const concluida = etapaConcluida(etapa.id)
-
-          return (
-            <button
-              key={etapa.id}
-              type="button"
-              onClick={() => setEtapaAtual(etapa.id)}
-              className={`w-full text-left px-4 py-3 rounded-xl border transition ${
-                ativa
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white hover:bg-gray-50 border-gray-200'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-medium">{etapa.titulo}</span>
+            return (
+              <button
+                key={etapa.id}
+                ref={(el) => { itemRefs.current[i] = el }}
+                type="button"
+                onClick={() => setEtapaAtual(etapa.id)}
+                className={`
+                  flex items-center gap-2 px-4 py-3.5 text-sm border-b-2 transition-all whitespace-nowrap
+                  ${ativa
+                    ? 'border-blue-600 text-blue-600 font-medium'
+                    : concluida
+                    ? 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                    : 'border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-200'
+                  }
+                `}
+              >
+                {/* Indicador numérico */}
                 <span
-                  className={`text-sm font-bold ${
-                    ativa
-                      ? 'text-white'
+                  className={`
+                    flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold flex-shrink-0 transition-all
+                    ${ativa
+                      ? 'bg-blue-600 text-white'
                       : concluida
-                      ? 'text-green-600'
-                      : 'text-gray-300'
-                  }`}
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-slate-100 text-slate-400'
+                    }
+                  `}
                 >
-                  {concluida ? '✓' : '○'}
+                  {concluida && !ativa ? '✓' : etapa.id}
                 </span>
-              </div>
-            </button>
-          )
-        })}
+
+                {/* Título curto */}
+                <span className="text-xs">
+                  {etapa.titulo.replace(/^\d[\d.–\s-]+/, '')}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </div>
-    </aside>
+
+      {/* Barra de progresso */}
+      <div className="flex items-center gap-3 px-6 py-2 border-t border-slate-100">
+        <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-blue-600 transition-all duration-300"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <span className="text-xs text-slate-400 tabular-nums shrink-0">
+          {indiceAtual + 1} / {ETAPAS.length}
+        </span>
+      </div>
+    </div>
   )
 }

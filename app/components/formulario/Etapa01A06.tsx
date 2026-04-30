@@ -21,6 +21,43 @@ function formatarDistancia(m: number) {
   return `${(m / 1000).toFixed(1).replace('.', ',')} km`
 }
 
+// ─── Componentes visuais auxiliares ──────────────────────────────────────────
+
+function SectionCard({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+      <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50">
+        <h3 className="text-sm font-semibold text-slate-700">{title}</h3>
+      </div>
+      <div className="p-5 space-y-4">{children}</div>
+    </div>
+  )
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="block text-xs font-medium text-slate-500 mb-1.5">
+      {children}
+    </label>
+  )
+}
+
+function inputCls() {
+  return 'w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition'
+}
+
+function selectCls() {
+  return 'w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white text-slate-900 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition appearance-none'
+}
+
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+
 type Props = {
   handleMelhoramentosPublicosChange: (campo: string, valor: string) => void
   form: any
@@ -45,6 +82,8 @@ type Props = {
   removerCroqui: (index: number) => void
 }
 
+// ─── Componente principal ─────────────────────────────────────────────────────
+
 export default function Etapa01A06({
   form,
   handleChange,
@@ -65,7 +104,6 @@ export default function Etapa01A06({
   const [buscandoCoords, setBuscandoCoords] = useState(false)
   const [msgCoords, setMsgCoords] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
 
-  // Fallback: atualiza campo a campo via evento sintético (quando onAutoFill não é fornecido)
   function setField(name: string, value: string) {
     handleChange({
       target: { name, value },
@@ -90,14 +128,12 @@ export default function Etapa01A06({
     let erroEndereco = false
     let erroReferencias = false
 
-    // ── 1. Endereço via Nominatim (independente) ───────────────────────────────
     try {
       const resRev = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=pt-BR`
       )
       if (!resRev.ok) throw new Error('Nominatim indisponível')
       const dadosRev = await resRev.json()
-
       const a = dadosRev.address || {}
       const rua = [a.road, a.house_number].filter(Boolean).join(', ')
       const bairro = a.suburb || a.neighbourhood || ''
@@ -106,12 +142,10 @@ export default function Etapa01A06({
       const cep = a.postcode ? `CEP ${a.postcode}` : ''
       const enderecoMontado = [rua, bairro, cidade, estado, cep].filter(Boolean).join(' – ')
       if (enderecoMontado) camposAutoFill['endereco'] = enderecoMontado
-    } catch (err) {
-      console.error('Nominatim:', err)
+    } catch {
       erroEndereco = true
     }
 
-    // ── 2. Limpa referências antigas antes de buscar novas ────────────────────
     camposAutoFill['referencia1'] = ''
     camposAutoFill['distancia1'] = ''
     camposAutoFill['referencia2'] = ''
@@ -123,9 +157,7 @@ export default function Etapa01A06({
     camposAutoFill['referencia5'] = ''
     camposAutoFill['distancia5'] = ''
 
-    // ── 3. Pontos de referência via Overpass (tenta múltiplos mirrors) ──────────
     try {
-      // Query simplificada e mais compatível
       const overpassQuery =
         `[out:json][timeout:30];` +
         `(` +
@@ -184,27 +216,22 @@ export default function Etapa01A06({
       if (poisUnicos[2]) { camposAutoFill['referencia3'] = poisUnicos[2].nome; camposAutoFill['distancia3'] = formatarDistancia(poisUnicos[2].dist) }
       if (poisUnicos[3]) { camposAutoFill['referencia4'] = poisUnicos[3].nome; camposAutoFill['distancia4'] = formatarDistancia(poisUnicos[3].dist) }
       if (poisUnicos[4]) { camposAutoFill['referencia5'] = poisUnicos[4].nome; camposAutoFill['distancia5'] = formatarDistancia(poisUnicos[4].dist) }
-    } catch (err) {
-      console.error('Overpass:', err)
+    } catch {
       erroReferencias = true
     }
 
-    // ── 4. Aplica todos os campos coletados ────────────────────────────────────
     if (Object.keys(camposAutoFill).length > 0) {
       if (setFormDirect) {
-        // Melhor caminho: atualização atômica via setForm funcional
         setFormDirect((prev: any) => ({ ...prev, ...camposAutoFill }))
       } else if (onAutoFill) {
         onAutoFill(camposAutoFill)
       } else {
-        // Fallback: flushSync para forçar atualizações síncronas
         Object.entries(camposAutoFill).forEach(([k, v]) => {
           flushSync(() => setField(k, v))
         })
       }
     }
 
-    // ── 5. Feedback ao usuário ─────────────────────────────────────────────────
     if (!erroEndereco && !erroReferencias) {
       setMsgCoords({ tipo: 'ok', texto: 'Endereço e referências preenchidos automaticamente.' })
     } else if (!erroEndereco && erroReferencias) {
@@ -219,19 +246,21 @@ export default function Etapa01A06({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+
+      {/* Cabeçalho da etapa */}
       <div>
-        <h2 className="text-2xl font-bold mb-2">
+        <h2 className="text-xl font-semibold text-slate-900 mb-1">
           1 a 6. Identificação e caracterização do imóvel
         </h2>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-slate-500">
           Preencha os dados iniciais do imóvel, áreas, divisões, referências e croqui.
         </p>
       </div>
 
-      {/* ── Coordenadas com preenchimento automático ── */}
-      <div className="border rounded p-4 bg-blue-50 space-y-3">
-        <label className="block font-semibold text-blue-900">
+      {/* ── Coordenadas ────────────────────────────────────────────────────────── */}
+      <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 space-y-3">
+        <label className="block text-sm font-semibold text-blue-900">
           📍 Coordenadas do imóvel
         </label>
 
@@ -241,22 +270,22 @@ export default function Etapa01A06({
             placeholder="Ex: -23.550520, -46.633308"
             value={form.coordenadasImovel || ''}
             onChange={handleChange}
-            className="flex-1 border p-2 rounded bg-white"
+            className="flex-1 border border-blue-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition"
           />
           <button
             type="button"
             onClick={buscarDadosPorCoordenadas}
             disabled={buscandoCoords || !form.coordenadasImovel?.trim()}
-            className="px-4 py-2 rounded bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition whitespace-nowrap"
+            className="px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition whitespace-nowrap flex items-center gap-2"
           >
             {buscandoCoords ? (
-              <span className="flex items-center gap-2">
+              <>
                 <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                 </svg>
                 Buscando…
-              </span>
+              </>
             ) : (
               '🔍 Preencher dados'
             )}
@@ -264,214 +293,265 @@ export default function Etapa01A06({
         </div>
 
         {msgCoords && (
-          <p className={`text-sm rounded px-3 py-2 ${msgCoords.tipo === 'ok' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          <p className={`text-sm rounded-lg px-3 py-2 ${msgCoords.tipo === 'ok' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
             {msgCoords.tipo === 'ok' ? '✅ ' : '⚠️ '}{msgCoords.texto}
           </p>
         )}
 
-        <p className="text-xs text-blue-700">
+        <p className="text-xs text-blue-700 leading-relaxed">
           Após inserir as coordenadas, clique em <strong>Preencher dados</strong> para buscar automaticamente o endereço e os pontos de referência mais próximos.
           Os campos preenchidos podem ser editados manualmente.
         </p>
       </div>
 
-      <input
-        name="endereco"
-        placeholder="Endereço"
-        value={form.endereco}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
-
-      <input
-        name="proprietario"
-        placeholder="Proprietário"
-        value={form.proprietario}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
-
-      <input
-  name="solicitante"
-  placeholder="Solicitante / Interessado"
-  value={form.solicitante || ''}
-  onChange={handleChange}
-  className="w-full border p-2 rounded"
-/>
-
-      <input
-        name="tipo"
-        placeholder="Tipo do imóvel"
-        value={form.tipo}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
-
-      <select
-        name="finalidade"
-        value={form.finalidade}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      >
-        <option value="">Selecione a finalidade</option>
-        <option value="garantia">Garantia</option>
-        <option value="execucao">Execução</option>
-      </select>
-
-      <div className="border rounded p-4 bg-gray-50 space-y-4">
-  <h3 className="text-lg font-bold">Definições iniciais do laudo</h3>
-
-  <div>
-    <label className="block font-medium mb-1">Método de avaliação</label>
-    <select
-      name="metodoAvaliacao"
-      value={form.metodoAvaliacao}
-      onChange={handleChange}
-      className="w-full border p-2 rounded bg-white"
-    >
-      <option value="">Selecione</option>
-      <option value="comparativo">Método Comparativo</option>
-      <option value="evolutivo">Método Evolutivo</option>
-    </select>
-  </div>
-
-  <div>
-    <label className="block font-medium mb-1">Tratamento dos dados</label>
-    <select
-      name="tratamentoDados"
-      value={form.tratamentoDados}
-      onChange={handleChange}
-      className="w-full border p-2 rounded bg-white"
-    >
-      <option value="">Selecione</option>
-      <option value="inferencia_estatistica">Inferência estatística</option>
-      <option value="tratamento_por_fatores">Tratamento de dados por fatores</option>
-    </select>
-  </div>
-
-</div>
-
-      <div className="border rounded p-4 bg-gray-50">
-        <h3 className="text-lg font-bold mb-3">Áreas principais</h3>
-
-        <input
-          name="areaConstruidaTotal"
-          placeholder="Área construída total (m²)"
-          value={form.areaConstruidaTotal}
-          onChange={handleChange}
-          className="w-full border p-2 rounded bg-white mb-3"
-        />
-
-        <input
-          name="areaConstruidaAverbada"
-          placeholder="Área construída averbada (m²)"
-          value={form.areaConstruidaAverbada}
-          onChange={handleChange}
-          className="w-full border p-2 rounded bg-white mb-3"
-        />
-
-        <div className="w-full border p-2 rounded bg-gray-100 mb-3">
-          <strong>Área construída não averbada:</strong>{' '}
-          {areaConstruidaNaoAverbada.toLocaleString('pt-BR')} m²
+      {/* ── Dados principais ──────────────────────────────────────────────────── */}
+      <SectionCard title="Dados do imóvel">
+        <div>
+          <FieldLabel>Endereço</FieldLabel>
+          <input
+            name="endereco"
+            placeholder="Endereço"
+            value={form.endereco}
+            onChange={handleChange}
+            className={inputCls()}
+          />
         </div>
 
-        <input
-          name="areaTerrenoTotal"
-          placeholder="Área de terreno total (m²)"
-          value={form.areaTerrenoTotal}
-          onChange={handleChange}
-          className="w-full border p-2 rounded bg-white mb-3"
-        />
-
-        <input
-          name="areaTerrenoAverbada"
-          placeholder="Área de terreno averbada (m²)"
-          value={form.areaTerrenoAverbada}
-          onChange={handleChange}
-          className="w-full border p-2 rounded bg-white mb-3"
-        />
-
-        <div className="w-full border p-2 rounded bg-gray-100">
-          <strong>Área de terreno não averbada:</strong>{' '}
-          {areaTerrenoNaoAverbada.toLocaleString('pt-BR')} m²
+        <div>
+          <FieldLabel>Proprietário</FieldLabel>
+          <input
+            name="proprietario"
+            placeholder="Proprietário"
+            value={form.proprietario}
+            onChange={handleChange}
+            className={inputCls()}
+          />
         </div>
-      </div>
 
-      <input
-        name="matricula"
-        placeholder="Matrícula do imóvel"
-        value={form.matricula}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
+        <div>
+          <FieldLabel>Solicitante / Interessado</FieldLabel>
+          <input
+            name="solicitante"
+            placeholder="Solicitante / Interessado"
+            value={form.solicitante || ''}
+            onChange={handleChange}
+            className={inputCls()}
+          />
+        </div>
 
-      <input
-        name="padrao"
-        placeholder="Padrão"
-        value={form.padrao}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel>Tipo do imóvel</FieldLabel>
+            <input
+              name="tipo"
+              placeholder="Tipo do imóvel"
+              value={form.tipo}
+              onChange={handleChange}
+              className={inputCls()}
+            />
+          </div>
 
-      <input
-        name="idadeAparente"
-        placeholder="Idade aparente"
-        value={form.idadeAparente}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
+          <div>
+            <FieldLabel>Finalidade</FieldLabel>
+            <select
+              name="finalidade"
+              value={form.finalidade}
+              onChange={handleChange}
+              className={selectCls()}
+            >
+              <option value="">Selecione a finalidade</option>
+              <option value="garantia">Garantia</option>
+              <option value="execucao">Execução</option>
+            </select>
+          </div>
+        </div>
+      </SectionCard>
 
-      <select
-        name="estadoConservacao"
-        value={form.estadoConservacao}
-        onChange={handleChange}
-        className="w-full border p-2 rounded bg-white"
-      >
-        <option value="">Estado de conservação</option>
-        <option value="Novo">Novo</option>
-        <option value="Entre novo e regular">Entre novo e regular</option>
-        <option value="Regular">Regular</option>
-        <option value="Entre regular e reparos simples">Entre regular e reparos simples</option>
-        <option value="Reparos simples">Reparos simples</option>
-        <option value="Entre reparos simples e importantes">Entre reparos simples e importantes</option>
-        <option value="Reparos importantes">Reparos importantes</option>
-        <option value="Entre reparos importantes e sem valor">Entre reparos importantes e sem valor</option>
-        <option value="Sem valor">Sem valor</option>
-      </select>
+      {/* ── Definições iniciais do laudo ──────────────────────────────────────── */}
+      <SectionCard title="Definições iniciais do laudo">
+        <div>
+          <FieldLabel>Método de avaliação</FieldLabel>
+          <select
+            name="metodoAvaliacao"
+            value={form.metodoAvaliacao}
+            onChange={handleChange}
+            className={selectCls()}
+          >
+            <option value="">Selecione</option>
+            <option value="comparativo">Método Comparativo</option>
+            <option value="evolutivo">Método Evolutivo</option>
+          </select>
+        </div>
 
-      <input
-  name="iptu"
-  value={form.iptu || ''}
-  onChange={handleChange}
-  placeholder="IPTU"
-  className="w-full border p-2 rounded"
-/>
+        <div>
+          <FieldLabel>Tratamento dos dados</FieldLabel>
+          <select
+            name="tratamentoDados"
+            value={form.tratamentoDados}
+            onChange={handleChange}
+            className={selectCls()}
+          >
+            <option value="">Selecione</option>
+            <option value="inferencia_estatistica">Inferência estatística</option>
+            <option value="tratamento_por_fatores">Tratamento de dados por fatores</option>
+          </select>
+        </div>
+      </SectionCard>
 
-      <div className="border rounded p-4 bg-gray-50">
-        <label className="block font-semibold mb-3">Especificações de divisões</label>
+      {/* ── Áreas principais ──────────────────────────────────────────────────── */}
+      <SectionCard title="Áreas principais">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel>Área construída total (m²)</FieldLabel>
+            <input
+              name="areaConstruidaTotal"
+              placeholder="0,00"
+              value={form.areaConstruidaTotal}
+              onChange={handleChange}
+              className={inputCls()}
+            />
+          </div>
 
-        <div className="grid grid-cols-[120px_1fr_60px] gap-2 mb-2 font-semibold">
-          <div>Quantidade</div>
-          <div>Ambiente</div>
-          <div></div>
+          <div>
+            <FieldLabel>Área construída averbada (m²)</FieldLabel>
+            <input
+              name="areaConstruidaAverbada"
+              placeholder="0,00"
+              value={form.areaConstruidaAverbada}
+              onChange={handleChange}
+              className={inputCls()}
+            />
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <span className="text-xs font-medium text-slate-500">Área construída não averbada</span>
+          <p className="text-sm font-semibold text-slate-800 mt-0.5">
+            {areaConstruidaNaoAverbada.toLocaleString('pt-BR')} m²
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel>Área de terreno total (m²)</FieldLabel>
+            <input
+              name="areaTerrenoTotal"
+              placeholder="0,00"
+              value={form.areaTerrenoTotal}
+              onChange={handleChange}
+              className={inputCls()}
+            />
+          </div>
+
+          <div>
+            <FieldLabel>Área de terreno averbada (m²)</FieldLabel>
+            <input
+              name="areaTerrenoAverbada"
+              placeholder="0,00"
+              value={form.areaTerrenoAverbada}
+              onChange={handleChange}
+              className={inputCls()}
+            />
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <span className="text-xs font-medium text-slate-500">Área de terreno não averbada</span>
+          <p className="text-sm font-semibold text-slate-800 mt-0.5">
+            {areaTerrenoNaoAverbada.toLocaleString('pt-BR')} m²
+          </p>
+        </div>
+      </SectionCard>
+
+      {/* ── Detalhes complementares ───────────────────────────────────────────── */}
+      <SectionCard title="Detalhes complementares">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel>Matrícula do imóvel</FieldLabel>
+            <input
+              name="matricula"
+              placeholder="Matrícula do imóvel"
+              value={form.matricula}
+              onChange={handleChange}
+              className={inputCls()}
+            />
+          </div>
+
+          <div>
+            <FieldLabel>IPTU</FieldLabel>
+            <input
+              name="iptu"
+              placeholder="IPTU"
+              value={form.iptu || ''}
+              onChange={handleChange}
+              className={inputCls()}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel>Padrão</FieldLabel>
+            <input
+              name="padrao"
+              placeholder="Padrão"
+              value={form.padrao}
+              onChange={handleChange}
+              className={inputCls()}
+            />
+          </div>
+
+          <div>
+            <FieldLabel>Idade aparente</FieldLabel>
+            <input
+              name="idadeAparente"
+              placeholder="Idade aparente"
+              value={form.idadeAparente}
+              onChange={handleChange}
+              className={inputCls()}
+            />
+          </div>
+        </div>
+
+        <div>
+          <FieldLabel>Estado de conservação</FieldLabel>
+          <select
+            name="estadoConservacao"
+            value={form.estadoConservacao}
+            onChange={handleChange}
+            className={selectCls()}
+          >
+            <option value="">Estado de conservação</option>
+            <option value="Novo">Novo</option>
+            <option value="Entre novo e regular">Entre novo e regular</option>
+            <option value="Regular">Regular</option>
+            <option value="Entre regular e reparos simples">Entre regular e reparos simples</option>
+            <option value="Reparos simples">Reparos simples</option>
+            <option value="Entre reparos simples e importantes">Entre reparos simples e importantes</option>
+            <option value="Reparos importantes">Reparos importantes</option>
+            <option value="Entre reparos importantes e sem valor">Entre reparos importantes e sem valor</option>
+            <option value="Sem valor">Sem valor</option>
+          </select>
+        </div>
+      </SectionCard>
+
+      {/* ── Especificações de divisões ────────────────────────────────────────── */}
+      <SectionCard title="Especificações de divisões">
+        <div className="grid grid-cols-[100px_1fr_44px] gap-2 pb-1 border-b border-slate-100">
+          <span className="text-xs font-medium text-slate-500">Quantidade</span>
+          <span className="text-xs font-medium text-slate-500">Ambiente</span>
+          <span />
         </div>
 
         {divisoes.map((item, index) => (
-          <div
-            key={index}
-            className="grid grid-cols-[120px_1fr_60px] gap-2 mb-2"
-          >
+          <div key={index} className="grid grid-cols-[100px_1fr_44px] gap-2 items-center">
             <select
               value={item.quantidade}
-              onChange={(e) =>
-                handleDivisaoChange(index, 'quantidade', e.target.value)
-              }
-              className="w-full border p-2 rounded bg-white"
+              onChange={(e) => handleDivisaoChange(index, 'quantidade', e.target.value)}
+              className={selectCls()}
             >
               {Array.from({ length: 20 }, (_, i) => i + 1).map((numero) => (
-                <option key={numero} value={String(numero)}>
-                  {numero}
-                </option>
+                <option key={numero} value={String(numero)}>{numero}</option>
               ))}
             </select>
 
@@ -479,18 +559,16 @@ export default function Etapa01A06({
               type="text"
               placeholder="Ex: Banheiros, Quarto, Sala, Cozinha"
               value={item.ambiente}
-              onChange={(e) =>
-                handleDivisaoChange(index, 'ambiente', e.target.value)
-              }
-              className="w-full border p-2 rounded bg-white"
+              onChange={(e) => handleDivisaoChange(index, 'ambiente', e.target.value)}
+              className={inputCls()}
             />
 
             <button
               type="button"
               onClick={() => removerLinhaDivisao(index)}
-              className="px-3 py-2 border rounded bg-red-100"
+              className="h-10 w-10 flex items-center justify-center rounded-xl border border-red-200 text-red-500 hover:bg-red-50 transition text-sm font-bold"
             >
-              X
+              ✕
             </button>
           </div>
         ))}
@@ -498,235 +576,177 @@ export default function Etapa01A06({
         <button
           type="button"
           onClick={adicionarLinhaDivisao}
-          className="mt-2 px-4 py-2 border rounded bg-white"
+          className="mt-1 flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-medium transition"
         >
-          + Adicionar ambiente
+          <span className="text-lg leading-none">+</span> Adicionar ambiente
         </button>
-      </div>
+      </SectionCard>
 
-      <div className="border rounded p-4 bg-gray-50">
-        <label className="block font-semibold mb-2">
-          O imóvel precisa de cidade de referência?
-        </label>
+      {/* ── Cidade de referência ──────────────────────────────────────────────── */}
+      <SectionCard title="Cidade de referência">
+        <div>
+          <FieldLabel>O imóvel precisa de cidade de referência?</FieldLabel>
+          <select
+            value={usarCidadeReferencia ? 'sim' : 'nao'}
+            onChange={(e) => setUsarCidadeReferencia(e.target.value === 'sim')}
+            className={selectCls()}
+          >
+            <option value="sim">Sim, adicionar cidade de referência</option>
+            <option value="nao">Não, o imóvel já está em uma cidade referência</option>
+          </select>
+        </div>
 
-        <select
-          value={usarCidadeReferencia ? 'sim' : 'nao'}
-          onChange={(e) => setUsarCidadeReferencia(e.target.value === 'sim')}
-          className="w-full border p-2 rounded bg-white"
-        >
-          <option value="sim">Sim, adicionar cidade de referência</option>
-          <option value="nao">Não, o imóvel já está em uma cidade referência</option>
-        </select>
-      </div>
+        {usarCidadeReferencia && (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <FieldLabel>Cidade principal</FieldLabel>
+              <input
+                name="cidadePrincipal"
+                placeholder="Cidade principal"
+                value={form.cidadePrincipal}
+                onChange={handleChange}
+                className={inputCls()}
+              />
+            </div>
 
-      {usarCidadeReferencia && (
-        <>
-          <input
-            name="cidadePrincipal"
-            placeholder="Cidade principal"
-            value={form.cidadePrincipal}
-            onChange={handleChange}
-            className="w-full border p-2 rounded"
-          />
+            <div>
+              <FieldLabel>Distância até a cidade principal</FieldLabel>
+              <input
+                name="distanciaCidadePrincipal"
+                placeholder="Distância até a cidade principal"
+                value={form.distanciaCidadePrincipal}
+                onChange={handleChange}
+                className={inputCls()}
+              />
+            </div>
+          </div>
+        )}
+      </SectionCard>
 
-          <input
-            name="distanciaCidadePrincipal"
-            placeholder="Distância até a cidade principal"
-            value={form.distanciaCidadePrincipal}
-            onChange={handleChange}
-            className="w-full border p-2 rounded"
-          />
-        </>
-      )}
+      {/* ── Pontos de referência ──────────────────────────────────────────────── */}
+      <SectionCard title="Pontos de referência">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <div key={n} className="grid grid-cols-2 gap-4">
+            <div>
+              <FieldLabel>Local de referência {n}</FieldLabel>
+              <input
+                name={`referencia${n}`}
+                placeholder={`Local de referência ${n}`}
+                value={form[`referencia${n}`] || ''}
+                onChange={handleChange}
+                className={inputCls()}
+              />
+            </div>
+            <div>
+              <FieldLabel>Distância da referência {n}</FieldLabel>
+              <input
+                name={`distancia${n}`}
+                placeholder={`Distância da referência ${n}`}
+                value={form[`distancia${n}`] || ''}
+                onChange={handleChange}
+                className={inputCls()}
+              />
+            </div>
+          </div>
+        ))}
+      </SectionCard>
 
-      <input
-        name="referencia1"
-        placeholder="Local de referência 1"
-        value={form.referencia1}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
+      {/* ── Melhoramentos públicos ────────────────────────────────────────────── */}
+      <SectionCard title="Melhoramentos públicos">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <tbody>
+              {[
+                ['redeAgua', 'Rede de água', 'redeEletrica', 'Rede Elétrica'],
+                ['gasCanalizado', 'Gás canalizado', 'redeTelefonica', 'Rede Telefônica'],
+                ['esgotoSanitario', 'Esgoto Sanitário', 'iluminacaoPublica', 'Iluminação Pública'],
+                ['esgotoPluvial', 'Esgoto Pluvial', 'pavimentacao', 'Pavimentação'],
+                ['fossa', 'Fossa', 'passeio', 'Passeio'],
+                ['coletaLixo', 'Coleta de Lixo', 'guias', 'Guias'],
+                ['lazer', 'Lazer', 'sarjetas', 'Sarjetas'],
+              ].map(([campo1, label1, campo2, label2]) => (
+                <tr key={String(campo1)} className="border-b border-slate-100 last:border-0">
+                  <td className="py-2 pr-3 text-slate-600 text-xs font-medium w-36">{label1}</td>
+                  <td className="py-2 pr-6">
+                    <select
+                      value={form.melhoramentosPublicos?.[String(campo1)] || ''}
+                      onChange={(e) => handleMelhoramentosPublicosChange(String(campo1), e.target.value)}
+                      className={selectCls()}
+                    >
+                      <option value="">Selecione</option>
+                      <option value="Sim">Sim</option>
+                      <option value="Não">Não</option>
+                    </select>
+                  </td>
+                  <td className="py-2 pr-3 text-slate-600 text-xs font-medium w-36">{label2}</td>
+                  <td className="py-2">
+                    <select
+                      value={form.melhoramentosPublicos?.[String(campo2)] || ''}
+                      onChange={(e) => handleMelhoramentosPublicosChange(String(campo2), e.target.value)}
+                      className={selectCls()}
+                    >
+                      <option value="">Selecione</option>
+                      <option value="Sim">Sim</option>
+                      <option value="Não">Não</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </SectionCard>
 
-      <input
-        name="distancia1"
-        placeholder="Distância da referência 1"
-        value={form.distancia1}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
-
-      <input
-        name="referencia2"
-        placeholder="Local de referência 2"
-        value={form.referencia2}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
-
-      <input
-        name="distancia2"
-        placeholder="Distância da referência 2"
-        value={form.distancia2}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
-
-      <input
-        name="referencia3"
-        placeholder="Local de referência 3"
-        value={form.referencia3}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
-
-      <input
-        name="distancia3"
-        placeholder="Distância da referência 3"
-        value={form.distancia3}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
-
-      <input
-        name="referencia4"
-        placeholder="Local de referência 4"
-        value={form.referencia4 || ''}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
-
-      <input
-        name="distancia4"
-        placeholder="Distância da referência 4"
-        value={form.distancia4 || ''}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
-
-      <input
-        name="referencia5"
-        placeholder="Local de referência 5"
-        value={form.referencia5 || ''}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
-
-      <input
-        name="distancia5"
-        placeholder="Distância da referência 5"
-        value={form.distancia5 || ''}
-        onChange={handleChange}
-        className="w-full border p-2 rounded"
-      />
-
-<div className="border rounded p-4 bg-gray-50">
-  <h3 className="text-lg font-bold mb-3 text-center">
-    Melhoramentos públicos
-  </h3>
-
-  <table className="w-full border-collapse border text-sm">
-    <tbody>
-      {[
-        ['redeAgua', 'Rede de água', 'redeEletrica', 'Rede Elétrica'],
-        ['gasCanalizado', 'Gás canalizado', 'redeTelefonica', 'Rede Telefônica'],
-        ['esgotoSanitario', 'Esgoto Sanitário', 'iluminacaoPublica', 'Iluminação Pública'],
-        ['esgotoPluvial', 'Esgoto Pluvial', 'pavimentacao', 'Pavimentação'],
-        ['fossa', 'Fossa', 'passeio', 'Passeio'],
-        ['coletaLixo', 'Coleta de Lixo', 'guias', 'Guias'],
-        ['lazer', 'Lazer', 'sarjetas', 'Sarjetas'],
-      ].map(([campo1, label1, campo2, label2]) => (
-        <tr key={String(campo1)}>
-          <td className="border p-2">{label1}</td>
-          <td className="border p-2">
-            <select
-              value={form.melhoramentosPublicos?.[String(campo1)] || ''}
-              onChange={(e) =>
-                handleMelhoramentosPublicosChange(String(campo1), e.target.value)
-              }
-              className="w-full border p-2 rounded bg-white"
-            >
-              <option value="">Selecione</option>
-              <option value="Sim">Sim</option>
-              <option value="Não">Não</option>
-            </select>
-          </td>
-
-          <td className="border p-2">{label2}</td>
-          <td className="border p-2">
-            <select
-              value={form.melhoramentosPublicos?.[String(campo2)] || ''}
-              onChange={(e) =>
-                handleMelhoramentosPublicosChange(String(campo2), e.target.value)
-              }
-              className="w-full border p-2 rounded bg-white"
-            >
-              <option value="">Selecione</option>
-              <option value="Sim">Sim</option>
-              <option value="Não">Não</option>
-            </select>
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-</div>
-
-      <div className="border rounded p-3 bg-gray-50">
-        <label className="block font-semibold mb-2">
-          Upload do croqui / imagem do item 6
-        </label>
-
+      {/* ── Croqui / Imagem ───────────────────────────────────────────────────── */}
+      <SectionCard title="Upload do croqui / imagem do item 6">
         <input
-  type="file"
-  accept="image/*"
-  multiple
-  onChange={handleCroqui}
-  className="w-full border p-2 rounded bg-white"
-/>
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleCroqui}
+          className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white text-slate-500 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 transition"
+        />
 
         {form.croquis && form.croquis.length > 0 && (
-  <div className="mt-4 space-y-4">
-    {form.croquis.map((croqui: any, index: number) => (
-      <div key={index} className="border rounded p-3 bg-white space-y-3">
-        <div className="flex justify-between items-center gap-3">
-          <span className="font-medium">Imagem {index + 1}</span>
+          <div className="mt-3 space-y-4">
+            {form.croquis.map((croqui: any, index: number) => (
+              <div key={index} className="rounded-xl border border-slate-200 p-4 space-y-3 bg-slate-50">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-slate-700">Imagem {index + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => removerCroqui(index)}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 transition font-medium"
+                  >
+                    Excluir imagem
+                  </button>
+                </div>
 
-          <button
-            type="button"
-            onClick={() => removerCroqui(index)}
-            className="px-3 py-1 rounded border border-red-300 text-red-600 bg-white hover:bg-red-50"
-          >
-            Excluir imagem
-          </button>
-        </div>
+                <div className="flex justify-center">
+                  <img
+                    src={croqui.preview}
+                    alt={`Croqui ${index + 1}`}
+                    className="w-full max-h-80 object-contain rounded-lg border border-slate-200"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </SectionCard>
 
-        <div className="flex justify-center">
-          <img
-            src={croqui.preview}
-            alt={`Croqui ${index + 1}`}
-            className="w-full max-h-80 object-contain rounded border"
-          />
-        </div>
-
-      </div>
-    ))}
-  </div>
-)}
-      </div>
-
-<div className="border rounded p-4 bg-gray-50 space-y-4">
-        <h3 className="text-lg font-bold">Condições específicas do terreno</h3>
-
+      {/* ── Condições específicas do terreno ─────────────────────────────────── */}
+      <SectionCard title="Condições específicas do terreno">
         <div className="space-y-2">
-          <label className="flex items-start gap-3">
+          <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
               name="terrenoEncravado"
               checked={Boolean(form.terrenoEncravado)}
               onChange={handleChange}
-              className="mt-1"
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
-            <span>Terreno encravado</span>
+            <span className="text-sm text-slate-700">Terreno encravado</span>
           </label>
 
           {form.terrenoEncravado && (
@@ -735,21 +755,21 @@ export default function Etapa01A06({
               value={form.observacoesTerrenoEncravado || ''}
               onChange={handleChange}
               placeholder="Observações sobre o terreno encravado"
-              className="w-full border p-3 rounded bg-white min-h-[120px]"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition min-h-[100px]"
             />
           )}
         </div>
 
         <div className="space-y-2">
-          <label className="flex items-start gap-3">
+          <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
               name="confrontacaoCursoAgua"
               checked={Boolean(form.confrontacaoCursoAgua)}
               onChange={handleChange}
-              className="mt-1"
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
-            <span>Confrontação com o curso d&apos;água</span>
+            <span className="text-sm text-slate-700">Confrontação com o curso d&apos;água</span>
           </label>
 
           {form.confrontacaoCursoAgua && (
@@ -758,12 +778,14 @@ export default function Etapa01A06({
               value={form.observacoesConfrontacaoCursoAgua || ''}
               onChange={handleChange}
               placeholder="Observações sobre a confrontação com o curso d'água"
-              className="w-full border p-3 rounded bg-white min-h-[120px]"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition min-h-[100px]"
             />
           )}
         </div>
-      </div>
+      </SectionCard>
 
+      {/* Espaço para a barra de navegação fixa não cobrir o último card */}
+      <div className="h-6" />
     </div>
   )
 }
