@@ -1198,6 +1198,32 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 <CabecalhoLaudo />
                 <div className="mb-6 mt-6">
                   {i === 0 && <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.consideracoes}. CONSIDERAÇÕES SOBRE O MERCADO</h2>}
+
+                  {i === 0 && (dados.liquidez || dados.desempenhoMercado) && (
+                    <table className="w-full border text-sm border-collapse mb-4 evitar-quebra">
+                      <thead>
+                        <tr className="bg-[#EAF0FB]">
+                          <th className="border p-2 text-left font-bold w-1/3">Campo</th>
+                          <th className="border p-2 text-left">Descrição</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dados.liquidez && (
+                          <tr>
+                            <td className="border p-2 font-semibold">Liquidez</td>
+                            <td className="border p-2">{dados.liquidez}</td>
+                          </tr>
+                        )}
+                        {dados.desempenhoMercado && (
+                          <tr>
+                            <td className="border p-2 font-semibold">Desempenho do Mercado</td>
+                            <td className="border p-2">{dados.desempenhoMercado}</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  )}
+
                   <div className="space-y-1.5 text-justify leading-relaxed">{chunk.map((paragrafo, j) => <p key={j}>{paragrafo}</p>)}</div>
                 </div>
               </PaginaFlexivel>
