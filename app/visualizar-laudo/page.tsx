@@ -235,6 +235,7 @@ A existência de confrontação com curso d’água exige avaliação técnica e
 Dessa forma, a confrontação com curso d’água pode influenciar negativamente o aproveitamento econômico do imóvel, afetando sua liquidez, ocupação e potencial construtivo, devendo tal condição ser considerada na análise mercadológica e na formação do valor.`
 
 type DadosLaudo = {
+  tipoLaudo?: 'detalhado' | 'simplificado'
   divisoes?: { quantidade: string; ambiente: string }[]
   fatoresSelecionados?: string[]
   metodoAvaliacao?: string
