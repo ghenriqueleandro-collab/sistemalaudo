@@ -1,8 +1,8 @@
-'use client'
-
 /**
  * SALVAR EM: src/app/agendamentos/page.tsx
  */
+
+'use client'
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -92,7 +92,6 @@ export default function AgendamentosPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const perfil = (session?.user as any)?.perfil
-  const permissoes = (session?.user as any)?.permissoes as Record<string, boolean> | undefined
 
   const [laudos, setLaudos] = useState<LaudoAgendamento[]>([])
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
@@ -102,7 +101,10 @@ export default function AgendamentosPage() {
   const [criandoLaudo, setCriandoLaudo] = useState(false)
   const [buscandoCoords, setBuscandoCoords] = useState(false)
   const [msgCoords, setMsgCoords] = useState<{tipo:'ok'|'erro';texto:string}|null>(null)
+
+  // ← ATUALIZADO: tipoLaudo adicionado ao estado inicial
   const [novoLaudo, setNovoLaudo] = useState({
+    tipoLaudo: 'detalhado' as 'detalhado' | 'simplificado',
     coordenadasImovel: '',
     endereco: '',
     proprietario: '',
@@ -121,11 +123,11 @@ export default function AgendamentosPage() {
     referencia4: '', distancia4: '',
     referencia5: '', distancia5: '',
   })
+
   const [filtroStatus, setFiltroStatus] = useState<StatusVistoria | ''>('')
   const [salvando, setSalvando] = useState(false)
   const [linkCopiado, setLinkCopiado] = useState(false)
 
-  // Campos do modal de agendamento
   const [dataAgendamento, setDataAgendamento] = useState('')
   const [horarioAgendamento, setHorarioAgendamento] = useState('')
   const [nomeVistoriador, setNomeVistoriador] = useState('')
@@ -133,15 +135,13 @@ export default function AgendamentosPage() {
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/')
-    if (status === 'authenticated' && perfil && perfil !== 'admin' && !permissoes?.realizarAgendamentos) {
+    if (status === 'authenticated' && perfil && perfil !== 'admin' && perfil !== 'agendador') {
       router.push('/meus-laudos')
     }
   }, [status, perfil])
 
   useEffect(() => {
-    if (status === 'authenticated') {
-      carregarDados()
-    }
+    if (status === 'authenticated') carregarDados()
   }, [status])
 
   function setNovoLaudoField(name: string, value: string) {
@@ -170,36 +170,38 @@ export default function AgendamentosPage() {
       }
     } catch {}
     try {
-      const q = `[out:json][timeout:30];(nwr["name"]["amenity"~"^(hospital|bank|pharmacy|school|place_of_worship|police|college|university|fuel|courthouse|town_hall)$"](around:6000,${lat},${lon});nwr["name"]["shop"~"^(supermarket|mall)$"](around:6000,${lat},${lon});nwr["name"]["leisure"~"^(stadium)$"](around:6000,${lat},${lon}););out center 60;`
+      type P = { nome: string; dist: number }
+      const overpassQuery = `[out:json][timeout:30];(nwr["name"]["amenity"~"^(hospital|bank|pharmacy|school|place_of_worship|police|college|university|fuel|courthouse|town_hall)$"](around:6000,${lat},${lon});nwr["name"]["shop"~"^(supermarket|mall)$"](around:6000,${lat},${lon}););out center 60;`
       const mirrors = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']
-      let elements: any[] = []
+      let dadosOver: any = null
       for (const mirror of mirrors) {
         try {
-          const res = await fetch(mirror, { method: 'POST', body: `data=${encodeURIComponent(q)}`, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: AbortSignal.timeout(20000) })
+          const res = await fetch(mirror, { method: 'POST', body: `data=${encodeURIComponent(overpassQuery)}`, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: AbortSignal.timeout(15000) })
           if (!res.ok) continue
           const json = await res.json()
-          if (json?.elements?.length > 0) { elements = json.elements; break }
-        } catch {}
+          if (json?.elements?.length > 0) { dadosOver = json; break }
+        } catch { continue }
       }
-      type P = { nome: string; dist: number }
-      const pois: P[] = elements.map((el: any) => {
-        const elLat = el.lat ?? el.center?.lat; const elLon = el.lon ?? el.center?.lon
-        const nome = el.tags?.name
-        if (!elLat || !elLon || !nome) return null
-        return { nome, dist: haversineMetros(lat, lon, elLat, elLon) }
-      }).filter((x): x is P => x !== null).sort((a, b) => a.dist - b.dist)
-      const vistos = new Set<string>(); const unicos: P[] = []
-      for (const p of pois) { const k = p.nome.toLowerCase().trim(); if (!vistos.has(k)) { vistos.add(k); unicos.push(p) } if (unicos.length === 5) break }
-      campos['referencia1'] = ''; campos['distancia1'] = ''
-      campos['referencia2'] = ''; campos['distancia2'] = ''
-      campos['referencia3'] = ''; campos['distancia3'] = ''
-      campos['referencia4'] = ''; campos['distancia4'] = ''
-      campos['referencia5'] = ''; campos['distancia5'] = ''
-      if (unicos[0]) { campos['referencia1'] = unicos[0].nome; campos['distancia1'] = formatarDistancia(unicos[0].dist) }
-      if (unicos[1]) { campos['referencia2'] = unicos[1].nome; campos['distancia2'] = formatarDistancia(unicos[1].dist) }
-      if (unicos[2]) { campos['referencia3'] = unicos[2].nome; campos['distancia3'] = formatarDistancia(unicos[2].dist) }
-      if (unicos[3]) { campos['referencia4'] = unicos[3].nome; campos['distancia4'] = formatarDistancia(unicos[3].dist) }
-      if (unicos[4]) { campos['referencia5'] = unicos[4].nome; campos['distancia5'] = formatarDistancia(unicos[4].dist) }
+      if (dadosOver) {
+        const pois = (dadosOver.elements || []).map((el: any) => {
+          const elLat = el.lat ?? el.center?.lat; const elLon = el.lon ?? el.center?.lon
+          const nome = el.tags?.name
+          if (!elLat || !elLon || !nome) return null
+          return { nome, dist: haversineMetros(lat, lon, elLat, elLon) }
+        }).filter((x): x is P => x !== null).sort((a: P, b: P) => a.dist - b.dist)
+        const vistos = new Set<string>(); const unicos: P[] = []
+        for (const p of pois) { const k = p.nome.toLowerCase().trim(); if (!vistos.has(k)) { vistos.add(k); unicos.push(p) } if (unicos.length === 5) break }
+        campos['referencia1'] = ''; campos['distancia1'] = ''
+        campos['referencia2'] = ''; campos['distancia2'] = ''
+        campos['referencia3'] = ''; campos['distancia3'] = ''
+        campos['referencia4'] = ''; campos['distancia4'] = ''
+        campos['referencia5'] = ''; campos['distancia5'] = ''
+        if (unicos[0]) { campos['referencia1'] = unicos[0].nome; campos['distancia1'] = formatarDistancia(unicos[0].dist) }
+        if (unicos[1]) { campos['referencia2'] = unicos[1].nome; campos['distancia2'] = formatarDistancia(unicos[1].dist) }
+        if (unicos[2]) { campos['referencia3'] = unicos[2].nome; campos['distancia3'] = formatarDistancia(unicos[2].dist) }
+        if (unicos[3]) { campos['referencia4'] = unicos[3].nome; campos['distancia4'] = formatarDistancia(unicos[3].dist) }
+        if (unicos[4]) { campos['referencia5'] = unicos[4].nome; campos['distancia5'] = formatarDistancia(unicos[4].dist) }
+      }
     } catch {}
     if (Object.keys(campos).length > 0) setNovoLaudo((prev) => ({ ...prev, ...campos }))
     setMsgCoords({ tipo: 'ok', texto: 'Endereço e referências preenchidos automaticamente.' })
@@ -236,7 +238,16 @@ export default function AgendamentosPage() {
       })
       if (!res.ok) { alert('Erro ao criar laudo.'); return }
       setMostrarModalNovoLaudo(false)
-      setNovoLaudo({ coordenadasImovel:'',endereco:'',proprietario:'',solicitante:'',tipo:'',finalidade:'',areaConstruidaTotal:'',areaConstruidaAverbada:'',areaTerrenoTotal:'',areaTerrenoAverbada:'',matricula:'',iptu:'',referencia1:'',distancia1:'',referencia2:'',distancia2:'',referencia3:'',distancia3:'',referencia4:'',distancia4:'',referencia5:'',distancia5:'' })
+      // ← ATUALIZADO: reset inclui tipoLaudo
+      setNovoLaudo({
+        tipoLaudo: 'detalhado',
+        coordenadasImovel: '', endereco: '', proprietario: '', solicitante: '',
+        tipo: '', finalidade: '', areaConstruidaTotal: '', areaConstruidaAverbada: '',
+        areaTerrenoTotal: '', areaTerrenoAverbada: '', matricula: '', iptu: '',
+        referencia1: '', distancia1: '', referencia2: '', distancia2: '',
+        referencia3: '', distancia3: '', referencia4: '', distancia4: '',
+        referencia5: '', distancia5: '',
+      })
       setMsgCoords(null)
       await carregarDados()
     } finally {
@@ -305,7 +316,6 @@ export default function AgendamentosPage() {
     try {
       const usuarioResp = usuarios.find((u) => u.email === editorResponsavelEmail)
       const nomeResponsavel = session?.user?.name || 'Agendador'
-
       await fetch('/api/vistoria', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -323,8 +333,6 @@ export default function AgendamentosPage() {
           },
         }),
       })
-
-      // Notifica o responsável pelo laudo
       if (editorResponsavelEmail) {
         await fetch('/api/notificacoes', {
           method: 'POST',
@@ -337,7 +345,6 @@ export default function AgendamentosPage() {
           }),
         })
       }
-
       await carregarDados()
       setLaudoSelecionado(null)
       alert('Agendamento salvo com sucesso!')
@@ -351,17 +358,13 @@ export default function AgendamentosPage() {
     if (!confirm('Confirmar que a vistoria foi realizada?')) return
     setSalvando(true)
     try {
-      const nomeResponsavel = session?.user?.name || 'Agendador'
       await fetch('/api/vistoria', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           laudoId: laudoSelecionado.id,
           statusVistoria: 'realizada',
-          eventoHistorico: {
-            usuario: nomeResponsavel,
-            acao: 'Vistoria marcada como realizada',
-          },
+          eventoHistorico: { usuario: session?.user?.name || 'Agendador', acao: 'Vistoria marcada como realizada' },
         }),
       })
       await carregarDados()
@@ -371,24 +374,15 @@ export default function AgendamentosPage() {
     }
   }
 
-  const laudosFiltrados = laudos
-    .filter((l) => !filtroStatus || l.statusVistoria === filtroStatus || (!l.statusVistoria && filtroStatus === 'aguardando_agendamento'))
+  const laudosFiltrados = filtroStatus
+    ? laudos.filter((l) => l.statusVistoria === filtroStatus)
+    : laudos
 
-  const contadores = {
-    aguardando_agendamento: laudos.filter((l) => !l.statusVistoria || l.statusVistoria === 'aguardando_agendamento').length,
-    agendada: laudos.filter((l) => l.statusVistoria === 'agendada').length,
-    realizada: laudos.filter((l) => l.statusVistoria === 'realizada').length,
-    fotos_disponiveis: laudos.filter((l) => l.statusVistoria === 'fotos_disponiveis').length,
-    finalizado: laudos.filter((l) => l.statusVistoria === 'finalizado').length,
-  }
-
-  if (status === 'loading' || carregando) {
-    return (
-      <AppShell>
-        <div className="flex items-center justify-center py-24 text-slate-400 text-sm">Carregando...</div>
-      </AppShell>
+  const contadores = Object.fromEntries(
+    (['aguardando_agendamento','agendada','realizada','fotos_disponiveis','finalizado'] as StatusVistoria[]).map(
+      (s) => [s, laudos.filter((l) => l.statusVistoria === s).length]
     )
-  }
+  ) as Record<StatusVistoria, number>
 
   return (
     <AppShell>
@@ -418,7 +412,12 @@ export default function AgendamentosPage() {
             <div className="w-full max-w-2xl rounded-[28px] border border-slate-200 bg-white p-8 shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-slate-950">Iniciar novo laudo</h2>
-                <button onClick={() => { setMostrarModalNovoLaudo(false); setMsgCoords(null) }} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+                <button
+                  onClick={() => { setMostrarModalNovoLaudo(false); setMsgCoords(null) }}
+                  className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
+                >
+                  ×
+                </button>
               </div>
 
               <div className="space-y-4">
@@ -438,61 +437,42 @@ export default function AgendamentosPage() {
                       disabled={buscandoCoords || !novoLaudo.coordenadasImovel.trim()}
                       className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                     >
-                      {buscandoCoords ? 'Buscando…' : '🔍 Preencher'}
+                      {buscandoCoords ? 'Buscando…' : 'Preencher dados'}
                     </button>
                   </div>
                   {msgCoords && (
-                    <p className={`text-xs rounded px-3 py-2 ${msgCoords.tipo === 'ok' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {msgCoords.tipo === 'ok' ? '✅ ' : '⚠️ '}{msgCoords.texto}
+                    <p className={`text-sm ${msgCoords.tipo === 'ok' ? 'text-emerald-700' : 'text-rose-600'}`}>
+                      {msgCoords.texto}
                     </p>
                   )}
                 </div>
 
-                {/* Endereço */}
-                <input value={novoLaudo.endereco} onChange={(e) => setNovoLaudoField('endereco', e.target.value)}
-                  placeholder="Endereço" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
-
-                {/* Proprietário e Solicitante */}
+                {/* Dados principais */}
                 <div className="grid grid-cols-2 gap-3">
+                  <input value={novoLaudo.endereco} onChange={(e) => setNovoLaudoField('endereco', e.target.value)}
+                    placeholder="Endereço" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
                   <input value={novoLaudo.proprietario} onChange={(e) => setNovoLaudoField('proprietario', e.target.value)}
-                    placeholder="Proprietário" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+                    placeholder="Proprietário" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
                   <input value={novoLaudo.solicitante} onChange={(e) => setNovoLaudoField('solicitante', e.target.value)}
-                    placeholder="Solicitante / Interessado" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
-                </div>
-
-                {/* Tipo e Finalidade */}
-                <div className="grid grid-cols-2 gap-3">
+                    placeholder="Solicitante" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
                   <input value={novoLaudo.tipo} onChange={(e) => setNovoLaudoField('tipo', e.target.value)}
-                    placeholder="Tipo do imóvel" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
-                  <select value={novoLaudo.finalidade} onChange={(e) => setNovoLaudoField('finalidade', e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400 bg-white">
-                    <option value="">Selecione a finalidade</option>
-                    <option value="garantia">Garantia</option>
-                    <option value="execucao">Execução</option>
-                  </select>
-                </div>
-
-                {/* Matrícula e IPTU */}
-                <div className="grid grid-cols-2 gap-3">
+                    placeholder="Tipo do imóvel" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
+                  <input value={novoLaudo.finalidade} onChange={(e) => setNovoLaudoField('finalidade', e.target.value)}
+                    placeholder="Finalidade" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
                   <input value={novoLaudo.matricula} onChange={(e) => setNovoLaudoField('matricula', e.target.value)}
-                    placeholder="Matrícula do imóvel" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
-                  <input value={novoLaudo.iptu} onChange={(e) => setNovoLaudoField('iptu', e.target.value)}
-                    placeholder="IPTU" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+                    placeholder="Matrícula" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
                 </div>
 
-                {/* Áreas principais */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-                  <p className="text-sm font-semibold text-slate-700">Áreas principais</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input value={novoLaudo.areaConstruidaTotal} onChange={(e) => setNovoLaudoField('areaConstruidaTotal', e.target.value)}
-                      placeholder="Área construída total (m²)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
-                    <input value={novoLaudo.areaConstruidaAverbada} onChange={(e) => setNovoLaudoField('areaConstruidaAverbada', e.target.value)}
-                      placeholder="Área construída averbada (m²)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
-                    <input value={novoLaudo.areaTerrenoTotal} onChange={(e) => setNovoLaudoField('areaTerrenoTotal', e.target.value)}
-                      placeholder="Área de terreno total (m²)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
-                    <input value={novoLaudo.areaTerrenoAverbada} onChange={(e) => setNovoLaudoField('areaTerrenoAverbada', e.target.value)}
-                      placeholder="Área de terreno averbada (m²)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
-                  </div>
+                {/* Áreas */}
+                <div className="grid grid-cols-2 gap-3">
+                  <input value={novoLaudo.areaConstruidaTotal} onChange={(e) => setNovoLaudoField('areaConstruidaTotal', e.target.value)}
+                    placeholder="Área construída total (m²)" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
+                  <input value={novoLaudo.areaConstruidaAverbada} onChange={(e) => setNovoLaudoField('areaConstruidaAverbada', e.target.value)}
+                    placeholder="Área construída averbada (m²)" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
+                  <input value={novoLaudo.areaTerrenoTotal} onChange={(e) => setNovoLaudoField('areaTerrenoTotal', e.target.value)}
+                    placeholder="Área de terreno total (m²)" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
+                  <input value={novoLaudo.areaTerrenoAverbada} onChange={(e) => setNovoLaudoField('areaTerrenoAverbada', e.target.value)}
+                    placeholder="Área de terreno averbada (m²)" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
                 </div>
 
                 {/* Referências — somente leitura após geocodificação */}
@@ -512,15 +492,50 @@ export default function AgendamentosPage() {
                     })}
                   </div>
                 )}
+
+                {/* ← NOVO: Seleção do modelo de laudo */}
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Modelo de laudo</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(['detalhado', 'simplificado'] as const).map((tipo) => (
+                      <button
+                        key={tipo}
+                        type="button"
+                        onClick={() => setNovoLaudo((prev) => ({ ...prev, tipoLaudo: tipo }))}
+                        className={`rounded-2xl border-2 p-3 text-left transition ${
+                          novoLaudo.tipoLaudo === tipo
+                            ? tipo === 'simplificado'
+                              ? 'border-emerald-400 bg-emerald-50'
+                              : 'border-blue-400 bg-blue-50'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                      >
+                        <p className="text-xs font-semibold text-slate-800 mb-1">
+                          {tipo === 'detalhado' ? 'Laudo completo NBR 14653' : 'Laudo simplificado'}
+                        </p>
+                        <p className="text-[11px] text-slate-500 leading-tight">
+                          {tipo === 'detalhado'
+                            ? 'Todas as seções da norma. ~20 páginas.'
+                            : 'Formato compacto para análise rápida. ~4 páginas.'}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="mt-6 flex gap-3">
-                <button onClick={() => { setMostrarModalNovoLaudo(false); setMsgCoords(null) }}
-                  className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <button
+                  onClick={() => { setMostrarModalNovoLaudo(false); setMsgCoords(null) }}
+                  className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
                   Cancelar
                 </button>
-                <button onClick={criarNovoLaudo} disabled={criandoLaudo}
-                  className="flex-1 rounded-2xl bg-[linear-gradient(135deg,#0f3d68,#2563eb)] py-3 text-sm font-semibold text-white disabled:opacity-60">
+                <button
+                  onClick={criarNovoLaudo}
+                  disabled={criandoLaudo}
+                  className="flex-1 rounded-2xl bg-[linear-gradient(135deg,#0f3d68,#2563eb)] py-3 text-sm font-semibold text-white disabled:opacity-60"
+                >
                   {criandoLaudo ? 'Criando laudo...' : 'Criar laudo'}
                 </button>
               </div>
@@ -566,16 +581,18 @@ export default function AgendamentosPage() {
                         <p className="font-medium text-slate-900 truncate">{laudo.endereco || 'Endereço não informado'}</p>
                         <p className="text-xs text-slate-500 mt-0.5">
                           {laudo.proprietario || '—'}
-                          {laudo.editorResponsavelNome && ` · Resp: ${laudo.editorResponsavelNome}`}
+                          {laudo.editorResponsavelNome && ` · Responsável: ${laudo.editorResponsavelNome}`}
                         </p>
                         {laudo.dataAgendamento && (
                           <p className="text-xs text-amber-600 mt-0.5">
-                            {laudo.horarioAgendamento ? `${laudo.dataAgendamento} às ${laudo.horarioAgendamento}` : laudo.dataAgendamento}
+                            {laudo.horarioAgendamento
+                              ? `Vistoria: ${laudo.dataAgendamento} às ${laudo.horarioAgendamento}`
+                              : `Vistoria: ${laudo.dataAgendamento}`}
                           </p>
                         )}
                       </div>
-                      <span className={`shrink-0 inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${statusClasse[st as StatusVistoria]}`}>
-                        {statusLabel[st as StatusVistoria]}
+                      <span className={`shrink-0 text-xs px-2.5 py-1 rounded-full font-medium ${statusClasse[st]}`}>
+                        {statusLabel[st]}
                       </span>
                     </div>
                   )
@@ -584,118 +601,95 @@ export default function AgendamentosPage() {
             )}
           </div>
 
-          {/* Painel lateral */}
+          {/* Painel lateral de agendamento */}
           {laudoSelecionado ? (
-            <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm space-y-5 h-fit">
+            <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm space-y-5 self-start">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">Imóvel</p>
-                <p className="font-semibold text-slate-900">{laudoSelecionado.endereco}</p>
-                <p className="text-sm text-slate-500">{laudoSelecionado.proprietario}</p>
-                {laudoSelecionado.tipo && <p className="text-xs text-slate-400 mt-0.5">{laudoSelecionado.tipo}</p>}
+                <p className="text-xs text-slate-400 mb-1">Imóvel selecionado</p>
+                <p className="font-semibold text-slate-900 text-sm leading-snug">{laudoSelecionado.endereco}</p>
+                <p className="text-xs text-slate-500 mt-1">{laudoSelecionado.proprietario}</p>
               </div>
 
-              {/* Link de vistoria */}
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Link para vistoriador</p>
-                {laudoSelecionado.tokenVistoria ? (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        readOnly
-                        value={`${typeof window !== 'undefined' ? window.location.origin : ''}/vistoria/${laudoSelecionado.tokenVistoria}`}
-                        className="flex-1 text-xs border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 outline-none"
-                      />
-                      <button
-                        onClick={copiarLink}
-                        className={`shrink-0 rounded-xl px-3 py-2 text-xs font-semibold transition ${linkCopiado ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-blue-600 text-white'}`}
-                      >
-                        {linkCopiado ? '✓ Copiado' : 'Copiar'}
-                      </button>
-                    </div>
-                    <p className="text-xs text-slate-400">Envie este link ao vistoriador via WhatsApp ou SMS.</p>
-                  </div>
-                ) : (
-                  <button
-                    onClick={gerarLink}
-                    disabled={salvando}
-                    className="w-full rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-                  >
-                    {salvando ? 'Gerando...' : 'Gerar link de vistoria'}
-                  </button>
-                )}
-              </div>
-
-              {/* Dados do agendamento */}
               <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Agendamento</p>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs text-slate-500 mb-1">Data</label>
-                    <input type="date" value={dataAgendamento} onChange={(e) => setDataAgendamento(e.target.value)}
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-400" />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-slate-500 mb-1">Horário</label>
-                    <input type="time" value={horarioAgendamento} onChange={(e) => setHorarioAgendamento(e.target.value)}
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-400" />
-                  </div>
-                </div>
-
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">Nome do vistoriador</label>
-                  <input type="text" value={nomeVistoriador} onChange={(e) => setNomeVistoriador(e.target.value)}
-                    placeholder="Quem fará a visita presencial"
+                  <label className="block text-xs text-slate-500 mb-1">Data da vistoria</label>
+                  <input type="date" value={dataAgendamento} onChange={(e) => setDataAgendamento(e.target.value)}
                     className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-400" />
                 </div>
-
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">Horário</label>
+                  <input type="time" value={horarioAgendamento} onChange={(e) => setHorarioAgendamento(e.target.value)}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-400" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">Nome do vistoriador</label>
+                  <input value={nomeVistoriador} onChange={(e) => setNomeVistoriador(e.target.value)}
+                    placeholder="Nome do vistoriador"
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-400" />
+                </div>
                 <div>
                   <label className="block text-xs text-slate-500 mb-1">Responsável pelo laudo</label>
                   <select value={editorResponsavelEmail} onChange={(e) => setEditorResponsavelEmail(e.target.value)}
                     className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-400 bg-white">
-                    <option value="">Selecione o editor responsável</option>
+                    <option value="">Selecione o responsável</option>
                     {usuarios.map((u) => (
                       <option key={u.email} value={u.email}>{u.nome}</option>
                     ))}
                   </select>
                 </div>
+              </div>
 
+              <div className="space-y-2">
                 <button
+                  type="button"
                   onClick={salvarAgendamento}
                   disabled={salvando}
-                  className="w-full rounded-2xl bg-[linear-gradient(135deg,#0f3d68,#2563eb)] py-3 text-sm font-semibold text-white disabled:opacity-60"
+                  className="w-full rounded-2xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
                 >
                   {salvando ? 'Salvando...' : 'Salvar agendamento'}
                 </button>
 
                 {laudoSelecionado.statusVistoria === 'agendada' && (
                   <button
+                    type="button"
                     onClick={marcarRealizada}
                     disabled={salvando}
-                    className="w-full rounded-2xl border border-purple-200 bg-purple-50 py-3 text-sm font-semibold text-purple-700 disabled:opacity-60"
+                    className="w-full rounded-2xl bg-purple-600 py-2.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60"
                   >
-                    Marcar vistoria como realizada
+                    Marcar como realizada
                   </button>
                 )}
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={gerarLink}
+                    disabled={salvando}
+                    className="flex-1 rounded-2xl border border-slate-200 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    Gerar link de vistoria
+                  </button>
+                  {laudoSelecionado.tokenVistoria && (
+                    <button
+                      type="button"
+                      onClick={copiarLink}
+                      className="flex-1 rounded-2xl border border-emerald-200 bg-emerald-50 py-2.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                    >
+                      {linkCopiado ? '✓ Copiado!' : 'Copiar link'}
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Histórico */}
               {laudoSelecionado.historicoEventos && laudoSelecionado.historicoEventos.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Histórico</p>
-                  <div className="space-y-3">
+                  <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Histórico</p>
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                     {[...laudoSelecionado.historicoEventos].reverse().map((ev, i) => (
-                      <div key={i} className="flex gap-3">
-                        <div className="flex flex-col items-center">
-                          <div className="w-2 h-2 rounded-full bg-blue-400 mt-1 shrink-0" />
-                          {i < laudoSelecionado.historicoEventos!.length - 1 && (
-                            <div className="w-px flex-1 bg-slate-200 mt-1" />
-                          )}
-                        </div>
-                        <div className="pb-3">
-                          <p className="text-sm text-slate-700">{ev.acao}</p>
-                          <p className="text-xs text-slate-400 mt-0.5">{formatarDataHora(ev.data)} · {ev.usuario}</p>
-                        </div>
+                      <div key={i} className="border-l-2 border-slate-200 pl-3">
+                        <p className="text-xs text-slate-700">{ev.acao}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{formatarDataHora(ev.data)} · {ev.usuario}</p>
                       </div>
                     ))}
                   </div>
@@ -703,8 +697,8 @@ export default function AgendamentosPage() {
               )}
             </div>
           ) : (
-            <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-6 flex items-center justify-center text-sm text-slate-400">
-              Selecione um laudo para gerenciar
+            <div className="rounded-[28px] border border-dashed border-slate-200 bg-slate-50 p-6 flex items-center justify-center text-slate-400 text-sm self-start min-h-[200px]">
+              Selecione um laudo para agendar a vistoria
             </div>
           )}
         </div>

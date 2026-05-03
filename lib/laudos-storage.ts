@@ -35,6 +35,7 @@ export type LaudoResumo = {
   dataAgendamento?: string
   horarioAgendamento?: string
   nomeVistoriador?: string
+  tipoLaudo?: 'detalhado' | 'simplificado'
 }
 
 export type FiltrosLaudo = {
@@ -43,6 +44,7 @@ export type FiltrosLaudo = {
   cidade: string
   tipoImovel: string
   finalidade: string
+  tipoLaudo?: string
 }
 
 // ─── Helpers de formatação (idênticos ao original) ───────────────────────────
@@ -138,6 +140,7 @@ function gerarResumoLaudo(valor: any): LaudoResumo | null {
     dataAgendamento: valor.dataAgendamento,
     horarioAgendamento: valor.horarioAgendamento,
     nomeVistoriador: valor.nomeVistoriador,
+    tipoLaudo: valor.tipoLaudo || 'detalhado',
   }
 }
 
@@ -182,12 +185,17 @@ export function filtrarLaudos(laudos: LaudoResumo[], filtros: FiltrosLaudo) {
     const correspondeFinalidade =
       !filtros.finalidade || laudo.finalidade === filtros.finalidade
 
+    const correspondeTipoLaudo =
+      !filtros.tipoLaudo ||
+      (laudo.tipoLaudo || 'detalhado') === filtros.tipoLaudo
+
     return (
       correspondeBusca &&
       correspondeStatus &&
       correspondeCidade &&
       correspondeTipo &&
-      correspondeFinalidade
+      correspondeFinalidade &&
+      correspondeTipoLaudo
     )
   })
 }
