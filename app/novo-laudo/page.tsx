@@ -33,6 +33,7 @@ export default function NovoLaudoPage() {
   ]
 
   const [form, setForm] = useState({
+    tipoLaudo: 'detalhado' as 'detalhado' | 'simplificado',
     coordenadasImovel: '',
     endereco: '',
     proprietario: '',
