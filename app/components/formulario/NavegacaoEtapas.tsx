@@ -5,15 +5,22 @@ import { ETAPAS, EtapaId } from './etapas'
 type NavegacaoEtapasProps = {
   etapaAtual: EtapaId
   setEtapaAtual: (etapa: EtapaId) => void
+  tipoLaudo?: 'detalhado' | 'simplificado'
 }
 
 export default function NavegacaoEtapas({
   etapaAtual,
   setEtapaAtual,
+  tipoLaudo,
 }: NavegacaoEtapasProps) {
-  const indiceAtual = ETAPAS.findIndex((etapa) => etapa.id === etapaAtual)
-  const etapaAnterior = indiceAtual > 0 ? ETAPAS[indiceAtual - 1] : null
-  const proximaEtapa = indiceAtual < ETAPAS.length - 1 ? ETAPAS[indiceAtual + 1] : null
+  const ETAPAS_SIMPLIFICADO_EXCLUIR: EtapaId[] = ['7']
+  const etapasFiltradas = tipoLaudo === 'simplificado'
+    ? ETAPAS.filter((e) => !ETAPAS_SIMPLIFICADO_EXCLUIR.includes(e.id))
+    : ETAPAS
+
+  const indiceAtual = etapasFiltradas.findIndex((etapa) => etapa.id === etapaAtual)
+  const etapaAnterior = indiceAtual > 0 ? etapasFiltradas[indiceAtual - 1] : null
+  const proximaEtapa = indiceAtual < etapasFiltradas.length - 1 ? etapasFiltradas[indiceAtual + 1] : null
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 shadow-[0_-4px_24px_-8px_rgba(15,23,42,0.08)]">
@@ -22,10 +29,10 @@ export default function NavegacaoEtapas({
         {/* Etapa atual */}
         <div className="hidden sm:block min-w-0">
           <p className="text-[11px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">
-            Etapa {indiceAtual + 1} de {ETAPAS.length}
+            Etapa {indiceAtual + 1} de {etapasFiltradas.length}
           </p>
           <p className="text-sm font-medium text-slate-700 truncate">
-            {ETAPAS[indiceAtual]?.titulo}
+            {etapasFiltradas[indiceAtual]?.titulo}
           </p>
         </div>
 

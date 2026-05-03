@@ -520,6 +520,7 @@ export default function NovoLaudoPage() {
         etapaAtual={etapaAtual}
         setEtapaAtual={setEtapaAtual}
         etapaConcluida={etapaConcluida}
+        tipoLaudo={form.tipoLaudo as 'detalhado' | 'simplificado' | undefined}
       />
 
       {/* ── CONTEÚDO FULL-WIDTH ── */}
@@ -590,6 +591,7 @@ export default function NovoLaudoPage() {
               handleCroqui={handleCroqui}
               removerCroqui={removerCroqui}
               setForm={setForm}
+              tipoLaudo={form.tipoLaudo as 'detalhado' | 'simplificado' | undefined}
             />
           )}
 
@@ -705,6 +707,7 @@ export default function NovoLaudoPage() {
       <NavegacaoEtapas
         etapaAtual={etapaAtual}
         setEtapaAtual={setEtapaAtual}
+        tipoLaudo={form.tipoLaudo as 'detalhado' | 'simplificado' | undefined}
       />
 
     </AppShell>

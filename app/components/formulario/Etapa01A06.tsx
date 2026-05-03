@@ -80,6 +80,7 @@ type Props = {
   removerLinhaDivisao: (index: number) => void
   handleCroqui: (e: React.ChangeEvent<HTMLInputElement>) => void
   removerCroqui: (index: number) => void
+  tipoLaudo?: 'detalhado' | 'simplificado'
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -100,6 +101,7 @@ export default function Etapa01A06({
   removerLinhaDivisao,
   handleCroqui,
   removerCroqui,
+  tipoLaudo,
 }: Props) {
   const [buscandoCoords, setBuscandoCoords] = useState(false)
   const [msgCoords, setMsgCoords] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
@@ -651,7 +653,8 @@ export default function Etapa01A06({
         ))}
       </SectionCard>
 
-      {/* ── Melhoramentos públicos ────────────────────────────────────────────── */}
+      {/* ── Melhoramentos públicos — apenas laudo detalhado ──────────────────────── */}
+      {tipoLaudo !== 'simplificado' && (
       <SectionCard title="Melhoramentos públicos">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
@@ -696,6 +699,7 @@ export default function Etapa01A06({
           </table>
         </div>
       </SectionCard>
+      )}
 
       {/* ── Croqui / Imagem ───────────────────────────────────────────────────── */}
       <SectionCard title="Upload do croqui / imagem do item 6">

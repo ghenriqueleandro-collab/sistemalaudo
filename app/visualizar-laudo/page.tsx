@@ -467,9 +467,11 @@ function VisualizarLaudoContent() {
   useEffect(() => {
     async function carregarLaudo() {
       try {
-        // Usa laudoId do useSearchParams — consistente com Next.js App Router
-        const parsed = (laudoId
-          ? await buscarLaudo(laudoId)
+        // Prioriza o ID passado na URL (?id=...), fallback para localStorage
+        const urlParams = new URL(window.location.href)
+        const idParam = urlParams.searchParams.get('id')
+        const parsed = (idParam
+          ? await buscarLaudo(idParam)
           : await obterLaudoAtual()) as DadosLaudo
         if (parsed) {
           setDados({
@@ -534,7 +536,7 @@ function VisualizarLaudoContent() {
       }
     }
     carregarLaudo()
-  }, [laudoId])
+  }, [])
 
   useEffect(() => {
     if (!dados) return
@@ -799,7 +801,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               </div>
             </Pagina>
 
-            {(() => {
+            {dados.tipoLaudo !== 'simplificado' && (() => {
               const ITENS_PRIMEIRA_PAGINA = 35
               const ITENS_DEMAIS_PAGINAS = 42
               const chunks: ItemSumario[][] = []
@@ -1077,7 +1079,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     <tr><td className="border p-2 font-bold">Área de terreno averbada</td><td className="border p-2">{formatarArea(dados.areaTerrenoAverbada)}</td></tr>
                   </tbody>
                 </table>
-                {dados.melhoramentosPublicos && (
+                {dados.melhoramentosPublicos && dados.tipoLaudo !== 'simplificado' && (
                   <div className="mt-6">
                     <table className="w-full border text-sm border-collapse evitar-quebra">
                       <thead><tr className="bg-[#EAF0FB]"><th colSpan={4} className="border p-2 text-center font-bold">Melhoramentos públicos</th></tr></thead>
@@ -1169,7 +1171,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               ))
             })()}
 
-            {(() => {
+            {dados.tipoLaudo !== 'simplificado' && (() => {
               const acabFiltrados = (dados.acabamentos || []).filter(
                 (a) => a.ambiente?.trim() || a.acabamento?.trim()
               )

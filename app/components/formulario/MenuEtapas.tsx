@@ -7,14 +7,22 @@ type MenuEtapasProps = {
   etapaAtual: EtapaId
   setEtapaAtual: (etapa: EtapaId) => void
   etapaConcluida: (etapa: EtapaId) => boolean
+  tipoLaudo?: 'detalhado' | 'simplificado'
 }
 
 export default function MenuEtapas({
   etapaAtual,
   setEtapaAtual,
   etapaConcluida,
+  tipoLaudo,
 }: MenuEtapasProps) {
-  const indiceAtual = ETAPAS.findIndex((e) => e.id === etapaAtual)
+  // Etapas excluídas do laudo simplificado: 7 (Acabamentos)
+  const ETAPAS_SIMPLIFICADO_EXCLUIR: EtapaId[] = ['7']
+  const etapasFiltradas = tipoLaudo === 'simplificado'
+    ? ETAPAS.filter((e) => !ETAPAS_SIMPLIFICADO_EXCLUIR.includes(e.id))
+    : ETAPAS
+
+  const indiceAtual = etapasFiltradas.findIndex((e) => e.id === etapaAtual)
   const scrollRef = useRef<HTMLDivElement>(null)
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
 
@@ -26,7 +34,7 @@ export default function MenuEtapas({
     }
   }, [indiceAtual])
 
-  const pct = Math.round(((indiceAtual + 1) / ETAPAS.length) * 100)
+  const pct = Math.round(((indiceAtual + 1) / etapasFiltradas.length) * 100)
 
   return (
     <div className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
@@ -37,7 +45,7 @@ export default function MenuEtapas({
         style={{ scrollbarWidth: 'none' }}
       >
         <div className="flex items-stretch min-w-max px-6">
-          {ETAPAS.map((etapa, i) => {
+          {etapasFiltradas.map((etapa, i) => {
             const ativa = etapaAtual === etapa.id
             const concluida = etapaConcluida(etapa.id)
 
@@ -91,7 +99,7 @@ export default function MenuEtapas({
           />
         </div>
         <span className="text-xs text-slate-400 tabular-nums shrink-0">
-          {indiceAtual + 1} / {ETAPAS.length}
+          {indiceAtual + 1} / {etapasFiltradas.length}
         </span>
       </div>
     </div>
