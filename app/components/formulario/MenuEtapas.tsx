@@ -17,7 +17,7 @@ export default function MenuEtapas({
   tipoLaudo,
 }: MenuEtapasProps) {
   // Etapas excluídas do laudo simplificado: 7 (Acabamentos)
-  const ETAPAS_SIMPLIFICADO_EXCLUIR: EtapaId[] = ['7']
+  const ETAPAS_SIMPLIFICADO_EXCLUIR: EtapaId[] = ['7', '9']
   const etapasFiltradas = tipoLaudo === 'simplificado'
     ? ETAPAS.filter((e) => !ETAPAS_SIMPLIFICADO_EXCLUIR.includes(e.id))
     : ETAPAS

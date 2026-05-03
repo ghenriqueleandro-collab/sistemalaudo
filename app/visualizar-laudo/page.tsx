@@ -1230,7 +1230,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               </PaginaFlexivel>
             ))}
 
-            {chunkArray(itensGlossario, 18).map((chunk, i) => (
+            {dados.tipoLaudo !== 'simplificado' && chunkArray(itensGlossario, 18).map((chunk, i) => (
               <PaginaFlexivel key={`sec9-${i}`} pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
                 <CabecalhoLaudo />
                 <div className="mb-8 mt-8">

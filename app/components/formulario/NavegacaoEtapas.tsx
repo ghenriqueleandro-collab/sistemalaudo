@@ -13,7 +13,7 @@ export default function NavegacaoEtapas({
   setEtapaAtual,
   tipoLaudo,
 }: NavegacaoEtapasProps) {
-  const ETAPAS_SIMPLIFICADO_EXCLUIR: EtapaId[] = ['7']
+  const ETAPAS_SIMPLIFICADO_EXCLUIR: EtapaId[] = ['7', '9']
   const etapasFiltradas = tipoLaudo === 'simplificado'
     ? ETAPAS.filter((e) => !ETAPAS_SIMPLIFICADO_EXCLUIR.includes(e.id))
     : ETAPAS
