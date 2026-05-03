@@ -467,11 +467,9 @@ function VisualizarLaudoContent() {
   useEffect(() => {
     async function carregarLaudo() {
       try {
-        // Prioriza o ID passado na URL (?id=...), fallback para localStorage
-        const urlParams = new URL(window.location.href)
-        const idParam = urlParams.searchParams.get('id')
-        const parsed = (idParam
-          ? await buscarLaudo(idParam)
+        // Usa laudoId do useSearchParams — consistente com Next.js App Router
+        const parsed = (laudoId
+          ? await buscarLaudo(laudoId)
           : await obterLaudoAtual()) as DadosLaudo
         if (parsed) {
           setDados({
@@ -536,7 +534,7 @@ function VisualizarLaudoContent() {
       }
     }
     carregarLaudo()
-  }, [])
+  }, [laudoId])
 
   useEffect(() => {
     if (!dados) return
