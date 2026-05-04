@@ -1,12 +1,5 @@
 'use client'
 
-/**
- * SALVAR EM: src/app/components/LaudoPdfSimplificado.tsx
- *
- * Versão compacta (modelo formulário) do laudo de avaliação.
- * Usa os mesmos dados do LaudoPdf.tsx — sem necessidade de campos extras.
- */
-
 import React from 'react'
 import {
   Document,
@@ -32,679 +25,509 @@ function fm(valor: number) {
 
 function cn(valor?: string) {
   if (!valor) return 0
-  return (
-    Number(
-      valor
-        .replace(/\s/g, '')
-        .replace(/\./g, '')
-        .replace(',', '.')
-        .replace(/[^\d.-]/g, '')
-    ) || 0
-  )
+  return Number(valor.replace(/\s/g,'').replace(/\./g,'').replace(',','.').replace(/[^\d.-]/g,'')) || 0
 }
 
 function numeroPorExtenso(valor: number): string {
-  const unidades = ['','um','dois','três','quatro','cinco','seis','sete','oito','nove','dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove']
-  const dezenas  = ['','','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa']
-  const centenas = ['','cento','duzentos','trezentos','quatrocentos','quinhentos','seiscentos','setecentos','oitocentos','novecentos']
+  const un = ['','um','dois','três','quatro','cinco','seis','sete','oito','nove','dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove']
+  const dz = ['','','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa']
+  const ct = ['','cento','duzentos','trezentos','quatrocentos','quinhentos','seiscentos','setecentos','oitocentos','novecentos']
   function ate999(n: number): string {
-    if (n === 0) return ''
-    if (n === 100) return 'cem'
-    if (n < 20) return unidades[n]
-    if (n < 100) { const d = Math.floor(n/10); const r = n%10; return r ? `${dezenas[d]} e ${unidades[r]}` : dezenas[d] }
-    const c = Math.floor(n/100); const r = n%100
-    return r === 0 ? centenas[c] : `${centenas[c]} e ${ate999(r)}`
+    if (n===0) return ''
+    if (n===100) return 'cem'
+    if (n<20) return un[n]
+    if (n<100) { const d=Math.floor(n/10),r=n%10; return r?`${dz[d]} e ${un[r]}`:dz[d] }
+    const c=Math.floor(n/100),r=n%100
+    return r===0?ct[c]:`${ct[c]} e ${ate999(r)}`
   }
   function inteiro(n: number): string {
-    if (n === 0) return 'zero'
-    const mi = Math.floor(n/1_000_000); const mil = Math.floor((n%1_000_000)/1_000); const resto = n%1_000
-    const p: string[] = []
-    if (mi > 0)    p.push(mi === 1 ? 'um milhão' : `${ate999(mi)} milhões`)
-    if (mil > 0)   p.push(mil === 1 ? 'mil' : `${ate999(mil)} mil`)
-    if (resto > 0) p.push(ate999(resto))
-    if (p.length === 1) return p[0]
-    if (p.length === 2) return `${p[0]} e ${p[1]}`
-    return p.slice(0,-1).join(', ') + ' e ' + p[p.length-1]
+    if (n===0) return 'zero'
+    const mi=Math.floor(n/1_000_000),ml=Math.floor((n%1_000_000)/1_000),re=n%1_000
+    const p: string[]=[]
+    if (mi>0) p.push(mi===1?'um milhão':`${ate999(mi)} milhões`)
+    if (ml>0) p.push(ml===1?'mil':`${ate999(ml)} mil`)
+    if (re>0) p.push(ate999(re))
+    if (p.length===1) return p[0]
+    if (p.length===2) return `${p[0]} e ${p[1]}`
+    return p.slice(0,-1).join(', ')+' e '+p[p.length-1]
   }
   return `${inteiro(Math.round(valor))} reais`
 }
 
-function metodologiaLabel(m?: string) {
-  if (m === 'comparativo') return 'Método Comparativo Direto de Dados de Mercado - Tratamento por fatores'
-  if (m === 'evolutivo')   return 'Método Evolutivo'
-  return m || '-'
+function cap(s: string) { return s.charAt(0).toUpperCase()+s.slice(1) }
+function metLabel(m?: string) {
+  if (m==='comparativo') return 'Método Comparativo Direto de Dados de Mercado - Tratamento por fatores'
+  if (m==='evolutivo')   return 'Método Evolutivo'
+  return m||'-'
+}
+function arredondar(v: number) { return Math.round(v/100)*100 }
+function fa(valor?: string) {
+  if (!valor) return '-'
+  const n = parseFloat(valor.replace(',','.'))
+  if (isNaN(n)) return valor
+  return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' m²'
 }
 
-function extrairEnderecoParts(endereco?: string) {
-  if (!endereco) return { logradouro: '', bairro: '', cidade: '', uf: '', cep: '' }
-  const parts = endereco.split(' – ').map(p => p.trim())
-  const logradouro = parts[0] || ''
-  const bairro     = parts[1] || ''
-  const cidade     = parts[2] || ''
-  const uf         = parts[3] || ''
-  const cepMatch   = endereco.match(/CEP\s*([\d-]+)/)
-  return { logradouro, bairro, cidade, uf, cep: cepMatch ? cepMatch[1] : '' }
-}
+// ─── Paleta ───────────────────────────────────────────────────────────────────
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
+const AZUL   = '#17325C'
+const AZUL2  = '#2347C6'
+const AZULLT = '#EAF0FB'
+const CINZA  = '#C9D3E6'
+const BRANCO = '#ffffff'
+const TEXTO  = '#1e293b'
 
-const AZUL    = '#17325C'
-const AZUL2   = '#2347C6'
-const AZUL_LT = '#EAF0FB'
-const CINZA   = '#C9D3E6'
-const BRANCO  = '#ffffff'
+// ─── Estilos ──────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
   page: {
-    paddingTop: 64,
+    backgroundColor: BRANCO,
+    paddingHorizontal: 28,
+    paddingTop: 14,
     paddingBottom: 40,
-    paddingHorizontal: 30,
     fontSize: 8,
     fontFamily: 'Helvetica',
-    color: '#1e293b',
+    color: TEXTO,
     lineHeight: 1.35,
   },
-
-  // Header fixo
-  fixedHeader: { position: 'absolute', top: 0, left: 0, right: 0 },
-  headerBg: { backgroundColor: AZUL, paddingVertical: 8, paddingHorizontal: 30, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerLogo: { width: 80, height: 22, objectFit: 'contain' },
-  headerRight: { alignItems: 'flex-end' },
-  headerTag: { fontSize: 6, color: '#8FA4C7', letterSpacing: 1.2, fontFamily: 'Helvetica-Bold' },
-  headerTitle: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: BRANCO },
-  headerSub: { fontSize: 7, color: '#b8cce4', marginTop: 1 },
-  headerLine: { height: 2.5, backgroundColor: AZUL2 },
-
-  // Footer fixo
-  fixedFooter: { position: 'absolute', bottom: 0, left: 0, right: 0 },
-  footerBg: { backgroundColor: AZUL, paddingVertical: 5, paddingHorizontal: 30, flexDirection: 'row', justifyContent: 'space-between' },
-  footerText: { fontSize: 6.5, color: '#8FA4C7' },
-  footerPage: { fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO },
-
-  // Títulos de seção
-  sectionHeader: { backgroundColor: AZUL, paddingVertical: 4, paddingHorizontal: 6, marginTop: 8, marginBottom: 0 },
-  sectionTitle: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: BRANCO },
-
-  // Tabelas
-  table: { width: '100%', borderWidth: 0.5, borderColor: CINZA },
-  row: { flexDirection: 'row', borderBottomWidth: 0.5, borderColor: CINZA },
+  header: {
+    backgroundColor: AZUL,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+  },
+  headerAccent: { height: 2.5, backgroundColor: AZUL2, marginBottom: 6 },
+  headerLogoTxt: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: BRANCO },
+  headerSub:     { fontSize: 8, color: '#8FA4C7', marginTop: 1 },
+  headerTag:     { fontSize: 8, color: '#8FA4C7', letterSpacing: 1 },
+  headerMeta:    { fontSize: 7.5, color: '#b8cce4', marginTop: 1 },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: AZUL,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  footerTxt: { fontSize: 7.5, color: '#8FA4C7' },
+  footerPag: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BRANCO },
+  secHeader: {
+    backgroundColor: AZUL,
+    paddingVertical: 3.5,
+    paddingHorizontal: 8,
+    marginTop: 8,
+    marginBottom: 0,
+  },
+  secTitle: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: BRANCO, textTransform: 'uppercase', letterSpacing: 0.5 },
+  titleBand: {
+    backgroundColor: AZUL2,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    marginBottom: 6,
+    marginTop: 4,
+  },
+  titleTxt: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center' },
+  table: { width: '100%', borderWidth: 0.5, borderColor: CINZA, marginTop: 3 },
+  row:   { flexDirection: 'row', borderBottomWidth: 0.5, borderColor: CINZA },
   rowLast: { flexDirection: 'row' },
-  cell: { paddingVertical: 3.5, paddingHorizontal: 5, fontSize: 8 },
-  cellLabel: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: AZUL },
-  cellValue: { fontSize: 8, color: '#1e293b' },
-  cellHead: { backgroundColor: AZUL_LT, paddingVertical: 3.5, paddingHorizontal: 5, fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: AZUL },
-  cellCenter: { textAlign: 'center' },
-
-  // Valores em destaque
-  valorBox: { backgroundColor: AZUL, padding: 8, flex: 1, marginRight: 4 },
-  valorBoxLight: { backgroundColor: AZUL_LT, borderWidth: 0.5, borderColor: CINZA, padding: 8, flex: 1 },
-  valorLabel: { fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: '#8FA4C7', letterSpacing: 0.5 },
-  valorNum: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: BRANCO, marginTop: 2 },
-  valorNumDark: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: AZUL, marginTop: 2 },
-  valorExt: { fontSize: 7, color: '#b8cce4', marginTop: 1 },
-  valorExtDark: { fontSize: 7, color: '#5a7090', marginTop: 1 },
-
-  // Checkbox style
-  checkRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
-  checkBox: { width: 8, height: 8, borderWidth: 0.5, borderColor: AZUL, marginRight: 3, backgroundColor: BRANCO },
-  checkBoxFilled: { width: 8, height: 8, borderWidth: 0.5, borderColor: AZUL, marginRight: 3, backgroundColor: AZUL2 },
-  checkLabel: { fontSize: 7.5, color: '#1e293b' },
-
-  // Foto
-  photoBox: { height: 140, marginVertical: 6, overflow: 'hidden' },
-  photoImg: { width: '100%', height: 140, objectFit: 'cover' },
-  
-  // Grid 2 colunas
-  grid2: { flexDirection: 'row' },
-  col2: { flex: 1 },
-  col2r: { flex: 1, marginLeft: 4 },
-
-  // Texto simples
-  txt: { fontSize: 8, color: '#1e293b', marginTop: 3 },
+  cellLbl: { backgroundColor: AZULLT, paddingVertical: 3, paddingHorizontal: 5, fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: AZUL },
+  cellVal: { paddingVertical: 3, paddingHorizontal: 5, fontSize: 7.5, color: TEXTO },
+  cellHead:{ backgroundColor: AZULLT, paddingVertical: 3, paddingHorizontal: 5, fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: AZUL, textAlign: 'center' },
+  valorRow:  { flexDirection: 'row', gap: 5, marginTop: 5, marginBottom: 4 },
+  valorDark: { flex: 1, backgroundColor: AZUL, padding: 8, borderRadius: 2 },
+  valorLight:{ flex: 1, backgroundColor: AZULLT, borderWidth: 0.5, borderColor: CINZA, padding: 8, borderRadius: 2 },
+  valorLbl:  { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#8FA4C7', letterSpacing: 0.5 },
+  valorLblD: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: AZUL2, letterSpacing: 0.5 },
+  valorNum:  { fontSize: 14, fontFamily: 'Helvetica-Bold', color: BRANCO, marginTop: 3 },
+  valorNumD: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: AZUL, marginTop: 3 },
+  valorExt:  { fontSize: 7, color: '#8FA4C7', marginTop: 1 },
+  valorExtD: { fontSize: 7, color: '#5a7090', marginTop: 1 },
+  grauRow: { flexDirection: 'row', gap: 5, marginTop: 4, marginBottom: 6 },
+  grauBox: { flex: 1, borderWidth: 0.5, borderColor: CINZA },
+  grauLbl: { backgroundColor: AZULLT, paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: AZUL, textAlign: 'center' },
+  grauNum: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: AZUL2, textAlign: 'center', paddingVertical: 6 },
+  signArea: { alignItems: 'center', marginTop: 18 },
+  signLine: { width: 160, height: 0.5, backgroundColor: '#334155', marginBottom: 3 },
+  signNome: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: AZUL },
+  signSub:  { fontSize: 7.5, color: '#475569' },
+  foto:     { height: 130, objectFit: 'cover', borderWidth: 0.5, borderColor: CINZA, marginTop: 6, marginBottom: 4 },
+  fotosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 6 },
+  fotoItem:  { width: '48.5%' },
+  fotoImg:   { height: 95, objectFit: 'cover', borderWidth: 0.5, borderColor: CINZA },
+  fotoLeg:   { backgroundColor: AZULLT, paddingVertical: 2, paddingHorizontal: 4, fontSize: 7, color: AZUL, borderWidth: 0.5, borderColor: CINZA, borderTopWidth: 0 },
+  txt:     { fontSize: 8, color: TEXTO, lineHeight: 1.5, marginTop: 4 },
   txtBold: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: AZUL },
-  spacer: { height: 4 },
-  line: { height: 0.5, backgroundColor: CINZA, marginVertical: 4 },
-
-  // Assinatura
-  signLine: { height: 0.5, backgroundColor: '#334155', width: 160, marginTop: 28, marginBottom: 3 },
-  signName: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: AZUL },
-  signSub: { fontSize: 7.5, color: '#475569' },
 })
 
-// ─── Componentes auxiliares ───────────────────────────────────────────────────
+// ─── Componentes ──────────────────────────────────────────────────────────────
 
-const Header = ({ solicitante, proponente }: { solicitante?: string; proponente?: string }) => (
-  <View style={s.fixedHeader} fixed>
-    <View style={s.headerBg}>
+const DocHeader = ({ solicitante, proprietario }: { solicitante?: string; proprietario?: string }) => (
+  <>
+    <View style={s.header}>
       <View>
-        <Text style={[s.headerTitle, { fontSize: 10 }]}>Lesath Engenharia</Text>
+        <Text style={s.headerLogoTxt}>Lesath Engenharia</Text>
         <Text style={s.headerSub}>Precisão técnica que gera confiança</Text>
       </View>
-      <View style={s.headerRight}>
-        <Text style={s.headerTag}>LAUDO DE AVALIAÇÃO</Text>
-        {solicitante ? <Text style={{ fontSize: 7, color: '#b8cce4', marginTop: 1 }}>Solicitante: {solicitante}</Text> : null}
-        {proponente  ? <Text style={{ fontSize: 7, color: '#b8cce4', marginTop: 1 }}>Proponente: {proponente}</Text> : null}
+      <View>
+        <Text style={[s.headerTag, { textAlign: 'right' }]}>LAUDO DE AVALIAÇÃO</Text>
+        {solicitante ? <Text style={[s.headerMeta, { textAlign: 'right' }]}>Solicitante: {solicitante}</Text> : null}
+        {proprietario ? <Text style={[s.headerMeta, { textAlign: 'right' }]}>Proponente: {proprietario}</Text> : null}
       </View>
     </View>
-    <View style={s.headerLine} />
+    <View style={s.headerAccent} />
+  </>
+)
+
+const DocFooter = ({ dataLaudo }: { dataLaudo?: string }) => (
+  <View fixed style={s.footer}>
+    <Text style={s.footerTxt}>www.lesathengenharia.com.br</Text>
+    <Text style={s.footerTxt}>{fd(dataLaudo)}</Text>
+    <Text style={s.footerPag} render={({ pageNumber, totalPages }) => `Página ${pageNumber} / ${totalPages}`} />
   </View>
 )
 
-const Footer = ({ dataLaudo }: { dataLaudo?: string }) => (
-  <View style={s.fixedFooter} fixed>
-    <View style={s.footerBg}>
-      <Text style={s.footerText}>www.lesathengenharia.com.br</Text>
-      <Text style={s.footerText}>{dataLaudo ? fd(dataLaudo) : ''}</Text>
-      <Text style={s.footerPage} render={({ pageNumber, totalPages }) => `Página ${pageNumber} / ${totalPages}`} />
-    </View>
+const SecHeader = ({ num, titulo }: { num: string; titulo: string }) => (
+  <View style={s.secHeader}>
+    <Text style={s.secTitle}>{num} — {titulo}</Text>
   </View>
 )
 
-const SecaoHeader = ({ numero, titulo }: { numero: string; titulo: string }) => (
-  <View style={s.sectionHeader}>
-    <Text style={s.sectionTitle}>{numero} - {titulo.toUpperCase()}</Text>
-  </View>
-)
-
-const RowData = ({ label, value, flex1 = 1, flex2 = 3, last = false }: { label: string; value: string; flex1?: number; flex2?: number; last?: boolean }) => (
+type RowProps = { label: string; value?: string; flex1?: number; flex2?: number; last?: boolean }
+const Row = ({ label, value, flex1=1, flex2=3, last=false }: RowProps) => (
   <View style={last ? s.rowLast : s.row}>
-    <View style={[s.cell, { flex: flex1, backgroundColor: AZUL_LT, borderRightWidth: 0.5, borderColor: CINZA }]}>
-      <Text style={s.cellLabel}>{label}</Text>
+    <View style={[s.cellLbl, { flex: flex1, borderRightWidth: 0.5, borderColor: CINZA }]}>
+      <Text>{label}</Text>
     </View>
-    <View style={[s.cell, { flex: flex2 }]}>
-      <Text style={s.cellValue}>{value || '-'}</Text>
+    <View style={[s.cellVal, { flex: flex2 }]}>
+      <Text>{value||'-'}</Text>
     </View>
-  </View>
-)
-
-const CheckItem = ({ label, checked }: { label: string; checked: boolean }) => (
-  <View style={s.checkRow}>
-    <View style={checked ? s.checkBoxFilled : s.checkBox}>
-      {checked && <Text style={{ fontSize: 5, color: BRANCO, textAlign: 'center', marginTop: 1 }}>✓</Text>}
-    </View>
-    <Text style={s.checkLabel}>{label}</Text>
   </View>
 )
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
-  const addr = extrairEnderecoParts(dados.endereco)
-  const valorFinal = arredondar(dados.valorFinalImovel || 0)
-  const vlf = cn(dados.valorLiquidezForcada)
-  const vlfFinal = vlf > 0 ? vlf : Math.round(valorFinal * 0.7)
-  const mel = dados.melhoramentosPublicos || {}
-  const fotoFachada = (dados.fotos || []).find(f => f.legenda?.toLowerCase().includes('fachada')) || dados.fotos?.[0]
-  const fotosAnexo  = dados.fotos || []
+  const endParts = (dados.endereco||'').split(' – ').map(p=>p.trim())
+  const logradouro = endParts[0]||''
+  const bairro     = endParts[1]||''
+  const cidade     = endParts[2]||''
+  const uf         = endParts[3]||''
+  const cepMatch   = (dados.endereco||'').match(/CEP\s*([\d-]+)/)
+  const cep        = cepMatch?cepMatch[1]:''
 
-  // Grau de fundamentação resumido
-  const somaFund = (dados.fundamentacao || []).reduce((a, i) => {
-    const m: Record<string,number> = { III: 3, II: 2, I: 1 }
-    return a + (m[i.grau] || 0)
-  }, 0)
-  const grauFund = somaFund >= 10 ? 'III' : somaFund >= 6 ? 'II' : somaFund >= 4 ? 'I' : '-'
+  const valorTerreno   = cn(dados.valorTerreno)
+  const valorBenfeits  = cn(dados.valorBenfeitorias)
+  const fatorComercial = cn(dados.fatorComercializacao)||1
+  const produto = (dados.outrosFatoresImovel||[]).reduce((a,i)=>a*(cn(i.valor)||1),1)
+  const base    = dados.modoValorImovel==='total' ? cn((dados as any).valorTotal||'') : valorTerreno+valorBenfeits
+  const vlFinal = arredondar(base*fatorComercial*produto)
+  const vlf     = cn(dados.valorLiquidezForcada)
 
-  const somaPrecisao = (dados.precisao || []).reduce((a, i) => {
-    const m: Record<string,number> = { III: 3, II: 2, I: 1 }
-    return a + (m[i.grau] || 0)
-  }, 0)
-  const grauPrecisao = somaPrecisao >= 3 ? 'III' : somaPrecisao >= 2 ? 'II' : somaPrecisao >= 1 ? 'I' : '-'
+  const capaMetodologia = dados.metodoAvaliacao==='evolutivo'?'Evolutivo':dados.metodoAvaliacao==='comparativo'?'Comparativo Direto':dados.metodoAvaliacao||'-'
 
-  function arredondar(v: number) { return Math.round(v / 100) * 100 }
+  const capaGrauFund = (()=>{
+    if (dados.metodoAvaliacao==='evolutivo') {
+      const soma=(dados.fundamentacaoEvolutivo||[]).reduce((s,i)=>s+(i.pontos||0),0)
+      if(soma>=8)return'III';if(soma>=5)return'II';if(soma>=3)return'I';return'-'
+    }
+    const soma=(dados.fundamentacao||[]).reduce((s,i)=>s+(i.pontos||0),0)
+    if(soma>=10)return'III';if(soma>=6)return'II';if(soma>=4)return'I';return'-'
+  })()
 
-  const divisoesFiltradas = (dados.divisoes || []).filter(d => d.ambiente?.trim())
+  const capaGrauPrec = (()=>{
+    const prec=dados.precisao||[]
+    if(prec.length===0)return'-'
+    if(prec.length===1)return prec[0].grau||'-'
+    const soma=prec.reduce((s,i)=>s+(i.pontos||0),0)
+    if(soma>=8)return'III';if(soma>=5)return'II';if(soma>=3)return'I';return'-'
+  })()
+
+  const capaFinalidade = dados.finalidade==='garantia'?'Avaliação para fins de garantia':dados.finalidade==='execucao'?'Avaliação para fins de execução':dados.finalidade||'-'
+
+  const hoje = new Date()
+  const meses=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro']
+  const dataExtenso = `São Paulo, ${hoje.getDate()} de ${meses[hoje.getMonth()]} de ${hoje.getFullYear()}.`
+
+  const fotoFachada = (dados.fotos||[]).find((f:any)=>(f.legenda||'').toLowerCase().includes('fachada'))||(dados.fotos||[])[0]
+  const fotosAnexo  = dados.fotos||[]
+  const divisoesFilt= (dados.divisoes||[]).filter((d:any)=>d.ambiente?.trim())
+
+  function chunkArray<T>(arr: T[], n: number): T[][] {
+    const out: T[][]=[]
+    for(let i=0;i<arr.length;i+=n) out.push(arr.slice(i,i+n))
+    return out
+  }
+
+  const temBenfeitorias = !!dados.imagemBenfeitorias
+  const secValor = temBenfeitorias ? '11' : '10'
+  const secGraus = temBenfeitorias ? '12' : '11'
+  const secConcl = temBenfeitorias ? '13' : '12'
 
   return (
     <Document>
-      {/* ══════════════════════════════════════════════════
-          PÁGINA 1 — IDENTIFICAÇÃO + AVALIAÇÃO + DIMENSÕES
-      ══════════════════════════════════════════════════ */}
+
+      {/* ══ PÁGINA 1 ════════════════════════════════════════════ */}
       <Page size="A4" style={s.page}>
-        <Header solicitante={dados.solicitante} proponente={dados.proprietario} />
-        <Footer dataLaudo={dados.dataLaudo} />
+        <DocHeader solicitante={dados.solicitante} proprietario={dados.proprietario} />
+        <DocFooter dataLaudo={dados.dataLaudo} />
 
-        {/* Título central */}
-        <View style={{ backgroundColor: AZUL2, paddingVertical: 5, paddingHorizontal: 10, marginBottom: 8 }}>
-          <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center' }}>
-            LAUDO DE AVALIAÇÃO
-          </Text>
+        <View style={s.titleBand}>
+          <Text style={s.titleTxt}>LAUDO DE AVALIAÇÃO</Text>
         </View>
 
-        {/* 1 - IDENTIFICAÇÃO */}
-        <SecaoHeader numero="1" titulo="Identificação" />
+        <SecHeader num="1" titulo="Identificação" />
         <View style={s.table}>
-          <RowData label="Matrícula"    value={dados.matricula} />
-          <RowData label="Solicitante"  value={dados.solicitante || ''} />
-          <RowData label="Proponente"   value={dados.proprietario} />
-          <RowData label="Logradouro"   value={addr.logradouro} flex1={1} flex2={3} />
-          <View style={s.row}>
-            <View style={[s.cell, { flex: 1, backgroundColor: AZUL_LT, borderRightWidth: 0.5, borderColor: CINZA }]}>
-              <Text style={s.cellLabel}>CEP</Text>
-              <Text style={s.cellValue}>{addr.cep || '-'}</Text>
-            </View>
-            <View style={[s.cell, { flex: 2, backgroundColor: AZUL_LT, borderRightWidth: 0.5, borderColor: CINZA }]}>
-              <Text style={s.cellLabel}>Bairro</Text>
-              <Text style={s.cellValue}>{addr.bairro || '-'}</Text>
-            </View>
-            <View style={[s.cell, { flex: 2, backgroundColor: AZUL_LT, borderRightWidth: 0.5, borderColor: CINZA }]}>
-              <Text style={s.cellLabel}>Cidade</Text>
-              <Text style={s.cellValue}>{addr.cidade || '-'}</Text>
-            </View>
-            <View style={[s.cell, { flex: 0.5 }]}>
-              <Text style={s.cellLabel}>UF</Text>
-              <Text style={s.cellValue}>{addr.uf || '-'}</Text>
-            </View>
+          <Row label="Matrícula"   value={dados.matricula} />
+          <Row label="Solicitante" value={dados.solicitante} />
+          <Row label="Proponente"  value={dados.proprietario} />
+          <Row label="Logradouro"  value={logradouro} />
+          <View style={s.rowLast}>
+            <View style={[s.cellLbl, { flex: 0.7, borderRightWidth: 0.5, borderColor: CINZA }]}><Text>CEP</Text></View>
+            <View style={[s.cellVal, { flex: 1.2, borderRightWidth: 0.5, borderColor: CINZA }]}><Text>{cep||'-'}</Text></View>
+            <View style={[s.cellLbl, { flex: 0.7, borderRightWidth: 0.5, borderColor: CINZA }]}><Text>Bairro</Text></View>
+            <View style={[s.cellVal, { flex: 1.5, borderRightWidth: 0.5, borderColor: CINZA }]}><Text>{bairro||'-'}</Text></View>
+            <View style={[s.cellLbl, { flex: 0.8, borderRightWidth: 0.5, borderColor: CINZA }]}><Text>Cidade</Text></View>
+            <View style={[s.cellVal, { flex: 1.5, borderRightWidth: 0.5, borderColor: CINZA }]}><Text>{cidade||'-'}</Text></View>
+            <View style={[s.cellLbl, { flex: 0.4, borderRightWidth: 0.5, borderColor: CINZA }]}><Text>UF</Text></View>
+            <View style={[s.cellVal, { flex: 0.7 }]}><Text>{uf||'-'}</Text></View>
           </View>
         </View>
 
-        {/* Foto fachada */}
-        {fotoFachada && (
-          <View style={s.photoBox}>
-            <Image src={fotoFachada.preview} style={s.photoImg} />
-          </View>
-        )}
+        {fotoFachada && <Image src={fotoFachada.preview} style={s.foto} />}
 
-        {/* 2 - AVALIAÇÃO */}
-        <SecaoHeader numero="2" titulo="Avaliação" />
-        <View style={{ flexDirection: 'row', marginTop: 4, marginBottom: 4 }}>
-          <View style={[s.valorBox, { marginRight: 6 }]}>
-            <Text style={s.valorLabel}>VALOR DA AVALIAÇÃO</Text>
-            <Text style={s.valorNum}>{fm(valorFinal)}</Text>
-            <Text style={s.valorExt}>({numeroPorExtenso(valorFinal).charAt(0).toUpperCase() + numeroPorExtenso(valorFinal).slice(1)})</Text>
+        <SecHeader num="2" titulo="Avaliação" />
+        <View style={s.valorRow}>
+          <View style={s.valorDark}>
+            <Text style={s.valorLbl}>VALOR DA AVALIAÇÃO</Text>
+            <Text style={s.valorNum}>{fm(vlFinal)}</Text>
+            <Text style={s.valorExt}>({cap(numeroPorExtenso(vlFinal))})</Text>
           </View>
-          <View style={s.valorBoxLight}>
-            <Text style={[s.valorLabel, { color: AZUL2 }]}>VALOR DE LIQUIDAÇÃO</Text>
-            <Text style={s.valorNumDark}>{fm(vlfFinal)}</Text>
-            <Text style={s.valorExtDark}>({numeroPorExtenso(vlfFinal).charAt(0).toUpperCase() + numeroPorExtenso(vlfFinal).slice(1)})</Text>
-          </View>
+          {vlf > 0 && (
+            <View style={s.valorLight}>
+              <Text style={s.valorLblD}>VALOR DE LIQUIDAÇÃO</Text>
+              <Text style={s.valorNumD}>{fm(vlf)}</Text>
+              <Text style={s.valorExtD}>({cap(numeroPorExtenso(vlf))})</Text>
+            </View>
+          )}
         </View>
-        <View style={[s.table, { marginBottom: 4 }]}>
-          <RowData label="Metodologia de cálculo" value={metodologiaLabel(dados.metodoAvaliacao)} last />
+        <View style={s.table}>
+          <Row label="Metodologia de cálculo" value={metLabel(dados.metodoAvaliacao)} last />
         </View>
 
-        {/* 3 - DIMENSÕES */}
-        <SecaoHeader numero="3" titulo="Dimensões" />
-        <View style={{ flexDirection: 'row', marginTop: 0 }}>
-          {/* Imóvel isolado */}
-          <View style={[s.table, { flex: 1, marginRight: 4 }]}>
-            <View style={[s.row, { backgroundColor: AZUL_LT }]}>
-              <Text style={[s.cellHead, { flex: 1 }]}>Imóvel isolado</Text>
-              <Text style={[s.cellHead, { flex: 1, textAlign: 'right' }]}> </Text>
-            </View>
-            {[
-              ['Averbada',      (dados.areaConstruidaAverbada || '0,00') + ' m²'],
-              ['Não Averbada',  ((dados.areaConstruidaNaoAverbada ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })) + ' m²'],
-              ['Total Construída', (dados.areaConstruidaTotal || '0,00') + ' m²'],
-              ['Terreno',       (dados.areaTerrenoTotal || '0,00') + ' m²'],
-            ].map(([l, v], i, arr) => (
-              <View key={l} style={i === arr.length - 1 ? s.rowLast : s.row}>
-                <View style={[s.cell, { flex: 1.5 }]}><Text style={s.cellLabel}>{l}</Text></View>
-                <View style={[s.cell, { flex: 1, textAlign: 'right' }]}><Text style={[s.cellValue, { textAlign: 'right' }]}>{v}</Text></View>
-              </View>
-            ))}
+        <SecHeader num="3" titulo="Dimensões" />
+        <View style={{ flexDirection: 'row', gap: 5, marginTop: 3 }}>
+          <View style={[s.table, { flex: 1, marginTop: 0 }]}>
+            <View style={s.row}><View style={[s.cellHead,{flex:1}]}><Text>Imóvel isolado</Text></View></View>
+            <Row label="Averbada"        value={fa(dados.areaConstruidaAverbada)} flex1={1.5} flex2={1} />
+            <Row label="Não Averbada"    value={fa(String(dados.areaConstruidaNaoAverbada??0))} flex1={1.5} flex2={1} />
+            <Row label="Total Construída" value={fa(dados.areaConstruidaTotal)} flex1={1.5} flex2={1} />
+            <Row label="Terreno"         value={fa(dados.areaTerrenoTotal)} flex1={1.5} flex2={1} last />
           </View>
-
-          {/* Data */}
-          <View style={[s.table, { flex: 1 }]}>
-            <View style={[s.row, { backgroundColor: AZUL_LT }]}>
-              <Text style={[s.cellHead, { flex: 1 }]}>Referências</Text>
-              <Text style={[s.cellHead, { flex: 1 }]}> </Text>
-            </View>
-            <RowData label="Padrão"       value={dados.padrao || '-'} flex1={1.5} flex2={1} />
-            <RowData label="Idade"        value={dados.idadeAparente ? dados.idadeAparente + ' anos' : '-'} flex1={1.5} flex2={1} />
-            <RowData label="Conservação"  value={dados.estadoConservacao || '-'} flex1={1.5} flex2={1} last />
+          <View style={[s.table, { flex: 1, marginTop: 0 }]}>
+            <View style={s.row}><View style={[s.cellHead,{flex:1}]}><Text>Referências</Text></View></View>
+            <Row label="Padrão"      value={dados.padrao} flex1={1.5} flex2={1} />
+            <Row label="Idade"       value={dados.idadeAparente ? dados.idadeAparente+' anos' : '-'} flex1={1.5} flex2={1} />
+            <Row label="Conservação" value={dados.estadoConservacao} flex1={1.5} flex2={1} />
+            <Row label="Finalidade"  value={capaFinalidade} flex1={1.5} flex2={1} last />
           </View>
         </View>
       </Page>
 
-      {/* ══════════════════════════════════════════════════
-          PÁGINA 2 — REGIÃO + AVALIANDO + DIVISÕES
-      ══════════════════════════════════════════════════ */}
+      {/* ══ PÁGINA 2 ════════════════════════════════════════════ */}
       <Page size="A4" style={s.page}>
-        <Header solicitante={dados.solicitante} proponente={dados.proprietario} />
-        <Footer dataLaudo={dados.dataLaudo} />
+        <DocHeader solicitante={dados.solicitante} proprietario={dados.proprietario} />
+        <DocFooter dataLaudo={dados.dataLaudo} />
 
-        {/* 4 - CARACTERÍSTICAS DA REGIÃO */}
-        <SecaoHeader numero="4" titulo="Características da Região" />
-        <View style={{ marginTop: 4 }}>
-          <Text style={[s.cellHead, { backgroundColor: AZUL_LT, paddingVertical: 3, paddingHorizontal: 6, marginBottom: 4 }]}>
-            Infraestrutura urbana
-          </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 4 }}>
-            {[
-              ['redeAgua',         'Água'],
-              ['esgotoSanitario',  'Esgoto sanitário'],
-              ['redeEletrica',     'Energia elétrica'],
-              ['iluminacaoPublica','Iluminação Pública'],
-              ['fossa',            'Fossa'],
-              ['pavimentacao',     'Pavimentação'],
-              ['esgotoPluvial',    'Esgoto pluvial'],
-              ['redeTelefonica',   'Telefone'],
-              ['gasCanalizado',    'Gás canalizado'],
-              ['guias',            'Guias'],
-              ['sarjetas',         'Sarjetas'],
-              ['passeio',          'Passeio'],
-              ['coletaLixo',       'Coleta de lixo'],
-              ['lazer',            'Lazer'],
-            ].map(([key, label]) => (
-              <View key={key} style={{ width: '25%', marginBottom: 3 }}>
-                <CheckItem label={label} checked={mel[key] === 'Sim'} />
-              </View>
-            ))}
+        <SecHeader num="4" titulo="Características e Dimensões do Avaliando" />
+        <View style={s.table}>
+          <View style={s.row}>
+            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Tipo</Text></View>
+            <View style={[s.cellVal,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{dados.tipo||'-'}</Text></View>
+            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>IPTU</Text></View>
+            <View style={[s.cellVal,{flex:1.5}]}><Text>{dados.iptu||'-'}</Text></View>
           </View>
-        </View>
-
-        {/* 5 - CARACTERÍSTICAS DO AVALIANDO */}
-        <SecaoHeader numero="5" titulo="Características e Dimensões do Avaliando" />
-        <View style={{ flexDirection: 'row', marginTop: 2 }}>
-          <View style={[s.table, { flex: 1, marginRight: 4 }]}>
-            <View style={[s.row, { backgroundColor: AZUL_LT }]}>
-              <Text style={[s.cellHead, { flex: 1 }]}>Implantação</Text>
-            </View>
-            <View style={s.rowLast}>
-              <View style={[s.cell, { flex: 1 }]}>
-                <Text style={s.cellValue}>{dados.tipo || 'Isolado'}</Text>
-              </View>
-            </View>
+          <View style={s.row}>
+            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Área terreno</Text></View>
+            <View style={[s.cellVal,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{fa(dados.areaTerrenoTotal)}</Text></View>
+            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Área construída</Text></View>
+            <View style={[s.cellVal,{flex:1.5}]}><Text>{fa(dados.areaConstruidaTotal)}</Text></View>
           </View>
-          <View style={[s.table, { flex: 2 }]}>
-            <View style={[s.row, { backgroundColor: AZUL_LT }]}>
-              <Text style={[s.cellHead, { flex: 1 }]}>Características do Terreno</Text>
-            </View>
-            <View style={s.row}>
-              <View style={[s.cell, { flex: 1, backgroundColor: AZUL_LT, borderRightWidth: 0.5, borderColor: CINZA }]}>
-                <Text style={s.cellLabel}>Situação</Text>
-              </View>
-              <View style={[s.cell, { flex: 2 }]}>
-                <Text style={s.cellValue}>Meio de quadra</Text>
-              </View>
-            </View>
-            <View style={s.rowLast}>
-              <View style={[s.cell, { flex: 1, backgroundColor: AZUL_LT, borderRightWidth: 0.5, borderColor: CINZA }]}>
-                <Text style={s.cellLabel}>Consistência</Text>
-              </View>
-              <View style={[s.cell, { flex: 2 }]}>
-                <Text style={s.cellValue}>Seco</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Dimensões do terreno */}
-        <View style={[s.table, { marginTop: 4 }]}>
-          <View style={[s.row, { backgroundColor: AZUL_LT }]}>
-            <Text style={[s.cellHead, { flex: 1, textAlign: 'center' }]}>Dimensões do Terreno</Text>
+          <View style={s.row}>
+            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Padrão</Text></View>
+            <View style={[s.cellVal,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{dados.padrao||'-'}</Text></View>
+            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Idade aparente</Text></View>
+            <View style={[s.cellVal,{flex:1.5}]}><Text>{dados.idadeAparente ? dados.idadeAparente+' anos' : '-'}</Text></View>
           </View>
           <View style={s.rowLast}>
-            <View style={[s.cell, { flex: 1, borderRightWidth: 0.5, borderColor: CINZA }]}>
-              <Text style={s.cellLabel}>Área</Text>
-              <Text style={s.cellValue}>{dados.areaTerrenoTotal || '-'} m²</Text>
-            </View>
-            <View style={[s.cell, { flex: 1, borderRightWidth: 0.5, borderColor: CINZA }]}>
-              <Text style={s.cellLabel}>Padrão</Text>
-              <Text style={s.cellValue}>{dados.padrao || '-'}</Text>
-            </View>
-            <View style={[s.cell, { flex: 1, borderRightWidth: 0.5, borderColor: CINZA }]}>
-              <Text style={s.cellLabel}>Uso</Text>
-              <Text style={s.cellValue}>{dados.tipo || '-'}</Text>
-            </View>
-            <View style={[s.cell, { flex: 1 }]}>
-              <Text style={s.cellLabel}>IPTU</Text>
-              <Text style={s.cellValue}>{dados.iptu || '-'}</Text>
-            </View>
+            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Conservação</Text></View>
+            <View style={[s.cellVal,{flex:4}]}><Text>{dados.estadoConservacao||'-'}</Text></View>
           </View>
         </View>
 
-        {/* Edificações */}
-        <View style={[s.table, { marginTop: 4 }]}>
-          <View style={[s.row, { backgroundColor: AZUL_LT }]}>
-            <Text style={[s.cellHead, { flex: 1, textAlign: 'center' }]}>Edificações</Text>
-          </View>
-          <View style={s.rowLast}>
-            <View style={[s.cell, { flex: 1, borderRightWidth: 0.5, borderColor: CINZA }]}>
-              <Text style={s.cellLabel}>Tipo</Text>
-              <Text style={s.cellValue}>{dados.tipo || '-'}</Text>
-            </View>
-            <View style={[s.cell, { flex: 1, borderRightWidth: 0.5, borderColor: CINZA }]}>
-              <Text style={s.cellLabel}>Idade aparente</Text>
-              <Text style={s.cellValue}>{dados.idadeAparente ? dados.idadeAparente + ' anos' : '-'}</Text>
-            </View>
-            <View style={[s.cell, { flex: 1, borderRightWidth: 0.5, borderColor: CINZA }]}>
-              <Text style={s.cellLabel}>Estado de conservação</Text>
-              <Text style={s.cellValue}>{dados.estadoConservacao || '-'}</Text>
-            </View>
-            <View style={[s.cell, { flex: 1 }]}>
-              <Text style={s.cellLabel}>Área construída</Text>
-              <Text style={s.cellValue}>{dados.areaConstruidaTotal || '0,00'} m²</Text>
-            </View>
-          </View>
+        <SecHeader num="5" titulo="Documentação Apresentada" />
+        <View style={s.table}>
+          <Row label="Matrícula"             value={dados.matricula} />
+          <Row label="Inscrição imobiliária" value={dados.iptu} last />
         </View>
 
-        {/* 6 - DOCUMENTAÇÃO */}
-        <SecaoHeader numero="6" titulo="Documentação Apresentada" />
-        <View style={[s.table, { marginTop: 0 }]}>
-          <RowData label="Matrícula"           value={dados.matricula} />
-          <RowData label="Inscrição imobiliária" value={dados.iptu || '-'} last />
-        </View>
-
-        {/* 7 - DESCRIÇÃO DO IMÓVEL */}
-        <SecaoHeader numero="7" titulo="Descrição do Imóvel Avaliando" />
-        <View style={{ padding: 6, borderWidth: 0.5, borderColor: CINZA }}>
-          <Text style={[s.txtBold, { marginBottom: 3 }]}>7.1 - Descrição do imóvel avaliando</Text>
+        <SecHeader num="6" titulo="Descrição do Imóvel Avaliando" />
+        <View style={{ borderWidth: 0.5, borderColor: CINZA, padding: 6, marginTop: 3 }}>
+          <Text style={s.txtBold}>6.1 - Descrição do imóvel avaliando</Text>
           <Text style={s.txt}>
             {dados.consideracoesMercado
-              ? dados.consideracoesMercado.substring(0, 400) + (dados.consideracoesMercado.length > 400 ? '...' : '')
-              : `Imóvel avaliando do tipo ${dados.tipo || 'residencial'}, localizado em ${dados.endereco}.`
-            }
+              ? dados.consideracoesMercado.substring(0,500)+(dados.consideracoesMercado.length>500?'...':'')
+              : `Imóvel do tipo ${dados.tipo||'residencial'}, localizado em ${dados.endereco}.`}
           </Text>
         </View>
 
-        {/* 8 - CARACTERÍSTICAS DO IMÓVEL (divisões) */}
-        {divisoesFiltradas.length > 0 && (
+        {divisoesFilt.length > 0 && (
           <>
-            <SecaoHeader numero="8" titulo="Características do Imóvel Avaliando" />
-            <View style={[s.table, { marginTop: 0 }]}>
-              <View style={[s.row, { backgroundColor: AZUL_LT }]}>
-                <Text style={[s.cellHead, { flex: 1 }]}>Divisão Interna</Text>
-                <Text style={[s.cellHead, { flex: 0.5, textAlign: 'center' }]}>Qtd.</Text>
-                <Text style={[s.cellHead, { flex: 2 }]}>Acabamentos</Text>
+            <SecHeader num="7" titulo="Características do Imóvel Avaliando" />
+            <View style={s.table}>
+              <View style={s.row}>
+                <View style={[s.cellHead,{flex:2,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Divisão Interna</Text></View>
+                <View style={[s.cellHead,{flex:1}]}><Text>Qtd.</Text></View>
               </View>
-              {divisoesFiltradas.map((div, i) => {
-                const acabamento = dados.acabamentos?.find(a => a.ambiente?.includes(div.ambiente))
-                return (
-                  <View key={i} style={i === divisoesFiltradas.length - 1 ? s.rowLast : s.row}>
-                    <View style={[s.cell, { flex: 1 }]}><Text style={s.cellValue}>{div.ambiente}</Text></View>
-                    <View style={[s.cell, { flex: 0.5 }]}><Text style={[s.cellValue, { textAlign: 'center' }]}>{div.quantidade}</Text></View>
-                    <View style={[s.cell, { flex: 2 }]}><Text style={s.cellValue}>{acabamento?.acabamento || '-'}</Text></View>
-                  </View>
-                )
-              })}
+              {divisoesFilt.map((d:any,i:number)=>(
+                <View key={i} style={i===divisoesFilt.length-1?s.rowLast:s.row}>
+                  <View style={[s.cellVal,{flex:2,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{d.ambiente}</Text></View>
+                  <View style={[s.cellVal,{flex:1,textAlign:'center'}]}><Text>{d.quantidade}</Text></View>
+                </View>
+              ))}
             </View>
           </>
         )}
       </Page>
 
-      {/* ══════════════════════════════════════════════════
-          PÁGINA 3 — LOCALIZAÇÃO + PESQUISA + VALOR FINAL
-      ══════════════════════════════════════════════════ */}
+      {/* ══ PÁGINA 3 ════════════════════════════════════════════ */}
       <Page size="A4" style={s.page}>
-        <Header solicitante={dados.solicitante} proponente={dados.proprietario} />
-        <Footer dataLaudo={dados.dataLaudo} />
+        <DocHeader solicitante={dados.solicitante} proprietario={dados.proprietario} />
+        <DocFooter dataLaudo={dados.dataLaudo} />
 
-        {/* 9 - LOCALIZAÇÃO */}
-        <SecaoHeader numero="9" titulo="Localização" />
-        <View style={[s.table, { marginTop: 0, marginBottom: 6 }]}>
-          <RowData label="Coordenadas" value={dados.coordenadasImovel || '-'} />
-          {dados.referencia1 && <RowData label={`Ref. 1 (${dados.distancia1 || '-'})`} value={dados.referencia1} />}
-          {dados.referencia2 && <RowData label={`Ref. 2 (${dados.distancia2 || '-'})`} value={dados.referencia2} />}
-          {dados.referencia3 && <RowData label={`Ref. 3 (${dados.distancia3 || '-'})`} value={dados.referencia3} />}
-          {dados.referencia4 && <RowData label={`Ref. 4 (${dados.distancia4 || '-'})`} value={dados.referencia4} />}
-          {dados.referencia5 && <RowData label={`Ref. 5 (${dados.distancia5 || '-'})`} value={dados.referencia5} last />}
+        <SecHeader num="8" titulo="Localização" />
+        <View style={s.table}>
+          {dados.coordenadasImovel && <Row label="Coordenadas" value={dados.coordenadasImovel} />}
+          {dados.referencia1 && <Row label={`Ref. 1 (${dados.distancia1||'-'})`} value={dados.referencia1} />}
+          {dados.referencia2 && <Row label={`Ref. 2 (${dados.distancia2||'-'})`} value={dados.referencia2} />}
+          {dados.referencia3 && <Row label={`Ref. 3 (${dados.distancia3||'-'})`} value={dados.referencia3} />}
+          {dados.referencia4 && <Row label={`Ref. 4 (${dados.distancia4||'-'})`} value={dados.referencia4} />}
+          {dados.referencia5
+            ? <Row label={`Ref. 5 (${dados.distancia5||'-'})`} value={dados.referencia5} last />
+            : null}
         </View>
 
-        {/* 10 - PESQUISA IMOBILIÁRIA */}
-        <SecaoHeader numero="10" titulo="Pesquisa Imobiliária" />
-        <View style={[s.table, { marginTop: 0, marginBottom: 4 }]}>
-          <View style={[s.row, { backgroundColor: AZUL_LT }]}>
-            <Text style={[s.cellHead, { flex: 2 }]}>Período de pesquisa</Text>
-            <Text style={[s.cellHead, { flex: 1.5 }]}>Tipo de informações</Text>
-            <Text style={[s.cellHead, { flex: 1 }]}>Qtd. elementos</Text>
-            <Text style={[s.cellHead, { flex: 2 }]}>Metodologia</Text>
+        <SecHeader num="9" titulo="Pesquisa Imobiliária" />
+        <View style={s.table}>
+          <View style={s.row}>
+            <View style={[s.cellHead,{flex:2,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Período de pesquisa</Text></View>
+            <View style={[s.cellHead,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Tipo</Text></View>
+            <View style={[s.cellHead,{flex:0.8,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Qtd.</Text></View>
+            <View style={[s.cellHead,{flex:2}]}><Text>Metodologia</Text></View>
           </View>
           <View style={s.rowLast}>
-            <View style={[s.cell, { flex: 2, borderRightWidth: 0.5, borderColor: CINZA }]}>
-              <Text style={s.cellValue}>
-                {dados.periodoPesquisaInicio && dados.periodoPesquisaFim
-                  ? `${fd(dados.periodoPesquisaInicio)} a ${fd(dados.periodoPesquisaFim)}`
-                  : '-'}
-              </Text>
+            <View style={[s.cellVal,{flex:2,borderRightWidth:0.5,borderColor:CINZA}]}>
+              <Text>{dados.periodoPesquisaInicio&&dados.periodoPesquisaFim?`${fd(dados.periodoPesquisaInicio)} a ${fd(dados.periodoPesquisaFim)}`:'-'}</Text>
             </View>
-            <View style={[s.cell, { flex: 1.5, borderRightWidth: 0.5, borderColor: CINZA }]}>
-              <Text style={s.cellValue}>{dados.tipoInformacoesObtidas || '-'}</Text>
-            </View>
-            <View style={[s.cell, { flex: 1, borderRightWidth: 0.5, borderColor: CINZA }]}>
-              <Text style={[s.cellValue, { textAlign: 'center' }]}>{dados.quantidadeElementos || '-'}</Text>
-            </View>
-            <View style={[s.cell, { flex: 2 }]}>
-              <Text style={s.cellValue}>{metodologiaLabel(dados.metodoAvaliacao)}</Text>
-            </View>
+            <View style={[s.cellVal,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{dados.tipoInformacoesObtidas||'-'}</Text></View>
+            <View style={[s.cellVal,{flex:0.8,borderRightWidth:0.5,borderColor:CINZA,textAlign:'center'}]}><Text>{dados.quantidadeElementos||'-'}</Text></View>
+            <View style={[s.cellVal,{flex:2}]}><Text>{metLabel(dados.metodoAvaliacao)}</Text></View>
           </View>
         </View>
 
-        {/* Fatores utilizados */}
-        {dados.fatoresSelecionados && dados.fatoresSelecionados.length > 0 && (
-          <View style={{ borderWidth: 0.5, borderColor: CINZA, padding: 6, marginBottom: 6 }}>
-            <Text style={[s.cellLabel, { marginBottom: 3 }]}>Fatores utilizados no modelo</Text>
-            {dados.fatoresSelecionados.map((f, i) => (
-              <Text key={i} style={[s.txt, { marginBottom: 1 }]}>• {f}</Text>
-            ))}
-          </View>
-        )}
-
-        {/* 11 - HOMOGENEIZAÇÃO resumida */}
-        {dados.imagemBenfeitorias && (
+        {temBenfeitorias && (
           <>
-            <SecaoHeader numero="11" titulo="Cálculo das Benfeitorias" />
-            <Image src={dados.imagemBenfeitorias} style={{ maxHeight: 120, objectFit: 'contain', marginVertical: 4 }} />
+            <SecHeader num="10" titulo="Cálculo das Benfeitorias" />
+            <Image src={dados.imagemBenfeitorias!} style={{ maxHeight: 100, objectFit: 'contain', marginTop: 4 }} />
           </>
         )}
 
-        {/* 12 - VALOR FINAL */}
-        <SecaoHeader numero="12" titulo="Valor Final da Avaliação" />
-        <View style={{ marginTop: 4, marginBottom: 6 }}>
-          <View style={{ flexDirection: 'row', marginBottom: 4 }}>
-            <View style={[s.valorBox, { marginRight: 6 }]}>
-              <Text style={s.valorLabel}>VALOR DA AVALIAÇÃO</Text>
-              <Text style={s.valorNum}>{fm(valorFinal)}</Text>
-              <Text style={s.valorExt}>({numeroPorExtenso(valorFinal).charAt(0).toUpperCase() + numeroPorExtenso(valorFinal).slice(1)})</Text>
-            </View>
-            <View style={s.valorBoxLight}>
-              <Text style={[s.valorLabel, { color: AZUL2 }]}>VALOR DE LIQUIDAÇÃO FORÇADA</Text>
-              <Text style={s.valorNumDark}>{fm(vlfFinal)}</Text>
-              <Text style={s.valorExtDark}>({numeroPorExtenso(vlfFinal).charAt(0).toUpperCase() + numeroPorExtenso(vlfFinal).slice(1)})</Text>
-            </View>
+        <SecHeader num={secValor} titulo="Valor Final da Avaliação" />
+        <View style={s.valorRow}>
+          <View style={s.valorDark}>
+            <Text style={s.valorLbl}>VALOR DA AVALIAÇÃO</Text>
+            <Text style={s.valorNum}>{fm(vlFinal)}</Text>
+            <Text style={s.valorExt}>({cap(numeroPorExtenso(vlFinal))})</Text>
           </View>
-
-          <View style={[s.table]}>
-            <View style={[s.row, { backgroundColor: AZUL_LT }]}>
-              <Text style={[s.cellHead, { flex: 1 }]}>Componente</Text>
-              <Text style={[s.cellHead, { flex: 1, textAlign: 'right' }]}>Valor</Text>
+          {vlf > 0 && (
+            <View style={s.valorLight}>
+              <Text style={s.valorLblD}>VALOR DE LIQUIDEZ FORÇADA</Text>
+              <Text style={s.valorNumD}>{fm(vlf)}</Text>
+              <Text style={s.valorExtD}>({cap(numeroPorExtenso(vlf))})</Text>
             </View>
-            <RowData label="Valor do terreno"         value={cn(dados.valorTerreno) > 0 ? fm(cn(dados.valorTerreno)) : '-'} />
-            <RowData label="Valor das benfeitorias"   value={cn(dados.valorBenfeitorias) > 0 ? fm(cn(dados.valorBenfeitorias)) : '-'} />
-            <RowData label="Fator de comercialização" value={dados.fatorComercializacao || '1,00'} />
-            <RowData label="Valor final arredondado"  value={fm(valorFinal)} last />
+          )}
+        </View>
+        <View style={s.table}>
+          <View style={s.row}>
+            <View style={[s.cellLbl,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Valor do terreno</Text></View>
+            <View style={[s.cellVal,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{valorTerreno>0?fm(valorTerreno):'-'}</Text></View>
+            <View style={[s.cellLbl,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Valor das benfeitorias</Text></View>
+            <View style={[s.cellVal,{flex:1.5}]}><Text>{valorBenfeits>0?fm(valorBenfeits):'-'}</Text></View>
+          </View>
+          <View style={s.rowLast}>
+            <View style={[s.cellLbl,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Fator de comercialização</Text></View>
+            <View style={[s.cellVal,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{dados.fatorComercializacao||'1,00'}</Text></View>
+            <View style={[s.cellLbl,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Valor arredondado</Text></View>
+            <View style={[s.cellVal,{flex:1.5}]}><Text style={{fontFamily:'Helvetica-Bold',color:AZUL}}>{fm(vlFinal)}</Text></View>
           </View>
         </View>
 
-        {/* 13 - GRAU DE FUNDAMENTAÇÃO E PRECISÃO */}
-        <SecaoHeader numero="13" titulo="Grau de Fundamentação e Precisão" />
-        <View style={{ flexDirection: 'row', marginTop: 4 }}>
-          <View style={[s.table, { flex: 1, marginRight: 6 }]}>
-            <View style={[s.row, { backgroundColor: AZUL_LT }]}>
-              <Text style={[s.cellHead, { flex: 1, textAlign: 'center' }]}>Grau de Fundamentação</Text>
+        <SecHeader num={secGraus} titulo="Grau de Fundamentação e Precisão" />
+        <View style={s.grauRow}>
+          {[
+            { label: 'Grau de Fundamentação', valor: capaGrauFund },
+            { label: 'Grau de Precisão',      valor: capaGrauPrec },
+            { label: 'Metodologia aplicada',  valor: capaMetodologia },
+          ].map(({ label, valor }) => (
+            <View key={label} style={s.grauBox}>
+              <View style={s.grauLbl}><Text>{label}</Text></View>
+              <Text style={s.grauNum}>{valor}</Text>
             </View>
-            <View style={s.rowLast}>
-              <View style={[s.cell, { flex: 1, alignItems: 'center' }]}>
-                <Text style={{ fontSize: 18, fontFamily: 'Helvetica-Bold', color: AZUL2 }}>{grauFund}</Text>
-              </View>
-            </View>
-          </View>
-          <View style={[s.table, { flex: 1 }]}>
-            <View style={[s.row, { backgroundColor: AZUL_LT }]}>
-              <Text style={[s.cellHead, { flex: 1, textAlign: 'center' }]}>Grau de Precisão</Text>
-            </View>
-            <View style={s.rowLast}>
-              <View style={[s.cell, { flex: 1, alignItems: 'center' }]}>
-                <Text style={{ fontSize: 18, fontFamily: 'Helvetica-Bold', color: AZUL2 }}>{grauPrecisao}</Text>
-              </View>
-            </View>
-          </View>
+          ))}
         </View>
 
-        {/* 14 - CONSIDERAÇÕES FINAIS */}
-        <SecaoHeader numero="14" titulo="Considerações Finais" />
-        <View style={{ padding: 6, borderWidth: 0.5, borderColor: CINZA, marginTop: 0 }}>
-          <Text style={[s.txtBold, { marginBottom: 4 }]}>INFORMAÇÕES FINAIS</Text>
+        <SecHeader num={secConcl} titulo="Considerações Finais" />
+        <View style={{ borderWidth: 0.5, borderColor: CINZA, padding: 6, marginTop: 3 }}>
+          <Text style={s.txtBold}>INFORMAÇÕES FINAIS</Text>
           <Text style={s.txt}>
-            Avaliação para determinação do valor de mercado do imóvel localizado em {dados.endereco}, 
-            feita pelo {metodologiaLabel(dados.metodoAvaliacao)}. O presente laudo de avaliação 
-            se enquadra no Grau de Fundamentação {grauFund} e Grau de Precisão {grauPrecisao} e 
-            atende integralmente à Norma ABNT NBR 14.653.
+            Avaliação para determinação do valor de mercado do imóvel localizado em {dados.endereco},
+            feita pelo {metLabel(dados.metodoAvaliacao)}. O presente laudo se enquadra no Grau de
+            Fundamentação {capaGrauFund} e Grau de Precisão {capaGrauPrec}, atendendo à Norma ABNT NBR 14.653.
           </Text>
-
-          {/* Assinatura */}
-          <View style={{ marginTop: 20, alignItems: 'center' }}>
+          <View style={s.signArea}>
             <View style={s.signLine} />
-            <Text style={s.signName}>{dados.responsavelNome || 'Responsável Técnico'}</Text>
-            <Text style={s.signSub}>{dados.responsavelRegistro ? `CREA/CAU: ${dados.responsavelRegistro}` : ''}</Text>
+            <Text style={s.signNome}>{dados.responsavelNome||'Responsável Técnico'}</Text>
+            {dados.responsavelRegistro ? <Text style={s.signSub}>CREA/CAU: {dados.responsavelRegistro}</Text> : null}
             <Text style={s.signSub}>Lesath Engenharia – CNPJ: 49.068.717/0001-64</Text>
-            {dados.dataLaudo && (
-              <Text style={[s.signSub, { marginTop: 4 }]}>
-                {(() => {
-                  const d = new Date(dados.dataLaudo + 'T12:00:00')
-                  const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro']
-                  return `São Paulo, ${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()}.`
-                })()}
-              </Text>
-            )}
+            <Text style={[s.signSub, { marginTop: 3 }]}>{dataExtenso}</Text>
           </View>
         </View>
       </Page>
 
-      {/* ══════════════════════════════════════════════════
-          PÁGINAS DE FOTOS — ANEXO A
-      ══════════════════════════════════════════════════ */}
-      {fotosAnexo.length > 0 && (
-        <>
-          {Array.from({ length: Math.ceil(fotosAnexo.length / 6) }, (_, pageIdx) => {
-            const grupo = fotosAnexo.slice(pageIdx * 6, pageIdx * 6 + 6)
-            return (
-              <Page key={`fotos-${pageIdx}`} size="A4" style={s.page}>
-                <Header solicitante={dados.solicitante} proponente={dados.proprietario} />
-                <Footer dataLaudo={dados.dataLaudo} />
+      {/* ══ PÁGINAS DE FOTOS ════════════════════════════════════ */}
+      {fotosAnexo.length > 0 && chunkArray(fotosAnexo, 6).map((grupo:any[], idx:number) => (
+        <Page key={`fotos-${idx}`} size="A4" style={s.page}>
+          <DocHeader solicitante={dados.solicitante} proprietario={dados.proprietario} />
+          <DocFooter dataLaudo={dados.dataLaudo} />
+          <View style={{ backgroundColor: AZUL2, paddingVertical: 4, paddingHorizontal: 8, marginBottom: 8, marginTop: 4 }}>
+            <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: BRANCO }}>ANEXO A | DOCUMENTAÇÃO FOTOGRÁFICA</Text>
+          </View>
+          <View style={s.fotosGrid}>
+            {grupo.map((foto:any, i:number) => (
+              <View key={i} style={s.fotoItem}>
+                <Image src={foto.preview} style={s.fotoImg} />
+                <View style={s.fotoLeg}><Text>{foto.legenda||`Foto ${idx*6+i+1}`}</Text></View>
+              </View>
+            ))}
+          </View>
+        </Page>
+      ))}
 
-                <View style={{ backgroundColor: AZUL2, paddingVertical: 4, paddingHorizontal: 6, marginBottom: 8 }}>
-                  <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: BRANCO }}>
-                    ANEXO A | DOCUMENTAÇÃO FOTOGRÁFICA
-                  </Text>
-                </View>
-
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                  {grupo.map((foto, i) => (
-                    <View key={i} style={{ width: '48%', marginBottom: 6 }}>
-                      <Image src={foto.preview} style={{ width: '100%', height: 100, objectFit: 'cover', borderWidth: 0.5, borderColor: CINZA }} />
-                      <View style={{ backgroundColor: AZUL_LT, paddingVertical: 3, paddingHorizontal: 4, borderWidth: 0.5, borderColor: CINZA, borderTopWidth: 0 }}>
-                        <Text style={{ fontSize: 7, color: AZUL }}>{foto.legenda || `Foto ${pageIdx * 6 + i + 1}`}</Text>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              </Page>
-            )
-          })}
-        </>
-      )}
     </Document>
   )
 }
