@@ -471,7 +471,7 @@ function VisualizarLaudoContent() {
     try {
       const [{ pdf }, { default: LaudoPdfSimplificado }] = await Promise.all([
         import('@react-pdf/renderer'),
-        import('./LaudoPdfSimplificado'),
+        import('../components/LaudoPdfSimplificado'),
       ])
       const blob = await pdf(
         React.createElement(LaudoPdfSimplificado, { dados }) as any
