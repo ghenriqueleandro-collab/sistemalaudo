@@ -1168,7 +1168,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               </div>
             </Pagina>
 
-            {dados.tipoLaudo !== 'simplificado' && (() => {
+            {(() => {
               const ITENS_PRIMEIRA_PAGINA = 35
               const ITENS_DEMAIS_PAGINAS = 42
               const chunks: ItemSumario[][] = []
@@ -1446,7 +1446,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     <tr><td className="border p-2 font-bold">Área de terreno averbada</td><td className="border p-2">{formatarArea(dados.areaTerrenoAverbada)}</td></tr>
                   </tbody>
                 </table>
-                {dados.melhoramentosPublicos && dados.tipoLaudo !== 'simplificado' && (
+                {dados.melhoramentosPublicos && (
                   <div className="mt-6">
                     <table className="w-full border text-sm border-collapse evitar-quebra">
                       <thead><tr className="bg-[#EAF0FB]"><th colSpan={4} className="border p-2 text-center font-bold">Melhoramentos públicos</th></tr></thead>
@@ -1538,7 +1538,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               ))
             })()}
 
-            {dados.tipoLaudo !== 'simplificado' && (() => {
+            {(() => {
               const acabFiltrados = (dados.acabamentos || []).filter(
                 (a) => a.ambiente?.trim() || a.acabamento?.trim()
               )
@@ -1596,7 +1596,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               </PaginaFlexivel>
             ))}
 
-            {dados.tipoLaudo !== 'simplificado' && chunkArray(itensGlossario, 18).map((chunk, i) => (
+            {chunkArray(itensGlossario, 18).map((chunk, i) => (
               <PaginaFlexivel key={`sec9-${i}`} pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
                 <CabecalhoLaudo />
                 <div className="mb-8 mt-8">
