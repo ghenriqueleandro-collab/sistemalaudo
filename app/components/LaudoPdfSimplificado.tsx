@@ -16,7 +16,7 @@ import {
   Image,
   StyleSheet,
 } from '@react-pdf/renderer'
-import type { DadosLaudo } from './LaudoPdf'
+import type { DadosLaudo } from '../visualizar-laudo/LaudoPdf'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
