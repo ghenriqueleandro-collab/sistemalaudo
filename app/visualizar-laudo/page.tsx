@@ -761,8 +761,8 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                   </span>
                 </div>
               )
-              const TH = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
-                <th style={{ background: '#EAF0FB', border: '0.5px solid #C9D3E6', padding: '3.5px 6px', fontSize: '8px', fontWeight: 700, color: '#17325C', textAlign: 'left', ...style }}>
+              const TH = ({ children, style, colSpan }: { children: React.ReactNode; style?: React.CSSProperties; colSpan?: number }) => (
+                <th colSpan={colSpan} style={{ background: '#EAF0FB', border: '0.5px solid #C9D3E6', padding: '3.5px 6px', fontSize: '8px', fontWeight: 700, color: '#17325C', textAlign: 'left', ...style }}>
                   {children}
                 </th>
               )
