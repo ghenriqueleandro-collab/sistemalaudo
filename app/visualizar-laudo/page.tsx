@@ -749,6 +749,371 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               .value-box-light .vb-num   { font-size: 18px; font-weight: 700; color: #17325C; line-height: 1.1; }
               .value-box-light .vb-ext   { font-size: 9px; color: #5a7090; margin-top: 2px; }
             `}</style>
+
+            {/* ══════════════════════════════════════════════
+                LAYOUT SIMPLIFICADO
+            ══════════════════════════════════════════════ */}
+            {dados.tipoLaudo === 'simplificado' && (() => {
+              const SecHeader = ({ num, titulo }: { num: string; titulo: string }) => (
+                <div style={{ background: '#17325C', padding: '4px 10px', margin: '10px 0 0' }}>
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {num} — {titulo}
+                  </span>
+                </div>
+              )
+              const TH = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
+                <th style={{ background: '#EAF0FB', border: '0.5px solid #C9D3E6', padding: '3.5px 6px', fontSize: '8px', fontWeight: 700, color: '#17325C', textAlign: 'left', ...style }}>
+                  {children}
+                </th>
+              )
+              const TDL = ({ children }: { children: React.ReactNode }) => (
+                <td style={{ background: '#EAF0FB', border: '0.5px solid #C9D3E6', padding: '3.5px 6px', fontSize: '8px', fontWeight: 700, color: '#17325C', width: '28%' }}>
+                  {children}
+                </td>
+              )
+              const TDV = ({ children, colSpan }: { children: React.ReactNode; colSpan?: number }) => (
+                <td colSpan={colSpan} style={{ border: '0.5px solid #C9D3E6', padding: '3.5px 6px', fontSize: '8px', color: '#1e293b' }}>
+                  {children || '—'}
+                </td>
+              )
+              const DocHeader = () => (
+                <div style={{ background: '#17325C', padding: '8px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#fff' }}>Lesath Engenharia</div>
+                    <div style={{ fontSize: '9px', color: '#8FA4C7', marginTop: '1px' }}>Precisão técnica que gera confiança</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '8px', color: '#8FA4C7', letterSpacing: '1px', textTransform: 'uppercase' }}>LAUDO DE AVALIAÇÃO</div>
+                    {dados.solicitante && <div style={{ fontSize: '8px', color: '#b8cce4', marginTop: '1px' }}>Solicitante: {dados.solicitante}</div>}
+                    {dados.proprietario && <div style={{ fontSize: '8px', color: '#b8cce4', marginTop: '1px' }}>Proponente: {dados.proprietario}</div>}
+                  </div>
+                </div>
+              )
+              const DocFooter = ({ pag }: { pag: string }) => (
+                <div style={{ background: '#17325C', padding: '4px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                  <span style={{ fontSize: '8px', color: '#8FA4C7' }}>www.lesathengenharia.com.br</span>
+                  <span style={{ fontSize: '8px', color: '#8FA4C7' }}>{formatarData(dados.dataLaudo || '')}</span>
+                  <span style={{ fontSize: '8px', fontWeight: 700, color: '#fff' }}>Página {pag}</span>
+                </div>
+              )
+
+              const endParts = (dados.endereco || '').split(' – ').map((p: string) => p.trim())
+              const logradouro = endParts[0] || ''
+              const bairro     = endParts[1] || ''
+              const cidade     = endParts[2] || ''
+              const uf         = endParts[3] || ''
+              const cepMatch   = (dados.endereco || '').match(/CEP\s*([\d-]+)/)
+              const cep        = cepMatch ? cepMatch[1] : ''
+
+              const metLabel =
+                dados.metodoAvaliacao === 'comparativo' ? 'Método Comparativo Direto de Dados de Mercado'
+                : dados.metodoAvaliacao === 'evolutivo'  ? 'Método Evolutivo'
+                : dados.metodoAvaliacao || '—'
+
+              const fotoFach = (dados.fotos || []).find((f: any) => (f.legenda || '').toLowerCase().includes('fachada')) || dados.fotos?.[0]
+              const fotosAnexo = dados.fotos || []
+              const divisoesFilt = (dados.divisoes || []).filter((d: any) => d.ambiente?.trim())
+
+              const vlFinal = valorArredondadoLaudo
+              const vlf = valorLiquidezForcadaNumero
+
+              return (
+                <>
+                  {/* ─── PÁGINA 1 ─────────────────────────────────────── */}
+                  <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
+                    <DocHeader />
+                    <div style={{ background: '#2347C6', textAlign: 'center', padding: '5px 12px', margin: '8px 0 6px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff' }}>LAUDO DE AVALIAÇÃO</span>
+                    </div>
+
+                    {/* 1 — Identificação */}
+                    <SecHeader num="1" titulo="Identificação" />
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6' }}>
+                      <tbody>
+                        <tr><TDL>Matrícula</TDL><TDV>{dados.matricula}</TDV></tr>
+                        <tr><TDL>Solicitante</TDL><TDV>{dados.solicitante}</TDV></tr>
+                        <tr><TDL>Proponente</TDL><TDV>{dados.proprietario}</TDV></tr>
+                        <tr><TDL>Logradouro</TDL><TDV>{logradouro}</TDV></tr>
+                        <tr>
+                          <td colSpan={2} style={{ border: '0.5px solid #C9D3E6', padding: 0 }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                              <tbody>
+                                <tr>
+                                  <TDL>CEP</TDL><TDV>{cep}</TDV>
+                                  <TDL>Bairro</TDL><TDV>{bairro}</TDV>
+                                  <TDL>Cidade</TDL><TDV>{cidade}</TDV>
+                                  <TDL>UF</TDL><TDV>{uf}</TDV>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* Foto fachada */}
+                    {fotoFach && (
+                      <div style={{ height: '130px', margin: '8px 0', overflow: 'hidden', border: '0.5px solid #C9D3E6', borderRadius: '3px' }}>
+                        <img src={fotoFach.preview} alt="Fachada" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                    )}
+
+                    {/* 2 — Avaliação */}
+                    <SecHeader num="2" titulo="Avaliação" />
+                    <div style={{ display: 'flex', gap: '6px', margin: '6px 0 4px' }}>
+                      <div style={{ flex: 1, background: '#17325C', padding: '8px 10px', borderRadius: '3px' }}>
+                        <div style={{ fontSize: '7.5px', color: '#8FA4C7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>VALOR DA AVALIAÇÃO</div>
+                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff', margin: '3px 0 1px' }}>{formatarMoeda(vlFinal)}</div>
+                        <div style={{ fontSize: '8px', color: '#8FA4C7' }}>({numeroPorExtenso(vlFinal).charAt(0).toUpperCase() + numeroPorExtenso(vlFinal).slice(1)})</div>
+                      </div>
+                      {vlf > 0 && (
+                        <div style={{ flex: 1, background: '#EAF0FB', border: '0.5px solid #C9D3E6', padding: '8px 10px', borderRadius: '3px' }}>
+                          <div style={{ fontSize: '7.5px', color: '#2347C6', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>VALOR DE LIQUIDAÇÃO</div>
+                          <div style={{ fontSize: '16px', fontWeight: 700, color: '#17325C', margin: '3px 0 1px' }}>{formatarMoeda(vlf)}</div>
+                          <div style={{ fontSize: '8px', color: '#5a7090' }}>({numeroPorExtenso(vlf).charAt(0).toUpperCase() + numeroPorExtenso(vlf).slice(1)})</div>
+                        </div>
+                      )}
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginBottom: '6px' }}>
+                      <tbody><tr><TDL>Metodologia</TDL><TDV>{metLabel}</TDV></tr></tbody>
+                    </table>
+
+                    {/* 3 — Dimensões */}
+                    <SecHeader num="3" titulo="Dimensões" />
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                      <table style={{ flex: 1, borderCollapse: 'collapse', border: '0.5px solid #C9D3E6' }}>
+                        <thead><tr><TH colSpan={2} style={{ textAlign: 'center' }}>Imóvel isolado</TH></tr></thead>
+                        <tbody>
+                          <tr><TDL>Averbada</TDL><TDV>{formatarArea(dados.areaConstruidaAverbada)}</TDV></tr>
+                          <tr><TDL>Não averbada</TDL><TDV>{formatarArea(dados.areaConstruidaNaoAverbada?.toString())}</TDV></tr>
+                          <tr><TDL>Total construída</TDL><TDV>{formatarArea(dados.areaConstruidaTotal)}</TDV></tr>
+                          <tr><TDL>Terreno</TDL><TDV>{formatarArea(dados.areaTerrenoTotal)}</TDV></tr>
+                        </tbody>
+                      </table>
+                      <table style={{ flex: 1, borderCollapse: 'collapse', border: '0.5px solid #C9D3E6' }}>
+                        <thead><tr><TH colSpan={2} style={{ textAlign: 'center' }}>Referências</TH></tr></thead>
+                        <tbody>
+                          <tr><TDL>Padrão</TDL><TDV>{dados.padrao}</TDV></tr>
+                          <tr><TDL>Idade</TDL><TDV>{dados.idadeAparente ? dados.idadeAparente + ' anos' : '—'}</TDV></tr>
+                          <tr><TDL>Conservação</TDL><TDV>{dados.estadoConservacao}</TDV></tr>
+                          <tr><TDL>Finalidade</TDL><TDV>{capaFinalidade}</TDV></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <DocFooter pag="1" />
+                  </Pagina>
+
+                  {/* ─── PÁGINA 2 ─────────────────────────────────────── */}
+                  <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
+                    <DocHeader />
+
+                    {/* 4 — Características do avaliando */}
+                    <SecHeader num="4" titulo="Características e Dimensões do Avaliando" />
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
+                      <tbody>
+                        <tr>
+                          <TDL>Tipo</TDL><TDV>{dados.tipo}</TDV>
+                          <TDL>IPTU</TDL><TDV>{dados.iptu}</TDV>
+                        </tr>
+                        <tr>
+                          <TDL>Área terreno</TDL><TDV>{formatarArea(dados.areaTerrenoTotal)}</TDV>
+                          <TDL>Área construída</TDL><TDV>{formatarArea(dados.areaConstruidaTotal)}</TDV>
+                        </tr>
+                        <tr>
+                          <TDL>Padrão</TDL><TDV>{dados.padrao}</TDV>
+                          <TDL>Idade aparente</TDL><TDV>{dados.idadeAparente ? dados.idadeAparente + ' anos' : '—'}</TDV>
+                        </tr>
+                        <tr>
+                          <TDL>Conservação</TDL><TDV colSpan={3}>{dados.estadoConservacao}</TDV>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* 5 — Documentação */}
+                    <SecHeader num="5" titulo="Documentação Apresentada" />
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
+                      <tbody>
+                        <tr><TDL>Matrícula</TDL><TDV>{dados.matricula}</TDV></tr>
+                        <tr><TDL>Inscrição imobiliária</TDL><TDV>{dados.iptu}</TDV></tr>
+                      </tbody>
+                    </table>
+
+                    {/* 6 — Descrição */}
+                    <SecHeader num="6" titulo="Descrição do Imóvel Avaliando" />
+                    <div style={{ border: '0.5px solid #C9D3E6', padding: '8px', fontSize: '8.5px', lineHeight: '1.55', color: '#1e293b', marginTop: '4px' }}>
+                      <strong style={{ color: '#17325C', fontSize: '8.5px' }}>6.1 — Descrição do imóvel avaliando</strong>
+                      <div style={{ marginTop: '4px' }}>
+                        {dados.consideracoesMercado
+                          ? dados.consideracoesMercado.substring(0, 500) + (dados.consideracoesMercado.length > 500 ? '...' : '')
+                          : `Imóvel do tipo ${dados.tipo || 'residencial'}, localizado em ${dados.endereco}.`}
+                      </div>
+                    </div>
+
+                    {/* 7 — Divisões */}
+                    {divisoesFilt.length > 0 && (
+                      <>
+                        <SecHeader num="7" titulo="Características do Imóvel Avaliando" />
+                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
+                          <thead>
+                            <tr>
+                              <TH style={{ width: '40%' }}>Divisão Interna</TH>
+                              <TH style={{ width: '20%', textAlign: 'center' }}>Qtd.</TH>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {divisoesFilt.map((d: any, i: number) => (
+                              <tr key={i}>
+                                <TDV>{d.ambiente}</TDV>
+                                <td style={{ border: '0.5px solid #C9D3E6', padding: '3.5px 6px', fontSize: '8px', textAlign: 'center', color: '#1e293b' }}>{d.quantidade}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </>
+                    )}
+                    <DocFooter pag="2" />
+                  </Pagina>
+
+                  {/* ─── PÁGINA 3 ─────────────────────────────────────── */}
+                  <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
+                    <DocHeader />
+
+                    {/* 8 — Localização */}
+                    <SecHeader num="8" titulo="Localização" />
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
+                      <tbody>
+                        {dados.coordenadasImovel && <tr><TDL>Coordenadas</TDL><TDV>{dados.coordenadasImovel}</TDV></tr>}
+                        {dados.referencia1 && <tr><TDL>Ref. 1 ({dados.distancia1})</TDL><TDV>{dados.referencia1}</TDV></tr>}
+                        {dados.referencia2 && <tr><TDL>Ref. 2 ({dados.distancia2})</TDL><TDV>{dados.referencia2}</TDV></tr>}
+                        {dados.referencia3 && <tr><TDL>Ref. 3 ({dados.distancia3})</TDL><TDV>{dados.referencia3}</TDV></tr>}
+                        {dados.referencia4 && <tr><TDL>Ref. 4 ({dados.distancia4})</TDL><TDV>{dados.referencia4}</TDV></tr>}
+                        {dados.referencia5 && <tr><TDL>Ref. 5 ({dados.distancia5})</TDL><TDV>{dados.referencia5}</TDV></tr>}
+                      </tbody>
+                    </table>
+
+                    {/* 9 — Pesquisa imobiliária */}
+                    <SecHeader num="9" titulo="Pesquisa Imobiliária" />
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px', marginBottom: '6px' }}>
+                      <thead>
+                        <tr>
+                          <TH style={{ width: '30%' }}>Período</TH>
+                          <TH style={{ width: '22%' }}>Tipo</TH>
+                          <TH style={{ width: '14%', textAlign: 'center' }}>Qtd.</TH>
+                          <TH>Metodologia</TH>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <TDV>
+                            {dados.periodoPesquisaInicio && dados.periodoPesquisaFim
+                              ? `${formatarData(dados.periodoPesquisaInicio)} a ${formatarData(dados.periodoPesquisaFim)}`
+                              : '—'}
+                          </TDV>
+                          <TDV>{dados.tipoInformacoesObtidas || '—'}</TDV>
+                          <td style={{ border: '0.5px solid #C9D3E6', padding: '3.5px 6px', fontSize: '8px', textAlign: 'center' }}>{dados.quantidadeElementos || '—'}</td>
+                          <TDV>{metLabel}</TDV>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* 10 — Valor final */}
+                    <SecHeader num="10" titulo="Valor Final da Avaliação" />
+                    <div style={{ display: 'flex', gap: '6px', margin: '6px 0 4px' }}>
+                      <div style={{ flex: 1, background: '#17325C', padding: '8px 10px', borderRadius: '3px' }}>
+                        <div style={{ fontSize: '7.5px', color: '#8FA4C7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>VALOR DA AVALIAÇÃO</div>
+                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff', margin: '3px 0 1px' }}>{formatarMoeda(vlFinal)}</div>
+                        <div style={{ fontSize: '8px', color: '#8FA4C7' }}>({numeroPorExtenso(vlFinal).charAt(0).toUpperCase() + numeroPorExtenso(vlFinal).slice(1)})</div>
+                      </div>
+                      {vlf > 0 && (
+                        <div style={{ flex: 1, background: '#EAF0FB', border: '0.5px solid #C9D3E6', padding: '8px 10px', borderRadius: '3px' }}>
+                          <div style={{ fontSize: '7.5px', color: '#2347C6', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>VALOR DE LIQUIDEZ FORÇADA</div>
+                          <div style={{ fontSize: '16px', fontWeight: 700, color: '#17325C', margin: '3px 0 1px' }}>{formatarMoeda(vlf)}</div>
+                          <div style={{ fontSize: '8px', color: '#5a7090' }}>({numeroPorExtenso(vlf).charAt(0).toUpperCase() + numeroPorExtenso(vlf).slice(1)})</div>
+                        </div>
+                      )}
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginBottom: '6px' }}>
+                      <tbody>
+                        <tr>
+                          <TDL>Valor do terreno</TDL>
+                          <TDV>{valorTerrenoNumero > 0 ? formatarMoeda(valorTerrenoNumero) : '—'}</TDV>
+                          <TDL>Valor das benfeitorias</TDL>
+                          <TDV>{valorBenfeitoriasNumero > 0 ? formatarMoeda(valorBenfeitoriasNumero) : '—'}</TDV>
+                        </tr>
+                        <tr>
+                          <TDL>Fator de comercialização</TDL>
+                          <TDV>{dados.fatorComercializacao || '1,00'}</TDV>
+                          <TDL>Valor arredondado</TDL>
+                          <td style={{ border: '0.5px solid #C9D3E6', padding: '3.5px 6px', fontSize: '8px', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(vlFinal)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* 11 — Graus */}
+                    <SecHeader num="11" titulo="Grau de Fundamentação e Precisão" />
+                    <div style={{ display: 'flex', gap: '6px', margin: '4px 0 6px' }}>
+                      {[
+                        { label: 'Grau de Fundamentação', valor: capaGrauFund },
+                        { label: 'Grau de Precisão',      valor: capaGrauPrec },
+                        { label: 'Metodologia aplicada',  valor: capaMetodologia },
+                      ].map(({ label, valor }) => (
+                        <div key={label} style={{ flex: 1, border: '0.5px solid #C9D3E6' }}>
+                          <div style={{ background: '#EAF0FB', padding: '3px 6px', fontSize: '7.5px', fontWeight: 700, color: '#17325C', textAlign: 'center' }}>{label}</div>
+                          <div style={{ padding: '8px 4px', textAlign: 'center', fontSize: '20px', fontWeight: 700, color: '#2347C6' }}>{valor}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* 12 — Conclusão + Assinatura */}
+                    <SecHeader num="12" titulo="Considerações Finais" />
+                    <div style={{ border: '0.5px solid #C9D3E6', padding: '8px', fontSize: '8.5px', lineHeight: '1.55', color: '#1e293b', marginTop: '4px' }}>
+                      <strong style={{ color: '#17325C' }}>INFORMAÇÕES FINAIS</strong>
+                      <div style={{ marginTop: '4px' }}>
+                        Avaliação para determinação do valor de mercado do imóvel localizado em {dados.endereco},
+                        feita pelo {metLabel}. O presente laudo se enquadra no Grau de Fundamentação {capaGrauFund} e
+                        Grau de Precisão {capaGrauPrec}, atendendo à Norma ABNT NBR 14.653.
+                      </div>
+                      <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <div style={{ width: '180px', height: '0.5px', background: '#334155', marginBottom: '4px' }} />
+                        <div style={{ fontSize: '9px', fontWeight: 700, color: '#17325C' }}>{dados.responsavelNome || 'Responsável Técnico'}</div>
+                        {dados.responsavelRegistro && <div style={{ fontSize: '8px', color: '#475569' }}>CREA/CAU: {dados.responsavelRegistro}</div>}
+                        <div style={{ fontSize: '8px', color: '#475569' }}>Lesath Engenharia – CNPJ: 49.068.717/0001-64</div>
+                        {dados.dataLaudo && (
+                          <div style={{ fontSize: '8px', color: '#475569', marginTop: '4px' }}>{capaDataImpressao}.</div>
+                        )}
+                      </div>
+                    </div>
+                    <DocFooter pag="3" />
+                  </Pagina>
+
+                  {/* ─── PÁGINAS DE FOTOS ─────────────────────────────── */}
+                  {fotosAnexo.length > 0 && chunkArray(fotosAnexo, 6).map((grupo: any[], pageIdx: number) => (
+                    <Pagina key={`fotos-simpl-${pageIdx}`} pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
+                      <DocHeader />
+                      <div style={{ background: '#2347C6', padding: '4px 12px', margin: '8px 0 8px' }}>
+                        <span style={{ fontSize: '9px', fontWeight: 700, color: '#fff' }}>ANEXO A | DOCUMENTAÇÃO FOTOGRÁFICA</span>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {grupo.map((foto: any, i: number) => (
+                          <div key={i} style={{ width: 'calc(50% - 3px)' }}>
+                            <img src={foto.preview} alt={foto.legenda || ''} style={{ width: '100%', height: '110px', objectFit: 'cover', border: '0.5px solid #C9D3E6', display: 'block' }} />
+                            <div style={{ background: '#EAF0FB', padding: '2px 5px', fontSize: '8px', color: '#17325C', border: '0.5px solid #C9D3E6', borderTop: 'none' }}>
+                              {foto.legenda || `Foto ${pageIdx * 6 + i + 1}`}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <DocFooter pag={String(4 + pageIdx)} />
+                    </Pagina>
+                  ))}
+                </>
+              )
+            })()}
+
+            {/* ══════════════════════════════════════════════
+                LAYOUT DETALHADO (apenas para laudos detalhados)
+            ══════════════════════════════════════════════ */}
+            {dados.tipoLaudo !== 'simplificado' && (
             <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
               {/* Cabeçalho geométrico — faixas diagonais via skewX, igual ao layout aprovado */}
               <div className="capa-geo-header relative overflow-hidden bg-[#17325C]" style={{ height: '130px' }}>
@@ -1785,6 +2150,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 <span className="text-right">{formatarData(dados.dataLaudo || '')}</span>
               </div>
             </div>
+            )}
           </div>
         </div>
       </section>
