@@ -316,20 +316,20 @@ export default function NovoLaudoPage() {
     setOutrosFatoresImovel(outrosFatoresImovel.filter((_, i) => i !== index))
   }
 
-  function selecionarGrauFundamentacao(item: number, grau: 'III' | 'II' | 'I') {
-    setFundamentacao((prev) => prev.map((f) => f.item === item ? { ...f, grau } : f))
+  function selecionarGrauFundamentacao(index: number, grau: 'III' | 'II' | 'I') {
+    setFundamentacao((prev) => prev.map((f, i) => i === index ? { ...f, grau } : f))
   }
 
-  function selecionarGrauFundamentacaoInferencia(item: number, grau: 'III' | 'II' | 'I') {
-    setFundamentacaoInferencia((prev) => prev.map((f) => f.item === item ? { ...f, grau } : f))
+  function selecionarGrauFundamentacaoInferencia(index: number, grau: 'III' | 'II' | 'I') {
+    setFundamentacaoInferencia((prev) => prev.map((f, i) => i === index ? { ...f, grau } : f))
   }
 
-  function selecionarGrauFundamentacaoEvolutivo(item: number, grau: 'III' | 'II' | 'I') {
-    setFundamentacaoEvolutivo((prev) => prev.map((f) => f.item === item ? { ...f, grau } : f))
+  function selecionarGrauFundamentacaoEvolutivo(index: number, grau: 'III' | 'II' | 'I') {
+    setFundamentacaoEvolutivo((prev) => prev.map((f, i) => i === index ? { ...f, grau } : f))
   }
 
-  function selecionarGrauPrecisao(item: number, grau: 'III' | 'II' | 'I') {
-    setPrecisao((prev) => prev.map((p) => p.item === item ? { ...p, grau } : p))
+  function selecionarGrauPrecisao(index: number, grau: 'III' | 'II' | 'I') {
+    setPrecisao((prev) => prev.map((p, i) => i === index ? { ...p, grau } : p))
   }
 
   function formatarDataBR(data: string) {
