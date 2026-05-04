@@ -1114,6 +1114,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 LAYOUT DETALHADO (apenas para laudos detalhados)
             ══════════════════════════════════════════════ */}
             {dados.tipoLaudo !== 'simplificado' && (
+            <>
             <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
               {/* Cabeçalho geométrico — faixas diagonais via skewX, igual ao layout aprovado */}
               <div className="capa-geo-header relative overflow-hidden bg-[#17325C]" style={{ height: '130px' }}>
@@ -2150,6 +2151,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 <span className="text-right">{formatarData(dados.dataLaudo || '')}</span>
               </div>
             </div>
+            </>
             )}
           </div>
         </div>
