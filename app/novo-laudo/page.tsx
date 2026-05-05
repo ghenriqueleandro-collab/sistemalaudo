@@ -236,14 +236,36 @@ export default function NovoLaudoPage() {
     setAcabamentos(novos)
   }
 
+  // ─── Comprime imagem para base64 (max 1200px, qualidade 0.75) ─────────────
+  function comprimirImagem(file: File, maxLado = 1200, qualidade = 0.75): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        const img = new window.Image()
+        img.onload = () => {
+          let { width, height } = img
+          if (width > maxLado || height > maxLado) {
+            if (width >= height) { height = Math.round((height / width) * maxLado); width = maxLado }
+            else { width = Math.round((width / height) * maxLado); height = maxLado }
+          }
+          const canvas = document.createElement('canvas')
+          canvas.width = width; canvas.height = height
+          const ctx = canvas.getContext('2d')!
+          ctx.drawImage(img, 0, 0, width, height)
+          resolve(canvas.toDataURL('image/jpeg', qualidade))
+        }
+        img.onerror = reject
+        img.src = ev.target?.result as string
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
   async function handleCroqui(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
     const novosCroquis = await Promise.all(
-      files.map((file) => new Promise<{ preview: string }>((resolve) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve({ preview: reader.result as string })
-        reader.readAsDataURL(file)
-      }))
+      files.map(async (file) => ({ preview: await comprimirImagem(file, 1400, 0.80) }))
     )
     setForm((prev) => ({ ...prev, croquis: [...(prev.croquis || []), ...novosCroquis] }))
   }
@@ -256,11 +278,11 @@ export default function NovoLaudoPage() {
     const file = e.target.files?.[0]
     if (!file) return
     try {
-      const url = await uploadArquivo(file)
-      setForm((prev) => ({ ...prev, imagemBenfeitorias: url }))
+      const base64 = await comprimirImagem(file, 1400, 0.82)
+      setForm((prev) => ({ ...prev, imagemBenfeitorias: base64 }))
     } catch (error) {
       console.error(error)
-      alert('Erro ao fazer upload da imagem.')
+      alert('Erro ao processar a imagem.')
     }
   }
 
@@ -268,11 +290,16 @@ export default function NovoLaudoPage() {
     const file = e.target.files?.[0]
     if (!file) return
     try {
-      const url = await uploadArquivo(file)
-      setForm((prev) => ({ ...prev, [campo]: url }))
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+      setForm((prev) => ({ ...prev, [campo]: base64 }))
     } catch (error) {
       console.error(error)
-      alert('Erro ao fazer upload do PDF.')
+      alert('Erro ao processar o PDF.')
     }
   }
 
@@ -280,24 +307,24 @@ export default function NovoLaudoPage() {
     const file = e.target.files?.[0]
     if (!file) return
     try {
-      const url = await uploadArquivo(file)
-      setForm((prev) => ({ ...prev, localizacaoComparativos: url }))
+      const base64 = await comprimirImagem(file, 1400, 0.82)
+      setForm((prev) => ({ ...prev, localizacaoComparativos: base64 }))
     } catch (error) {
       console.error(error)
-      alert('Erro ao fazer upload da imagem de localização.')
+      alert('Erro ao processar a imagem de localização.')
     }
   }
 
   async function handleFotos(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
     const novasFotos = await Promise.all(
-      files.map((file) => new Promise<{ preview: string; legenda: string }>((resolve) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve({ preview: reader.result as string, legenda: '' })
-        reader.readAsDataURL(file)
+      files.map(async (file) => ({
+        preview: await comprimirImagem(file, 1200, 0.75),
+        legenda: file.name.replace(/\.[^.]+$/, ''),
       }))
     )
     setFotos((prev) => [...prev, ...novasFotos])
+  }
   }
 
   function handleLegenda(index: number, legenda: string) {
