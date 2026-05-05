@@ -689,7 +689,7 @@ function VisualizarLaudoContent() {
   const temAcabamentosSection = (dados.acabamentos || []).some(
     (a) => a.ambiente?.trim() || a.acabamento?.trim()
   )
-  const temConsideracoesSection = paginasSecao8.some((chunk) => chunk.length > 0)
+  const temConsideracoesSection = paginasSecao8.some((chunk) => chunk.length > 0) || !!dados.liquidez || !!dados.desempenhoMercado
   const temFundamentacaoSection =
     (dados.fundamentacao?.length ?? 0) > 0 ||
     (dados.fundamentacaoEvolutivo?.length ?? 0) > 0 ||
@@ -1598,7 +1598,12 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               ) : null
             })()}
 
-            {paginasSecao8.some(chunk => chunk.length > 0) && paginasSecao8.map((chunk, i) => (
+            {(paginasSecao8.some(chunk => chunk.length > 0) || dados.liquidez || dados.desempenhoMercado) && (() => {
+              // Garante ao menos uma página para renderizar o cabeçalho + tabela
+              const chunks = paginasSecao8.some(chunk => chunk.length > 0)
+                ? paginasSecao8
+                : [[]]
+              return chunks.map((chunk, i) => (
               <PaginaFlexivel key={`sec8-${i}`} pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
                 <CabecalhoLaudo />
                 <div className="mb-6 mt-6">
@@ -1629,10 +1634,13 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     </table>
                   )}
 
-                  <div className="space-y-1.5 text-justify leading-relaxed">{chunk.map((paragrafo, j) => <p key={j}>{paragrafo}</p>)}</div>
+                  {chunk.length > 0 && (
+                    <div className="space-y-1.5 text-justify leading-relaxed">{chunk.map((paragrafo, j) => <p key={j}>{paragrafo}</p>)}</div>
+                  )}
                 </div>
               </PaginaFlexivel>
-            ))}
+              ))
+            })()}
 
             {chunkArray(itensGlossario, 18).map((chunk, i) => (
               <PaginaFlexivel key={`sec9-${i}`} pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
