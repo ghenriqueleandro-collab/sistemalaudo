@@ -35,6 +35,8 @@ export default function NovoLaudoPage() {
 
   const [form, setForm] = useState({
     tipoLaudo: 'detalhado' as 'detalhado' | 'simplificado',
+    modoValorImovel: 'separado' as 'separado' | 'total',
+    valorTotal: '',
     coordenadasImovel: '',
     endereco: '',
     proprietario: '',
@@ -118,7 +120,6 @@ export default function NovoLaudoPage() {
   const [acabamentos, setAcabamentos] = useState([{ ambiente: '', acabamento: '' }])
   const [resumoMercado, setResumoMercado] = useState([{ campo: '', descricao: '' }])
   const [outrosFatoresImovel, setOutrosFatoresImovel] = useState([{ descricao: '', valor: '' }])
-  const [modoValorImovel, setModoValorImovel] = useState<'separado' | 'total'>('separado')
   const [etapaAtual, setEtapaAtual] = useState<EtapaId>('1-6')
   const [laudoId, setLaudoId] = useState('')
   const [editandoLaudoExistente, setEditandoLaudoExistente] = useState(false)
@@ -374,13 +375,14 @@ export default function NovoLaudoPage() {
     return acc * (isNaN(v) ? 1 : v)
   }, 1)
 
-  const subtotalImovel =
-    (parseFloat((form.valorTerreno || '0').replace(',', '.')) +
-      parseFloat((form.valorBenfeitorias || '0').replace(',', '.'))) *
-    produtoOutrosFatores
+  const _parseBR = (s: string) => parseFloat((s || '0').replace(/\./g, '').replace(',', '.')) || 0
+
+  const subtotalImovel = form.modoValorImovel === 'total'
+    ? _parseBR(form.valorTotal || '0') * produtoOutrosFatores
+    : (_parseBR(form.valorTerreno) + _parseBR(form.valorBenfeitorias)) * produtoOutrosFatores
 
   const valorFinalImovel =
-    subtotalImovel * parseFloat((form.fatorComercializacao || '1').replace(',', '.'))
+    subtotalImovel * (_parseBR(form.fatorComercializacao || '1') || 1)
 
   function formatarMoeda(valor: number) {
     return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -658,8 +660,8 @@ export default function NovoLaudoPage() {
               produtoOutrosFatores={produtoOutrosFatores}
               valorFinalImovel={valorFinalImovel}
               formatarMoeda={formatarMoeda}
-              modoValorImovel={modoValorImovel}
-              onModoChange={(modo: 'separado' | 'total') => setModoValorImovel(modo)}
+              modoValorImovel={form.modoValorImovel as 'separado' | 'total'}
+              onModoChange={(modo: 'separado' | 'total') => setForm((prev) => ({ ...prev, modoValorImovel: modo }))}
             />
           )}
 
