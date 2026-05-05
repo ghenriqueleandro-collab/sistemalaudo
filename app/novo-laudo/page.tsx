@@ -325,7 +325,6 @@ export default function NovoLaudoPage() {
     )
     setFotos((prev) => [...prev, ...novasFotos])
   }
-  }
 
   function handleLegenda(index: number, legenda: string) {
     setFotos((prev) => prev.map((f, i) => i === index ? { ...f, legenda } : f))
