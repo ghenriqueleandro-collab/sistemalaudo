@@ -332,8 +332,14 @@ function formatarMoeda(valor: number) {
 // Garante que medidas de área sempre mostrem 2 casas decimais (ex: 900 m² → 900,00 m²)
 function formatarArea(valor?: string): string {
   if (!valor) return ''
-  const numStr = valor.replace(/m²/g, '').replace(/\s/g, '').trim()
-  const num = parseFloat(numStr.replace(',', '.'))
+  // Remove "m²", espaços e separadores de milhar (ponto), troca vírgula decimal por ponto
+  const numStr = valor
+    .replace(/m²/g, '')
+    .replace(/\s/g, '')
+    .trim()
+    .replace(/\.(?=\d{3})/g, '')   // remove pontos de milhar (ex: 1.771 → 1771)
+    .replace(',', '.')              // converte vírgula decimal em ponto
+  const num = parseFloat(numStr)
   if (isNaN(num)) return valor
   return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' m²'
 }
