@@ -167,7 +167,7 @@ const s = StyleSheet.create({
   signNome: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: AZUL },
   signSub:  { fontSize: 7.5, color: '#475569' },
   // Fotos
-  foto:      { height: 120, objectFit: 'cover', borderWidth: 0.5, borderColor: CINZA, marginTop: 6, marginBottom: 4 },
+  foto:      { width: '100%', height: 120, objectFit: 'cover', borderWidth: 0.5, borderColor: CINZA, marginTop: 6, marginBottom: 4 },
   fotosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 6 },
   fotoItem:  { width: '48.5%' },
   fotoImg:   { height: 95, objectFit: 'cover', borderWidth: 0.5, borderColor: CINZA },
