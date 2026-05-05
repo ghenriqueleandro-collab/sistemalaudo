@@ -235,9 +235,15 @@ export default function NovoLaudoPage() {
     setAcabamentos(novos)
   }
 
-  function handleCroqui(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleCroqui(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
-    const novosCroquis = files.map((file) => ({ preview: URL.createObjectURL(file) }))
+    const novosCroquis = await Promise.all(
+      files.map((file) => new Promise<{ preview: string }>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve({ preview: reader.result as string })
+        reader.readAsDataURL(file)
+      }))
+    )
     setForm((prev) => ({ ...prev, croquis: [...(prev.croquis || []), ...novosCroquis] }))
   }
 
@@ -281,9 +287,15 @@ export default function NovoLaudoPage() {
     }
   }
 
-  function handleFotos(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFotos(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
-    const novasFotos = files.map((file) => ({ preview: URL.createObjectURL(file), legenda: '' }))
+    const novasFotos = await Promise.all(
+      files.map((file) => new Promise<{ preview: string; legenda: string }>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve({ preview: reader.result as string, legenda: '' })
+        reader.readAsDataURL(file)
+      }))
+    )
     setFotos((prev) => [...prev, ...novasFotos])
   }
 
