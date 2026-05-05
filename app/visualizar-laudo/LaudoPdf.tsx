@@ -75,9 +75,9 @@ export type DadosLaudo = {
   imagemBenfeitorias: string
   valorTerreno: string
   valorBenfeitorias: string
-  valorTotal?: string
-  modoValorImovel?: 'separado' | 'total'
   fatorComercializacao: string
+  modoValorImovel?: 'separado' | 'total'
+  valorTotal?: string
   valorLiquidezForcada?: string
   garantiaClassificacao?: string
   garantiaObservacoes?: string
@@ -475,13 +475,13 @@ export function LaudoPdf({
 }) {
   const valorTerrenoN = cn(dados.valorTerreno)
   const valorBenfeitoriasN = cn(dados.valorBenfeitorias)
-  const valorTotalN = cn(dados.valorTotal || '')
-  const modoTotal = dados.modoValorImovel === 'total'
   const fatorComerc = cn(dados.fatorComercializacao)
   const prodOutros = (dados.outrosFatoresImovel || []).reduce(
     (t, i) => t * (cn(i.valor) || 1), 1
   )
-  const baseCalculo = modoTotal ? valorTotalN : (valorTerrenoN + valorBenfeitoriasN)
+  const valorTotalN = cn(dados.valorTotal || '')
+  const modoTotal = dados.modoValorImovel === 'total'
+  const baseCalculo = modoTotal && valorTotalN > 0 ? valorTotalN : (valorTerrenoN + valorBenfeitoriasN)
   const subtotal = baseCalculo * fatorComerc
   const valorFinal = subtotal * prodOutros
   const valorArredondado = arredondar(valorFinal)
