@@ -782,6 +782,7 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Pr
                   </select>
                 </div>
               )}
+              )}
               {fatores.foc && (
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1.5">Estado de conservação (FOC)</label>
@@ -793,12 +794,14 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Pr
                   </select>
                 </div>
               )}
+              )}
               {fatores.foc && (
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1.5">Idade (anos)</label>
                   <input type="number" value={elem.idade} onChange={e => updateElem(abaAtiva, 'idade', e.target.value)}
                     placeholder="0" className={cls} />
                 </div>
+              )}
               )}
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1.5">Andar</label>
@@ -864,6 +867,7 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Pr
                     placeholder="100" className={cls} />
                 </div>
               )}
+              )}
               {fatores.andar && (
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1.5">Fator andar (100 = neutro)</label>
@@ -871,12 +875,14 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Pr
                     placeholder="100" className={cls} />
                 </div>
               )}
+              )}
               {fatores.vaga && (
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1.5">Fator vaga (100 = neutro)</label>
                   <input type="number" value={elem.fatorVaga} onChange={e => updateElem(abaAtiva, 'fatorVaga', e.target.value)}
                     placeholder="100" className={cls} />
                 </div>
+              )}
               )}
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1.5">V.U. (auto)</label>
@@ -1057,8 +1063,10 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Pr
                   </table>
                 </div>
               </div>
+              )}
 
-              {fatores.padrao && <div className="px-5 py-4 border-b border-slate-100">
+              {fatores.padrao && (
+              <div className="px-5 py-4 border-b border-slate-100">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Fator Padrão — F = Pc<sub>av</sub> / Pc<sub>elem</sub></p>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs border-collapse">
@@ -1092,9 +1100,11 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Pr
                   </table>
                 </div>
               </div>
+              )}
 
               {/* Fator FOC */}
-              {fatores.foc && <div className="px-5 py-4 border-b border-slate-100">
+              {fatores.foc && (
+              <div className="px-5 py-4 border-b border-slate-100">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
                   Fator FOC (Ross-Heidecke) — Ka = (1-R)×(1-Ie/Ir)² + R | K = Ka×(1-Ec) | F = K<sub>av</sub> / K<sub>elem</sub>
                 </p>
@@ -1164,9 +1174,11 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Pr
                   </table>
                 </div>
               </div>
+              )}
 
               {/* Fator Andar */}
-              {fatores.andar && <div className="px-5 py-4">
+              {fatores.andar && (
+              <div className="px-5 py-4">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Fator Andar — F = Andar<sub>av</sub> / Andar<sub>elem</sub></p>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs border-collapse">
@@ -1195,6 +1207,7 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Pr
                   </table>
                 </div>
               </div>
+              )}
             </div>
           )}
 
