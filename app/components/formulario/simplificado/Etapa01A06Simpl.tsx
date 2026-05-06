@@ -494,13 +494,59 @@ export default function Etapa01A06({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <FieldLabel>Padrão</FieldLabel>
-            <input
+            <select
               name="padrao"
-              placeholder="Padrão"
-              value={form.padrao}
+              value={form.padrao || ''}
               onChange={handleChange}
-              className={inputCls()}
-            />
+              className={selectCls()}
+            >
+              <option value="">Selecione o padrão</option>
+              <optgroup label="Apartamento">
+                {['Apto. Econômico -','Apto. Econômico','Apto. Econômico +',
+                  'Apto. Simples s/elev. -','Apto. Simples s/elev.','Apto. Simples s/elev. +',
+                  'Apto. Simples c/elev. -','Apto. Simples c/elev.','Apto. Simples c/elev. +',
+                  'Apto. Médio s/elev. -','Apto. Médio s/elev.','Apto. Médio s/elev. +',
+                  'Apto. Médio c/elev. -','Apto. Médio c/elev.','Apto. Médio c/elev. +',
+                  'Apto. Superior s/elev. -','Apto. Superior s/elev.','Apto. Superior s/elev. +',
+                  'Apto. Superior c/elev. -','Apto. Superior c/elev.','Apto. Superior c/elev. +',
+                  'Apto. Fino -','Apto. Fino','Apto. Fino +','Apto. Luxo',
+                ].map(v => <option key={v} value={v}>{v}</option>)}
+              </optgroup>
+              <optgroup label="Casa">
+                {['Casa Padrão Rústico Mínimo','Casa Padrão Rústico Médio','Casa Padrão Rústico Máximo',
+                  'Casa Padrão Proletário Mínimo','Casa Padrão Proletário Médio','Casa Padrão Proletário Máximo',
+                  'Casa Padrão Econômico Mínimo','Casa Padrão Econômico Médio','Casa Padrão Econômico Máximo',
+                  'Casa Padrão Simples Mínimo','Casa Padrão Simples Médio','Casa Padrão Simples Máximo',
+                  'Casa Padrão Médio Mínimo','Casa Padrão Médio Médio','Casa Padrão Médio Máximo',
+                  'Casa Padrão Superior Mínimo','Casa Padrão Superior Médio','Casa Padrão Superior Máximo',
+                  'Casa Padrão Fino Mínimo','Casa Padrão Fino Médio','Casa Padrão Fino Máximo','Casa Padrão Luxo',
+                  'CASA | Fino','CASA | Fino +','CASA | Luxo -',
+                ].map(v => <option key={v} value={v}>{v}</option>)}
+              </optgroup>
+              <optgroup label="Escritório">
+                {['Escritório Econômico -','Escritório Econômico','Escritório Econômico +',
+                  'Escritório Simples s/Elevador -','Escritório Simples s/Elevador','Escritório Simples s/Elevador +',
+                  'Escritório Simples c/Elevador -','Escritório Simples c/Elevador','Escritório Simples c/Elevador +',
+                  'Escritório Médio s/Elevador -','Escritório Médio s/Elevador','Escritório Médio s/Elevador +',
+                  'Escritório Médio c/Elevador -','Escritório Médio c/Elevador','Escritório Médio c/Elevador +',
+                  'Escritório Superior s/Elevador -','Escritório Superior s/Elevador','Escritório Superior s/Elevador +',
+                  'Escritório Superior c/Elevador -','Escritório Superior c/Elevador','Escritório Superior c/Elevador +',
+                  'Escritório Fino -','Escritório Fino','Escritório Fino +','Escritório Luxo',
+                ].map(v => <option key={v} value={v}>{v}</option>)}
+              </optgroup>
+              <optgroup label="Galpão">
+                {['GALPÃO | Econômico -','GALPÃO | Econômico','GALPÃO | Econômico +',
+                  'GALPÃO | Simples -','GALPÃO | Simples','GALPÃO | Simples +',
+                  'GALPÃO | Médio -','GALPÃO | Médio','GALPÃO | Médio +','GALPÃO | Superior -',
+                ].map(v => <option key={v} value={v}>{v}</option>)}
+              </optgroup>
+              <optgroup label="Cobertura">
+                {['COBERTURA | Simples -','COBERTURA | Simples','COBERTURA | Simples +',
+                  'COBERTURA | Médio -','COBERTURA | Médio','COBERTURA | Médio +',
+                  'COBERTURA | Superior -','COBERTURA | Superior','COBERTURA | Superior +',
+                ].map(v => <option key={v} value={v}>{v}</option>)}
+              </optgroup>
+            </select>
           </div>
 
           <div>
