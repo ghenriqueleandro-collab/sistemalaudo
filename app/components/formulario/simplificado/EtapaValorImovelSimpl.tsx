@@ -17,6 +17,8 @@ type Props = {
   produtoOutrosFatores: number
   valorFinalImovel: number
   formatarMoeda: (valor: number) => string
+  modoValorImovel: 'separado' | 'total'
+  onModoChange: (modo: 'separado' | 'total') => void
 }
 
 export default function EtapaValorImovel({
@@ -30,6 +32,8 @@ export default function EtapaValorImovel({
   produtoOutrosFatores,
   valorFinalImovel,
   formatarMoeda,
+  modoValorImovel,
+  onModoChange,
 }: Props) {
   return (
     <div className="space-y-4">
