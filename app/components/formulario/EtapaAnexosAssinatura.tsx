@@ -21,6 +21,7 @@ type Props = {
     campo: 'documentacaoPdf' | 'calculoPdf'
   ) => void
   handleLocalizacaoComparativos: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onRemoverAnexo: (campo: 'documentacaoPdf' | 'calculoPdf' | 'localizacaoComparativos') => void
   handleFotos: (e: React.ChangeEvent<HTMLInputElement>) => void
   fotos: FotoItem[]
   handleLegenda: (index: number, valor: string) => void
@@ -34,6 +35,7 @@ export default function EtapaAnexosAssinatura({
   formatarDataBR,
   handlePdfUpload,
   handleLocalizacaoComparativos,
+  onRemoverAnexo,
   handleFotos,
   fotos,
   handleLegenda,
@@ -212,6 +214,14 @@ useEffect(() => {
             onChange={(e) => handlePdfUpload(e, 'documentacaoPdf')}
             className="w-full border p-2 rounded"
           />
+          {form.documentacaoPdf && (
+            <div className="mt-1.5 flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+              <span>✓</span>
+              <span className="font-medium">Arquivo enviado</span>
+              <button type="button" onClick={() => onRemoverAnexo('documentacaoPdf')}
+                className="ml-auto text-xs text-slate-500 hover:text-red-600">Remover</button>
+            </div>
+          )}
         </div>
 
         <div>
@@ -224,6 +234,12 @@ useEffect(() => {
             onChange={handleLocalizacaoComparativos}
             className="w-full border p-2 rounded"
           />
+          {form.localizacaoComparativos && (
+            <div className="mt-1.5 flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+              <span>✓</span>
+              <span className="font-medium">Imagem enviada</span>
+            </div>
+          )}
         </div>
 
         <div>
@@ -234,6 +250,14 @@ useEffect(() => {
             onChange={(e) => handlePdfUpload(e, 'calculoPdf')}
             className="w-full border p-2 rounded"
           />
+          {form.calculoPdf && (
+            <div className="mt-1.5 flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+              <span>✓</span>
+              <span className="font-medium">Arquivo enviado</span>
+              <button type="button" onClick={() => onRemoverAnexo('calculoPdf')}
+                className="ml-auto text-xs text-slate-500 hover:text-red-600">Remover</button>
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">

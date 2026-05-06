@@ -303,6 +303,10 @@ export default function NovoLaudoPage() {
     }
   }
 
+  function onRemoverAnexo(campo: 'documentacaoPdf' | 'calculoPdf' | 'localizacaoComparativos') {
+    setForm((prev) => ({ ...prev, [campo]: '' }))
+  }
+
   async function handleLocalizacaoComparativos(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -729,6 +733,7 @@ export default function NovoLaudoPage() {
               formatarDataBR={formatarDataBR}
               handlePdfUpload={handlePdfUpload}
               handleLocalizacaoComparativos={handleLocalizacaoComparativos}
+              onRemoverAnexo={onRemoverAnexo}
               handleFotos={handleFotos}
               fotos={fotos}
               handleLegenda={handleLegenda}
