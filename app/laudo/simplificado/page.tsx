@@ -535,34 +535,27 @@ export default function LaudoSimplificadoPage() {
             form.metodoAvaliacao.trim() &&
             form.tratamentoDados.trim()
         )
-      case '7':
-        return acabamentos.some((item) => item.acabamento.trim())
       case '8':
-        return Boolean(form.consideracoesMercado.trim())
-      case '9':
-        return true
+        return Boolean((form.consideracoesMercado || '').trim())
       case '9.1':
         return Boolean(
           form.periodoPesquisaInicio &&
             form.periodoPesquisaFim &&
-            form.tipoInformacoesObtidas &&
-            form.caracteristicasTerreno
+            form.tipoInformacoesObtidas
         )
       case '9.2':
         return Boolean(form.imagemBenfeitorias)
       case '10':
         return Boolean(
-          form.valorTerreno.trim() &&
-            form.valorBenfeitorias.trim() &&
-            form.fatorComercializacao.trim() &&
-            (form.valorLiquidezForcada || '').trim()
+          (form.valorTerreno || '').trim() &&
+            (form.fatorComercializacao || '').trim()
         )
       case '11':
         return Boolean(
-          fundamentacao.some((item) => item.grau) ||
-            fundamentacaoInferencia.some((item) => item.grau) ||
-            fundamentacaoEvolutivo.some((item) => item.grau) ||
-            precisao.some((item) => item.grau)
+          fundamentacao.some((item: any) => item.grau) ||
+            fundamentacaoInferencia.some((item: any) => item.grau) ||
+            fundamentacaoEvolutivo.some((item: any) => item.grau) ||
+            precisao.some((item: any) => item.grau)
         )
       case '12':
         return valorFinalImovel > 0
