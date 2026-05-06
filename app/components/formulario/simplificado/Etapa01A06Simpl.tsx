@@ -785,15 +785,17 @@ export default function Etapa01A06({
         <div className="border-t border-slate-100 pt-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-slate-700">Fator Vaga</span>
-            <Toggle fator="vaga" label={fatores.vaga ? 'Ativo' : 'Desativado'} />
+            <Toggle fator="vaga" label={fatores.vaga ? 'Ativo (considerado no cálculo)' : 'Desativado (apenas informação)'} />
           </div>
-          {fatores.vaga && (
-            <div>
-              <input name="vagasAvaliando" placeholder="0" type="number"
-                value={form.vagasAvaliando || ''} onChange={handleChange} className={inputCls()} />
-              <p className="text-[11px] text-slate-400 mt-1">Número de vagas de garagem do avaliando.</p>
-            </div>
-          )}
+          <div>
+            <input name="vagasAvaliando" placeholder="0" type="number"
+              value={form.vagasAvaliando || ''} onChange={handleChange} className={inputCls()} />
+            <p className="text-[11px] text-slate-400 mt-1">
+              {fatores.vaga
+                ? 'Número de vagas do avaliando — considerado no cálculo.'
+                : 'Número de vagas do avaliando — apenas informativo, não considerado no cálculo.'}
+            </p>
+          </div>
         </div>
       </SectionCard>
 

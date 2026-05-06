@@ -410,8 +410,8 @@ export default function LaudoSimplificadoPage() {
       ...prev,
       tipoImovelCDDM: tipo,
       fatoresCDDMAtivos: tipo === 'isolado'
-        ? { ...prev.fatoresCDDMAtivos, andar: false, vaga: false }
-        : { ...prev.fatoresCDDMAtivos },
+        ? { ...prev.fatoresCDDMAtivos, local: true, andar: false, vaga: false }
+        : { ...prev.fatoresCDDMAtivos, local: true, vaga: true },
     }))
   }
 

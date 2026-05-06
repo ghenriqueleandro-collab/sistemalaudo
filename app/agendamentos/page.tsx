@@ -251,6 +251,7 @@ export default function AgendamentosPage() {
         areaTotal: '',
         fracaoIdeal: '',
         fatoresCDDMAtivos: { local: true, padrao: true, foc: true, andar: true, vaga: true },
+        coordenadasImovel: '',
         coordenadasImovel: '', endereco: '', proprietario: '', solicitante: '',
         tipo: '', finalidade: '', areaConstruidaTotal: '', areaConstruidaAverbada: '',
         areaTerrenoTotal: '', areaTerrenoAverbada: '', matricula: '', iptu: '',
@@ -552,8 +553,8 @@ export default function AgendamentosPage() {
                           type="button"
                           onClick={() => {
                             const novoFatores = value === 'isolado'
-                              ? { ...novoLaudo.fatoresCDDMAtivos, andar: false, vaga: false }
-                              : { ...novoLaudo.fatoresCDDMAtivos }
+                              ? { ...novoLaudo.fatoresCDDMAtivos, local: true, andar: false, vaga: false }
+                              : { ...novoLaudo.fatoresCDDMAtivos, local: true, vaga: true }
                             setNovoLaudo((prev) => ({
                               ...prev,
                               tipoImovelCDDM: value,
