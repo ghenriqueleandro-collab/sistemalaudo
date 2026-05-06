@@ -598,6 +598,7 @@ export default function AgendamentosPage() {
                   </div>
                 )}
 
+              </div>
               <div className="mt-6 flex gap-3">
                 <button
                   onClick={() => { setMostrarModalNovoLaudo(false); setMsgCoords(null) }}
