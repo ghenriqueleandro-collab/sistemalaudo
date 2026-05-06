@@ -536,16 +536,6 @@ export default function NovoLaudoPage() {
         atualizadoEm: new Date().toISOString(),
       }
 
-      // Verifica tamanho do payload — Redis limita 5MB por chave
-      const payloadStr = JSON.stringify(payload)
-      const tamanhoMB = new Blob([payloadStr]).size / 1024 / 1024
-
-      if (tamanhoMB > 4.5) {
-        alert(`⚠ O laudo está muito grande (${tamanhoMB.toFixed(1)}MB). Remova algumas fotos ou use imagens menores e tente novamente.`)
-        setSalvando(false)
-        return
-      }
-
       const idSalvo = await salvarLaudo(payload)
 
       if (!idSalvo) {
