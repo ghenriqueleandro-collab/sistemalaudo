@@ -800,11 +800,13 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Pr
                     placeholder="0" className={cls} />
                 </div>
               )}
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1.5">Andar</label>
-                <input type="text" value={elem.andar} onChange={e => updateElem(abaAtiva, 'andar', e.target.value)}
-                  placeholder="n/a" className={cls} />
-              </div>
+              {fatores.andar && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1.5">Andar</label>
+                  <input type="text" value={elem.andar} onChange={e => updateElem(abaAtiva, 'andar', e.target.value)}
+                    placeholder="n/a" className={cls} />
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-5 gap-3 mt-3">
@@ -871,13 +873,13 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Pr
                     placeholder="100" className={cls} />
                 </div>
               )}
-              {fatores.vaga && (
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1.5">Fator vaga (100 = neutro)</label>
-                  <input type="number" value={elem.fatorVaga} onChange={e => updateElem(abaAtiva, 'fatorVaga', e.target.value)}
-                    placeholder="100" className={cls} />
-                </div>
-              )}
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">
+                  Vagas {!fatores.vaga && <span className="text-slate-300 text-[10px]">(apenas informação)</span>}
+                </label>
+                <input type="number" value={elem.fatorVaga} onChange={e => updateElem(abaAtiva, 'fatorVaga', e.target.value)}
+                  placeholder="100" className={cls} />
+              </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1.5">V.U. (auto)</label>
                 <div className={`rounded-xl px-3 py-2 text-sm font-semibold border ${
@@ -1224,6 +1226,7 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Pr
                         {fatores.foc && <th className="border border-slate-200 px-3 py-2 text-blue-800">F. FOC</th>}
                         {fatores.andar && <th className="border border-slate-200 px-3 py-2 text-blue-800">F. Andar</th>}
                         {fatores.vaga && <th className="border border-slate-200 px-3 py-2 text-blue-800">F. Vaga</th>}
+                        {!fatores.vaga && <th className="border border-slate-200 px-3 py-2 text-slate-300">Vagas</th>}
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Coef. Geral</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">V.U. Hom.</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Saneado</th>
@@ -1239,7 +1242,10 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Pr
                           {fatores.padrao && <td className="border border-slate-200 px-3 py-2 text-center">{fmt(r.fatorPadrao, 4)}</td>}
                           {fatores.foc && <td className="border border-slate-200 px-3 py-2 text-center">{fmt(r.fatorFOC, 4)}</td>}
                           {fatores.andar && <td className="border border-slate-200 px-3 py-2 text-center">{fmt(r.fatorAndar, 4)}</td>}
-                          {fatores.vaga && <td className="border border-slate-200 px-3 py-2 text-center">{fmt(r.fatorVaga, 4)}</td>}
+                          {fatores.vaga
+                            ? <td className="border border-slate-200 px-3 py-2 text-center">{fmt(r.fatorVaga, 4)}</td>
+                            : <td className="border border-slate-200 px-3 py-2 text-center text-slate-300">{fmt(r.fatorVaga, 4)}</td>
+                          }
                           <td className={`border border-slate-200 px-3 py-2 text-center font-semibold ${
                             r.coefGeral < 0.5 || r.coefGeral > 2.0 ? 'text-red-700' : 'text-slate-700'
                           }`}>{fmt(r.coefGeral, 4)}</td>
