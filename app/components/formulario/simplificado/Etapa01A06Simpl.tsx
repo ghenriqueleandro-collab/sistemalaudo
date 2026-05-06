@@ -83,6 +83,8 @@ type Props = {
   tipoLaudo?: 'detalhado' | 'simplificado'
   fatoresCDDMAtivos?: { local: boolean; padrao: boolean; foc: boolean; andar: boolean; vaga: boolean }
   toggleFatorCDDM?: (fator: 'local' | 'padrao' | 'foc' | 'andar' | 'vaga') => void
+  tipoImovelCDDM?: '' | 'isolado' | 'fracao'
+  setTipoImovelCDDM?: (tipo: 'isolado' | 'fracao') => void
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -106,8 +108,11 @@ export default function Etapa01A06({
   tipoLaudo,
   fatoresCDDMAtivos,
   toggleFatorCDDM,
+  tipoImovelCDDM,
+  setTipoImovelCDDM,
 }: Props) {
   const fatores = fatoresCDDMAtivos ?? { local: true, padrao: true, foc: true, andar: true, vaga: true }
+  const isFracao = tipoImovelCDDM === 'fracao'
 
   // Toggle switch component inline
   const Toggle = ({ fator, label }: { fator: 'local' | 'padrao' | 'foc' | 'andar' | 'vaga'; label: string }) => (
@@ -329,6 +334,36 @@ export default function Etapa01A06({
         </p>
       </div>
 
+      {/* ── Tipo de imóvel ────────────────────────────────────────────────────── */}
+      <SectionCard title="Tipo de imóvel">
+        <p className="text-xs text-slate-400 mb-3">
+          Define os campos disponíveis e os fatores padrão para o cálculo CDDM.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          {([
+            { value: 'isolado', label: 'Imóvel isolado', desc: 'Casa, terreno, galpão. Sem fração ideal.' },
+            { value: 'fracao', label: 'Imóvel com fração', desc: 'Apartamento, sala, vaga. Possui área comum e fração ideal.' },
+          ] as const).map(({ value, label, desc }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setTipoImovelCDDM?.(value)}
+              className={`rounded-2xl border-2 p-3 text-left transition ${
+                tipoImovelCDDM === value
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}
+            >
+              <p className="text-sm font-semibold text-slate-800 mb-0.5">{label}</p>
+              <p className="text-[11px] text-slate-500 leading-tight">{desc}</p>
+              {value === 'isolado' && (
+                <p className="text-[10px] text-amber-600 mt-1">Fatores Andar e Vaga desativados por padrão</p>
+              )}
+            </button>
+          ))}
+        </div>
+      </SectionCard>
+
       {/* ── Dados principais ──────────────────────────────────────────────────── */}
       <SectionCard title="Dados do imóvel">
         <div>
@@ -427,7 +462,7 @@ export default function Etapa01A06({
       <SectionCard title="Áreas principais">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <FieldLabel>Área construída total (m²)</FieldLabel>
+            <FieldLabel>{isFracao ? 'Área privativa total (m²)' : 'Área construída total (m²)'}</FieldLabel>
             <input
               name="areaConstruidaTotal"
               placeholder="0,00"
@@ -438,7 +473,7 @@ export default function Etapa01A06({
           </div>
 
           <div>
-            <FieldLabel>Área construída averbada (m²)</FieldLabel>
+            <FieldLabel>{isFracao ? 'Área privativa averbada (m²)' : 'Área construída averbada (m²)'}</FieldLabel>
             <input
               name="areaConstruidaAverbada"
               placeholder="0,00"
@@ -450,42 +485,70 @@ export default function Etapa01A06({
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <span className="text-xs font-medium text-slate-500">Área construída não averbada</span>
+          <span className="text-xs font-medium text-slate-500">
+            {isFracao ? 'Área privativa não averbada' : 'Área construída não averbada'}
+          </span>
           <p className="text-sm font-semibold text-slate-800 mt-0.5">
             {areaConstruidaNaoAverbada.toLocaleString('pt-BR')} m²
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <FieldLabel>Área de terreno total (m²)</FieldLabel>
-            <input
-              name="areaTerrenoTotal"
-              placeholder="0,00"
-              value={form.areaTerrenoTotal}
-              onChange={handleChange}
-              className={inputCls()}
-            />
+        {/* Campos de fração — apenas para imóvel com fração */}
+        {isFracao && (
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <FieldLabel>Área comum (m²)</FieldLabel>
+              <input name="areaComum" placeholder="0,00"
+                value={form.areaComum || ''} onChange={handleChange} className={inputCls()} />
+            </div>
+            <div>
+              <FieldLabel>Área total (m²)</FieldLabel>
+              <input name="areaTotal" placeholder="0,00"
+                value={form.areaTotal || ''} onChange={handleChange} className={inputCls()} />
+            </div>
+            <div>
+              <FieldLabel>Fração ideal (%)</FieldLabel>
+              <input name="fracaoIdeal" placeholder="0,000000"
+                value={form.fracaoIdeal || ''} onChange={handleChange} className={inputCls()} />
+            </div>
           </div>
+        )}
 
-          <div>
-            <FieldLabel>Área de terreno averbada (m²)</FieldLabel>
-            <input
-              name="areaTerrenoAverbada"
-              placeholder="0,00"
-              value={form.areaTerrenoAverbada}
-              onChange={handleChange}
-              className={inputCls()}
-            />
-          </div>
-        </div>
+        {/* Área de terreno — oculta para imóvel com fração */}
+        {!isFracao && (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <FieldLabel>Área de terreno total (m²)</FieldLabel>
+                <input
+                  name="areaTerrenoTotal"
+                  placeholder="0,00"
+                  value={form.areaTerrenoTotal}
+                  onChange={handleChange}
+                  className={inputCls()}
+                />
+              </div>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <span className="text-xs font-medium text-slate-500">Área de terreno não averbada</span>
-          <p className="text-sm font-semibold text-slate-800 mt-0.5">
-            {areaTerrenoNaoAverbada.toLocaleString('pt-BR')} m²
-          </p>
-        </div>
+              <div>
+                <FieldLabel>Área de terreno averbada (m²)</FieldLabel>
+                <input
+                  name="areaTerrenoAverbada"
+                  placeholder="0,00"
+                  value={form.areaTerrenoAverbada}
+                  onChange={handleChange}
+                  className={inputCls()}
+                />
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <span className="text-xs font-medium text-slate-500">Área de terreno não averbada</span>
+              <p className="text-sm font-semibold text-slate-800 mt-0.5">
+                {areaTerrenoNaoAverbada.toLocaleString('pt-BR')} m²
+              </p>
+            </div>
+          </>
+        )}
       </SectionCard>
 
       {/* ── Detalhes complementares ───────────────────────────────────────────── */}

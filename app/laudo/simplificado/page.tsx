@@ -42,6 +42,10 @@ export default function LaudoSimplificadoPage() {
     fatorLocalAvaliando: '',
     fatorAndarAvaliando: '',
     vagasAvaliando: '',
+    tipoImovelCDDM: '' as '' | 'isolado' | 'fracao',
+    areaComum: '',
+    areaTotal: '',
+    fracaoIdeal: '',
     fatoresCDDMAtivos: {
       local: true,
       padrao: true,
@@ -399,6 +403,16 @@ export default function LaudoSimplificadoPage() {
       console.error(error)
       alert('Erro ao processar o PDF.')
     }
+  }
+
+  function setTipoImovelCDDM(tipo: 'isolado' | 'fracao') {
+    setForm((prev: any) => ({
+      ...prev,
+      tipoImovelCDDM: tipo,
+      fatoresCDDMAtivos: tipo === 'isolado'
+        ? { ...prev.fatoresCDDMAtivos, andar: false, vaga: false }
+        : { ...prev.fatoresCDDMAtivos },
+    }))
   }
 
   function toggleFatorCDDM(fator: 'local' | 'padrao' | 'foc' | 'andar' | 'vaga') {
@@ -870,6 +884,8 @@ export default function LaudoSimplificadoPage() {
               tipoLaudo="simplificado"
               fatoresCDDMAtivos={form.fatoresCDDMAtivos}
               toggleFatorCDDM={toggleFatorCDDM}
+              tipoImovelCDDM={form.tipoImovelCDDM}
+              setTipoImovelCDDM={setTipoImovelCDDM}
             />
           )}
 

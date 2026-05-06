@@ -105,6 +105,11 @@ export default function AgendamentosPage() {
   // ← ATUALIZADO: tipoLaudo adicionado ao estado inicial
   const [novoLaudo, setNovoLaudo] = useState({
     tipoLaudo: 'detalhado' as 'detalhado' | 'simplificado',
+    tipoImovelCDDM: '' as '' | 'isolado' | 'fracao',
+    areaComum: '',
+    areaTotal: '',
+    fracaoIdeal: '',
+    fatoresCDDMAtivos: { local: true, padrao: true, foc: true, andar: true, vaga: true },
     coordenadasImovel: '',
     endereco: '',
     proprietario: '',
@@ -241,6 +246,11 @@ export default function AgendamentosPage() {
       // ← ATUALIZADO: reset inclui tipoLaudo
       setNovoLaudo({
         tipoLaudo: 'detalhado',
+        tipoImovelCDDM: '',
+        areaComum: '',
+        areaTotal: '',
+        fracaoIdeal: '',
+        fatoresCDDMAtivos: { local: true, padrao: true, foc: true, andar: true, vaga: true },
         coordenadasImovel: '', endereco: '', proprietario: '', solicitante: '',
         tipo: '', finalidade: '', areaConstruidaTotal: '', areaConstruidaAverbada: '',
         areaTerrenoTotal: '', areaTerrenoAverbada: '', matricula: '', iptu: '',
@@ -527,7 +537,66 @@ export default function AgendamentosPage() {
                     ))}
                   </div>
                 </div>
-              </div>
+
+                {/* Tipo de imóvel — apenas para laudos simplificados */}
+                {novoLaudo.tipoLaudo === 'simplificado' && (
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Tipo de imóvel</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {([
+                        { value: 'isolado', label: 'Imóvel isolado', desc: 'Casa, terreno, galpão. Sem fração ideal.' },
+                        { value: 'fracao', label: 'Imóvel com fração', desc: 'Apartamento, sala, vaga. Possui área comum e fração ideal.' },
+                      ] as const).map(({ value, label, desc }) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => {
+                            const novoFatores = value === 'isolado'
+                              ? { ...novoLaudo.fatoresCDDMAtivos, andar: false, vaga: false }
+                              : { ...novoLaudo.fatoresCDDMAtivos }
+                            setNovoLaudo((prev) => ({
+                              ...prev,
+                              tipoImovelCDDM: value,
+                              fatoresCDDMAtivos: novoFatores,
+                            }))
+                          }}
+                          className={`rounded-2xl border-2 p-3 text-left transition ${
+                            novoLaudo.tipoImovelCDDM === value
+                              ? 'border-blue-400 bg-blue-50'
+                              : 'border-slate-200 bg-white hover:border-slate-300'
+                          }`}
+                        >
+                          <p className="text-xs font-semibold text-slate-800 mb-1">{label}</p>
+                          <p className="text-[11px] text-slate-500 leading-tight">{desc}</p>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Campos informativos para imóvel com fração */}
+                    {novoLaudo.tipoImovelCDDM === 'fracao' && (
+                      <div className="grid grid-cols-3 gap-3 mt-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-500 mb-1">Área comum (m²)</label>
+                          <input value={novoLaudo.areaComum}
+                            onChange={e => setNovoLaudo(p => ({ ...p, areaComum: e.target.value }))}
+                            placeholder="0,00" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-500 mb-1">Área total (m²)</label>
+                          <input value={novoLaudo.areaTotal}
+                            onChange={e => setNovoLaudo(p => ({ ...p, areaTotal: e.target.value }))}
+                            placeholder="0,00" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-500 mb-1">Fração ideal (%)</label>
+                          <input value={novoLaudo.fracaoIdeal}
+                            onChange={e => setNovoLaudo(p => ({ ...p, fracaoIdeal: e.target.value }))}
+                            placeholder="0,000000" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
               <div className="mt-6 flex gap-3">
                 <button
