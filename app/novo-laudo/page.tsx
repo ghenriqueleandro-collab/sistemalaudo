@@ -550,8 +550,9 @@ export default function NovoLaudoPage() {
       await definirLaudoAtual(idSalvo)
       window.open('/visualizar-laudo?id=' + encodeURIComponent(laudoUuid), '_blank')
     } catch (error) {
-      console.error(error)
-      alert('Erro ao salvar o laudo.')
+      console.error('Erro ao salvar laudo:', error)
+      const msg = error instanceof Error ? error.message : String(error)
+      alert(`Erro ao salvar o laudo.\n\nDetalhe: ${msg}`)
     } finally {
       setSalvando(false)
     }
