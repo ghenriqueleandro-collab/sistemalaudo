@@ -126,6 +126,7 @@ export default function LaudoSimplificadoPage() {
   const [editandoLaudoExistente, setEditandoLaudoExistente] = useState(false)
   const [formPronto, setFormPronto] = useState(false)
   const [salvando, setSalvando] = useState(false)
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [laudoUuid, setLaudoUuid] = useState(() => crypto.randomUUID())
 
   // Sincroniza as divisões internas com a lista de acabamentos
@@ -590,15 +591,11 @@ export default function LaudoSimplificadoPage() {
     return url
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
+  async function executarSave(silencioso = false) {
+    if (!laudoUuid || salvando) return
 
-    if (!form.garantiaClassificacao) {
-      alert('Selecione a classificação da garantia.')
-      return
-    }
-
-    setSalvando(true)
+    if (!silencioso) setSalvando(true)
+    setAutoSaveStatus('saving')
     try {
       const status = obterStatusLaudo()
 
@@ -723,15 +720,35 @@ export default function LaudoSimplificadoPage() {
       }
 
       await definirLaudoAtual(idSalvo)
-      window.open('/visualizar-laudo?id=' + encodeURIComponent(laudoUuid), '_blank')
+      setAutoSaveStatus('saved')
+      // Volta para idle após 3 segundos
+      setTimeout(() => setAutoSaveStatus('idle'), 3000)
     } catch (error) {
       console.error('Erro ao salvar laudo:', error)
-      const msg = error instanceof Error ? error.message : String(error)
-      alert(`Erro ao salvar o laudo.\n\nDetalhe: ${msg}`)
+      setAutoSaveStatus('error')
+      if (!silencioso) {
+        const msg = error instanceof Error ? error.message : String(error)
+        alert(`Erro ao salvar o laudo.\n\nDetalhe: ${msg}`)
+      }
     } finally {
       setSalvando(false)
     }
   }
+
+  // ─── Auto-save com debounce de 2s ────────────────────────────────────────────
+  useEffect(() => {
+    if (!formPronto || !laudoUuid) return
+    const timer = setTimeout(() => { executarSave(true) }, 2000)
+    return () => clearTimeout(timer)
+  }, [form, fotos, divisoes, acabamentos, fundamentacao, fundamentacaoInferencia,
+      fundamentacaoEvolutivo, precisao, resumoMercado, outrosFatoresImovel])
+
+  // Salva ao sair da página (beforeunload)
+  useEffect(() => {
+    const handler = () => { executarSave(true) }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [])
 
   // ─── RENDER ───────────────────────────────────────────────────────────────────
 
@@ -786,16 +803,32 @@ export default function LaudoSimplificadoPage() {
             </button>
 
             <Link
-              href="/visualizar-laudo"
+              href={laudoUuid ? `/visualizar-laudo?id=${laudoUuid}` : '/visualizar-laudo'}
               className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 transition"
             >
               Visualizar laudo
             </Link>
+
+            {/* Indicador de auto-save */}
+            <div className="flex items-center gap-1.5 text-xs">
+              {autoSaveStatus === 'saving' && (
+                <><span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                <span className="text-slate-400">Salvando…</span></>
+              )}
+              {autoSaveStatus === 'saved' && (
+                <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span className="text-emerald-600">Salvo</span></>
+              )}
+              {autoSaveStatus === 'error' && (
+                <><span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                <span className="text-red-600">Erro ao salvar</span></>
+              )}
+            </div>
           </div>
         </div>
 
         {/* ── FORMULÁRIO FULL-WIDTH ── */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-6">
 
           {etapaAtual === '1-6' && (
             <Etapa01A06Simpl
@@ -898,17 +931,9 @@ export default function LaudoSimplificadoPage() {
             />
           )}
 
-          {/* Botão salvar */}
-          <div className="pt-4 border-t border-slate-200">
-            <button
-              disabled={salvando}
-              className="w-full sm:w-auto rounded-xl bg-blue-600 text-white px-6 py-2.5 text-sm font-semibold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
-            >
-              {salvando ? 'Salvando...' : 'Salvar Laudo'}
-            </button>
-          </div>
+          {/* Sem botão de salvar — auto-save ativo */}
 
-        </form>
+        </div>
       </section>
 
       {/* ── NAVEGAÇÃO STICKY NO RODAPÉ ── */}
