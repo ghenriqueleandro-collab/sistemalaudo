@@ -265,7 +265,7 @@ export default function NovoLaudoPage() {
   async function handleCroqui(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
     const novosCroquis = await Promise.all(
-      files.map(async (file) => ({ preview: await comprimirImagem(file, 1400, 0.80) }))
+      files.map(async (file) => ({ preview: await comprimirImagem(file, 1000, 0.70) }))
     )
     setForm((prev) => ({ ...prev, croquis: [...(prev.croquis || []), ...novosCroquis] }))
   }
@@ -319,7 +319,7 @@ export default function NovoLaudoPage() {
     const files = Array.from(e.target.files || [])
     const novasFotos = await Promise.all(
       files.map(async (file) => ({
-        preview: await comprimirImagem(file, 1200, 0.75),
+        preview: await comprimirImagem(file, 800, 0.55),
         legenda: file.name.replace(/\.[^.]+$/, ''),
       }))
     )
@@ -518,6 +518,7 @@ export default function NovoLaudoPage() {
     setSalvando(true)
     try {
       const status = obterStatusLaudo()
+
       const payload = {
         ...form,
         id: laudoUuid,
@@ -535,7 +536,30 @@ export default function NovoLaudoPage() {
         atualizadoEm: new Date().toISOString(),
       }
 
-      const idSalvo = await salvarLaudo(payload)
+      // Verifica tamanho do payload — Redis limita 5MB por chave
+      // Se ultrapassar 4MB, remove PDFs grandes para garantir o save
+      const payloadStr = JSON.stringify(payload)
+      const tamanhoMB = new Blob([payloadStr]).size / 1024 / 1024
+      let payloadFinal = payload
+
+      if (tamanhoMB > 4) {
+        const semPdfs = {
+          ...payload,
+          documentacaoPdf: payload.documentacaoPdf?.startsWith('data:') ? '' : payload.documentacaoPdf,
+          calculoPdf: payload.calculoPdf?.startsWith('data:') ? '' : payload.calculoPdf,
+        }
+        const tamanhoSemPdfs = new Blob([JSON.stringify(semPdfs)]).size / 1024 / 1024
+        if (tamanhoSemPdfs <= 4) {
+          payloadFinal = semPdfs
+          alert('⚠ Os PDFs anexados são muito grandes e foram removidos para permitir o salvamento. Faça o upload de PDFs menores.')
+        } else {
+          alert('⚠ O laudo contém muitos dados de imagem. Remova algumas fotos ou use imagens menores e tente novamente.')
+          setSalvando(false)
+          return
+        }
+      }
+
+      const idSalvo = await salvarLaudo(payloadFinal)
 
       if (!idSalvo) {
         alert('Verifique sua conexão e tente novamente.')
