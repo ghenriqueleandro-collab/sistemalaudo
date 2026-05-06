@@ -131,6 +131,21 @@ export default function NovoLaudoPage() {
   const [salvando, setSalvando] = useState(false)
   const [laudoUuid, setLaudoUuid] = useState(() => crypto.randomUUID())
 
+  // Sincroniza as divisões internas com a lista de acabamentos
+  // preservando os valores já preenchidos pelo usuário
+  useEffect(() => {
+    const divisoesFiltradas = divisoes.filter(d => d.ambiente?.trim())
+    if (divisoesFiltradas.length === 0) return
+
+    setAcabamentos(prev => {
+      const mapa = new Map(prev.map(a => [a.ambiente, a.acabamento]))
+      return divisoesFiltradas.map(d => ({
+        ambiente: d.ambiente,
+        acabamento: mapa.get(d.ambiente) || '',
+      }))
+    })
+  }, [divisoes])
+
   useEffect(() => {
     async function carregarLaudoParaEdicao() {
       try {
