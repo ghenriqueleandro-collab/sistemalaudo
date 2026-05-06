@@ -117,21 +117,113 @@ const CONSERVACAO_PARA_FOC: Record<string, FOCLetra> = {
   'Sem valor': 'I',
 }
 
-// Padrão construtivo → CUB % (conforme tabela Apoio planilha)
-const PADRAO_CUB: Record<string, number> = {
-  'Baixo': 70,
-  'Baixo-Médio': 80,
-  'Médio': 100,
-  'Médio-Alto': 110,
-  'Alto': 120,
-  'Muito Alto': 130,
-  // aliases comuns
-  'baixo': 70,
-  'médio': 100,
-  'alto': 120,
-  'Simples': 70,
-  'Normal': 100,
+// ─── Tabela completa de Padrão Construtivo (ref_padrao da planilha) ──────────
+// Pc = Coeficiente de Padrão Construtivo | Ir = Vida Referencial (anos) | R = Valor Residual
+const PADRAO_TABLE: Record<string, { Pc: number; Ir: number; R: number }> = {
+  'Escritório Econômico -':             { Pc: 2.0810, Ir: 70, R: 0.2 },
+  'Escritório Econômico':               { Pc: 2.3130, Ir: 70, R: 0.2 },
+  'Escritório Econômico +':             { Pc: 2.5440, Ir: 70, R: 0.2 },
+  'Escritório Simples s/Elevador -':    { Pc: 3.3780, Ir: 70, R: 0.2 },
+  'Escritório Simples s/Elevador':      { Pc: 3.7530, Ir: 70, R: 0.2 },
+  'Escritório Simples s/Elevador +':    { Pc: 4.0130, Ir: 70, R: 0.2 },
+  'Escritório Simples c/Elevador -':    { Pc: 3.7420, Ir: 70, R: 0.2 },
+  'Escritório Simples c/Elevador':      { Pc: 4.1580, Ir: 70, R: 0.2 },
+  'Escritório Simples c/Elevador +':    { Pc: 4.5730, Ir: 70, R: 0.2 },
+  'Escritório Médio s/Elevador -':      { Pc: 4.0140, Ir: 60, R: 0.2 },
+  'Escritório Médio s/Elevador':        { Pc: 4.3300, Ir: 60, R: 0.2 },
+  'Escritório Médio s/Elevador +':      { Pc: 4.7630, Ir: 60, R: 0.2 },
+  'Escritório Médio c/Elevador -':      { Pc: 4.7450, Ir: 60, R: 0.2 },
+  'Escritório Médio c/Elevador':        { Pc: 5.2730, Ir: 60, R: 0.2 },
+  'Escritório Médio c/Elevador +':      { Pc: 5.7670, Ir: 60, R: 0.2 },
+  'Escritório Superior s/Elevador -':   { Pc: 5.2060, Ir: 60, R: 0.2 },
+  'Escritório Superior s/Elevador':     { Pc: 5.7840, Ir: 60, R: 0.2 },
+  'Escritório Superior s/Elevador +':   { Pc: 6.3630, Ir: 60, R: 0.2 },
+  'Escritório Superior c/Elevador -':   { Pc: 5.7680, Ir: 60, R: 0.2 },
+  'Escritório Superior c/Elevador':     { Pc: 6.3710, Ir: 60, R: 0.2 },
+  'Escritório Superior c/Elevador +':   { Pc: 7.0720, Ir: 60, R: 0.2 },
+  'Escritório Fino -':                  { Pc: 7.0730, Ir: 50, R: 0.2 },
+  'Escritório Fino':                    { Pc: 7.9290, Ir: 50, R: 0.2 },
+  'Escritório Fino +':                  { Pc: 8.7220, Ir: 50, R: 0.2 },
+  'Escritório Luxo':                    { Pc: 9.9350, Ir: 50, R: 0.2 },
+  'CASA | Fino':                        { Pc: 3.8650, Ir: 50, R: 0.2 },
+  'CASA | Fino +':                      { Pc: 4.3990, Ir: 50, R: 0.2 },
+  'CASA | Luxo -':                      { Pc: 4.8430, Ir: 50, R: 0.2 },
+  'GALPÃO | Econômico -':               { Pc: 0.5180, Ir: 60, R: 0.2 },
+  'GALPÃO | Econômico':                 { Pc: 0.6090, Ir: 60, R: 0.2 },
+  'GALPÃO | Econômico +':               { Pc: 0.7000, Ir: 60, R: 0.2 },
+  'GALPÃO | Simples -':                 { Pc: 0.9820, Ir: 60, R: 0.2 },
+  'GALPÃO | Simples':                   { Pc: 1.1250, Ir: 60, R: 0.2 },
+  'GALPÃO | Simples +':                 { Pc: 1.2680, Ir: 60, R: 0.2 },
+  'GALPÃO | Médio -':                   { Pc: 1.3680, Ir: 80, R: 0.2 },
+  'GALPÃO | Médio':                     { Pc: 1.6590, Ir: 80, R: 0.2 },
+  'GALPÃO | Médio +':                   { Pc: 1.8710, Ir: 80, R: 0.2 },
+  'GALPÃO | Superior -':                { Pc: 1.8720, Ir: 80, R: 0.2 },
+  'COBERTURA | Simples -':              { Pc: 0.0710, Ir: 20, R: 0.2 },
+  'COBERTURA | Simples':                { Pc: 0.1420, Ir: 20, R: 0.2 },
+  'COBERTURA | Simples +':              { Pc: 0.2130, Ir: 20, R: 0.2 },
+  'COBERTURA | Médio -':                { Pc: 0.2290, Ir: 20, R: 0.2 },
+  'COBERTURA | Médio':                  { Pc: 0.2930, Ir: 20, R: 0.2 },
+  'COBERTURA | Médio +':                { Pc: 0.3570, Ir: 20, R: 0.2 },
+  'COBERTURA | Superior -':             { Pc: 0.3330, Ir: 30, R: 0.2 },
+  'COBERTURA | Superior':               { Pc: 0.4860, Ir: 30, R: 0.2 },
+  'COBERTURA | Superior +':             { Pc: 0.6390, Ir: 30, R: 0.2 },
+  'Apto. Econômico -':                  { Pc: 0.6000, Ir: 60, R: 0.2 },
+  'Apto. Econômico':                    { Pc: 0.8100, Ir: 60, R: 0.2 },
+  'Apto. Econômico +':                  { Pc: 1.0200, Ir: 60, R: 0.2 },
+  'Apto. Simples s/elev. -':            { Pc: 1.0260, Ir: 60, R: 0.2 },
+  'Apto. Simples s/elev.':              { Pc: 1.0320, Ir: 60, R: 0.2 },
+  'Apto. Simples s/elev. +':            { Pc: 1.2660, Ir: 60, R: 0.2 },
+  'Apto. Simples c/elev. -':            { Pc: 1.5000, Ir: 60, R: 0.2 },
+  'Apto. Simples c/elev.':              { Pc: 1.4700, Ir: 60, R: 0.2 },
+  'Apto. Simples c/elev. +':            { Pc: 1.6800, Ir: 60, R: 0.2 },
+  'Apto. Médio s/elev. -':              { Pc: 1.5123, Ir: 60, R: 0.2 },
+  'Apto. Médio s/elev.':                { Pc: 1.7460, Ir: 60, R: 0.2 },
+  'Apto. Médio s/elev. +':              { Pc: 1.9800, Ir: 60, R: 0.2 },
+  'Apto. Médio c/elev. -':              { Pc: 1.6920, Ir: 60, R: 0.2 },
+  'Apto. Médio c/elev.':                { Pc: 1.9260, Ir: 60, R: 0.2 },
+  'Apto. Médio c/elev. +':              { Pc: 2.1600, Ir: 60, R: 0.2 },
+  'Apto. Superior s/elev. -':           { Pc: 1.9920, Ir: 60, R: 0.2 },
+  'Apto. Superior s/elev.':             { Pc: 2.2260, Ir: 60, R: 0.2 },
+  'Apto. Superior s/elev. +':           { Pc: 2.4600, Ir: 60, R: 0.2 },
+  'Apto. Superior c/elev. -':           { Pc: 2.1720, Ir: 60, R: 0.2 },
+  'Apto. Superior c/elev.':             { Pc: 2.4060, Ir: 60, R: 0.2 },
+  'Apto. Superior c/elev. +':           { Pc: 2.6400, Ir: 60, R: 0.2 },
+  'Apto. Fino -':                       { Pc: 2.6520, Ir: 50, R: 0.2 },
+  'Apto. Fino':                         { Pc: 3.0660, Ir: 50, R: 0.2 },
+  'Apto. Fino +':                       { Pc: 3.4800, Ir: 50, R: 0.2 },
+  'Apto. Luxo':                         { Pc: 4.3280, Ir: 50, R: 0.2 },
+  'Casa Padrão Rústico Mínimo':         { Pc: 0.3600, Ir: 60, R: 0.2 },
+  'Casa Padrão Rústico Médio':          { Pc: 0.4200, Ir: 60, R: 0.2 },
+  'Casa Padrão Rústico Máximo':         { Pc: 0.4800, Ir: 60, R: 0.2 },
+  'Casa Padrão Proletário Mínimo':      { Pc: 0.4920, Ir: 60, R: 0.2 },
+  'Casa Padrão Proletário Médio':       { Pc: 0.5760, Ir: 60, R: 0.2 },
+  'Casa Padrão Proletário Máximo':      { Pc: 0.6600, Ir: 60, R: 0.2 },
+  'Casa Padrão Econômico Mínimo':       { Pc: 0.6720, Ir: 70, R: 0.2 },
+  'Casa Padrão Econômico Médio':        { Pc: 0.7860, Ir: 70, R: 0.2 },
+  'Casa Padrão Econômico Máximo':       { Pc: 0.8490, Ir: 70, R: 0.2 },
+  'Casa Padrão Simples Mínimo':         { Pc: 0.9120, Ir: 70, R: 0.2 },
+  'Casa Padrão Simples Médio':          { Pc: 1.0560, Ir: 70, R: 0.2 },
+  'Casa Padrão Simples Máximo':         { Pc: 1.2000, Ir: 70, R: 0.2 },
+  'Casa Padrão Médio Mínimo':           { Pc: 1.2120, Ir: 70, R: 0.2 },
+  'Casa Padrão Médio Médio':            { Pc: 1.3860, Ir: 70, R: 0.2 },
+  'Casa Padrão Médio Máximo':           { Pc: 1.5600, Ir: 70, R: 0.2 },
+  'Casa Padrão Superior Mínimo':        { Pc: 1.6680, Ir: 60, R: 0.2 },
+  'Casa Padrão Superior Médio':         { Pc: 1.7760, Ir: 60, R: 0.2 },
+  'Casa Padrão Superior Máximo':        { Pc: 1.9800, Ir: 60, R: 0.2 },
+  'Casa Padrão Fino Mínimo':            { Pc: 2.2080, Ir: 60, R: 0.2 },
+  'Casa Padrão Fino Médio':             { Pc: 2.4360, Ir: 60, R: 0.2 },
+  'Casa Padrão Fino Máximo':            { Pc: 2.8800, Ir: 60, R: 0.2 },
+  'Casa Padrão Luxo':                   { Pc: 3.3360, Ir: 60, R: 0.2 },
 }
+
+// Grupos para exibição no select
+const PADRAO_GRUPOS = [
+  { grupo: 'Apartamento', prefixos: ['Apto.'] },
+  { grupo: 'Casa', prefixos: ['Casa Padrão', 'CASA |'] },
+  { grupo: 'Escritório', prefixos: ['Escritório'] },
+  { grupo: 'Galpão', prefixos: ['GALPÃO |'] },
+  { grupo: 'Cobertura', prefixos: ['COBERTURA |'] },
+]
 
 // T-Student 80% confiança (bilateral α=0.20, t(N-1, 0.10))
 const T_STUDENT: Record<number, number> = {
@@ -162,8 +254,21 @@ function fmtFator(v: number): string {
   return v.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
 }
 
-function getPadraoCoef(padrao: string): number {
-  return PADRAO_CUB[padrao] ?? 100
+function getPadraoData(padrao: string): { Pc: number; Ir: number; R: number } {
+  return PADRAO_TABLE[padrao] ?? { Pc: 1, Ir: 60, R: 0.2 }
+}
+
+// Ross-Heidecke: Ka = (1-R)*(1 - Ie/Ir)^2 + R
+// K = Ka * (1 - Ec)
+// FOC = K_avaliando / K_elemento
+function calcularKa(Ie: number, Ir: number, R: number): number {
+  if (Ir <= 0) return 1
+  const pv = Math.min(Ie / Ir, 1)  // % de vida, máx 1
+  return (1 - R) * Math.pow(1 - pv, 2) + R
+}
+
+function calcularK(Ie: number, Ir: number, R: number, Ec: number): number {
+  return calcularKa(Ie, Ir, R) * (1 - Ec)
 }
 
 function getFOCDepr(foc: string): number {
@@ -177,11 +282,11 @@ function calcularResultado(
   avaliando: AvalianoCDDM
 ): Resultado {
   const areaAv       = pn(avaliando.area)
-  const cubAv        = getPadraoCoef(avaliando.padraoConstrutivo)
+  const dadosAv      = getPadraoData(avaliando.padraoConstrutivo)
   const deprAv       = getFOCDepr(avaliando.estadoConservacao)
   const fLocalAv     = pn(avaliando.fatorLocal) || 100
   const fAndarAv     = pn(avaliando.fatorAndar) || 100
-  const vagasAv      = pn(avaliando.vagas)
+  const idadeAv      = pn((avaliando as any).idadeAparente || '0')
 
   const elemsValidos = elementos.filter(e => pn(e.area) > 0 && pn(e.valorOferta) > 0)
 
@@ -192,31 +297,36 @@ function calcularResultado(
     const fLocalElem  = pn(e.fatorLocal) || 100
     const fAndarElem  = pn(e.fatorAndar) || 100
     const fVagaElem   = pn(e.fatorVaga) || 100
-    const vagasElem   = pn(e.vagas)
-    const cubElem     = getPadraoCoef(e.padraoConstrutivo)
+    const dadosElem   = getPadraoData(e.padraoConstrutivo)
     const deprElem    = getFOCDepr(e.estadoConservacao)
+    const idadeElem   = pn(e.idade || '0')
 
-    // VU = Valor Líquido / Área — Valor Líquido = Valor Oferta × Fator Oferta
+    // VU = Valor Líquido / Área
     const vu = area > 0 ? (valOfer * fOfer) / area : 0
 
-    // Fator Área: sqrt(area_avaliando / area_elemento) — NBR 14653-2
+    // Fator Área: √(área_av / área_elem) — NBR 14653-2
     const fatorArea = area > 0 && areaAv > 0 ? Math.sqrt(areaAv / area) : 1
 
-    // Fator Local: local_avaliando / local_elemento
+    // Fator Local: local_av / local_elem
     const fatorLocal = fLocalElem > 0 ? fLocalAv / fLocalElem : 1
 
-    // Fator Padrão: CUB%_avaliando / CUB%_elemento
-    const fatorPadrao = cubElem > 0 ? cubAv / cubElem : 1
+    // Fator Padrão: Pc_av / Pc_elem (coeficiente real da tabela ref_padrao)
+    const fatorPadrao = dadosElem.Pc > 0 ? dadosAv.Pc / dadosElem.Pc : 1
 
-    // Fator FOC: (1 - depr_avaliando) / (1 - depr_elemento)
-    const fatorFOC = deprElem < 1 ? (1 - deprAv) / (1 - deprElem) : 1
+    // Fator FOC (Ross-Heidecke completo):
+    //   Ka = (1-R)*(1 - Ie/Ir)^2 + R
+    //   K  = Ka * (1 - Ec)
+    //   FOC = K_avaliando / K_elemento
+    const Kav   = calcularK(idadeAv,   dadosAv.Ir,   dadosAv.R,   deprAv)
+    const Kelem = calcularK(idadeElem, dadosElem.Ir, dadosElem.R, deprElem)
+    const fatorFOC = Kelem > 0 ? Kav / Kelem : 1
 
-    // Fator Andar: andar_avaliando / andar_elemento (coeficientes diretos)
+    // Fator Andar: fAndarAv / fAndarElem
     const fatorAndar = fAndarElem > 0 ? fAndarAv / fAndarElem : 1
 
-    // Fator Vaga: vaga_avaliando / vaga_elemento (coeficientes diretos)
-    const fVagaAv = pn(avaliando.fatorLocal) > 0 ? 100 : 100  // usa 100 como base
-    const fatorVaga = fVagaElem > 0 ? fVagaAv / fVagaElem : 1  // placeholder
+    // Fator Vaga
+    const fVagaAv  = 100
+    const fatorVaga = fVagaElem > 0 ? fVagaAv / fVagaElem : 1
 
     // Coeficiente geral de homogeneização (produto de todos os fatores)
     const coefGeral = fatorArea * fatorLocal * fatorPadrao * fatorFOC * fatorAndar * fatorVaga
@@ -466,7 +576,8 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
     fatorLocal: '100',
     fatorAndar: '100',
     vagas: '',
-  }), [form.areaConstruidaTotal, form.padrao, form.estadoConservacao])
+    idadeAparente: form.idadeAparente || '0',
+  }), [form.areaConstruidaTotal, form.padrao, form.estadoConservacao, form.idadeAparente])
 
   const resultado = useMemo(
     () => calcularResultado(elementos, avaliando),
@@ -635,9 +746,18 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
                 <label className="block text-xs font-medium text-slate-500 mb-1.5">Padrão construtivo</label>
                 <select value={elem.padraoConstrutivo} onChange={e => updateElem(abaAtiva, 'padraoConstrutivo', e.target.value)} className={clsSelect}>
                   <option value="">Selecione</option>
-                  {Object.keys(PADRAO_CUB).filter(k => k[0] === k[0].toUpperCase()).map(k => (
-                    <option key={k} value={k}>{k} ({PADRAO_CUB[k]}%)</option>
-                  ))}
+                  {PADRAO_GRUPOS.map(({ grupo, prefixos }) => {
+                    const opts = Object.keys(PADRAO_TABLE).filter(k =>
+                      prefixos.some(p => k.startsWith(p))
+                    )
+                    return opts.length > 0 ? (
+                      <optgroup key={grupo} label={grupo}>
+                        {opts.map(k => (
+                          <option key={k} value={k}>{k}</option>
+                        ))}
+                      </optgroup>
+                    ) : null
+                  })}
                 </select>
               </div>
               <div>
@@ -905,18 +1025,16 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
                 </div>
               </div>
 
-              {/* Fator Padrão */}
               <div className="px-5 py-4 border-b border-slate-100">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Fator Padrão — F = CUB%<sub>av</sub> / CUB%<sub>elem</sub></p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Fator Padrão — F = Pc<sub>av</sub> / Pc<sub>elem</sub></p>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs border-collapse">
                     <thead>
                       <tr className="bg-blue-50">
                         <th className="border border-slate-200 px-3 py-2 text-left text-blue-800">Elemento</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Padrão</th>
-                        <th className="border border-slate-200 px-3 py-2 text-blue-800">CUB %</th>
+                        <th className="border border-slate-200 px-3 py-2 text-blue-800">Pc (elem)</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Coeficiente</th>
-                        <th className="border border-slate-200 px-3 py-2 text-blue-800">Diferença</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">V.U. Calculado</th>
                       </tr>
                     </thead>
@@ -925,9 +1043,8 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
                         <tr key={i} className="hover:bg-slate-50">
                           <td className="border border-slate-200 px-3 py-2 font-medium">{i + 1}</td>
                           <td className="border border-slate-200 px-3 py-2">{elementos[i].padraoConstrutivo || '—'}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-center">{getPadraoCoef(elementos[i].padraoConstrutivo) || '—'}</td>
+                          <td className="border border-slate-200 px-3 py-2 text-center">{getPadraoData(elementos[i].padraoConstrutivo).Pc || '—'}</td>
                           <td className="border border-slate-200 px-3 py-2 text-center">{fmtFator(r.fatorPadrao)}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-center">{fmtFator(r.fatorPadrao - 1)}</td>
                           <td className="border border-slate-200 px-3 py-2 text-center font-medium">
                             {fmtMoeda(r.vu * r.fatorArea * r.fatorLocal * r.fatorPadrao)}/m²
                           </td>
@@ -935,8 +1052,8 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
                       ))}
                       <tr className="bg-blue-50">
                         <td colSpan={2} className="border border-slate-200 px-3 py-2 font-semibold text-blue-800">Avaliando</td>
-                        <td className="border border-slate-200 px-3 py-2 text-center text-blue-800">{getPadraoCoef(avaliando.padraoConstrutivo)}</td>
-                        <td colSpan={3} className="border border-slate-200 px-3 py-2 text-blue-800 text-center">{avaliando.padraoConstrutivo || '—'}</td>
+                        <td className="border border-slate-200 px-3 py-2 text-center text-blue-800">{getPadraoData(avaliando.padraoConstrutivo).Pc}</td>
+                        <td colSpan={2} className="border border-slate-200 px-3 py-2 text-blue-800 text-center">{avaliando.padraoConstrutivo || '—'}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -946,41 +1063,69 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
               {/* Fator FOC */}
               <div className="px-5 py-4 border-b border-slate-100">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-                  Fator FOC — F = (1 − Depr<sub>av</sub>) / (1 − Depr<sub>elem</sub>)
+                  Fator FOC (Ross-Heidecke) — Ka = (1-R)×(1-Ie/Ir)² + R | K = Ka×(1-Ec) | F = K<sub>av</sub> / K<sub>elem</sub>
                 </p>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs border-collapse">
                     <thead>
                       <tr className="bg-blue-50">
-                        <th className="border border-slate-200 px-3 py-2 text-left text-blue-800">Elemento</th>
+                        <th className="border border-slate-200 px-3 py-2 text-left text-blue-800">Elem.</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">FOC</th>
-                        <th className="border border-slate-200 px-3 py-2 text-blue-800">Depreciação</th>
-                        <th className="border border-slate-200 px-3 py-2 text-blue-800">Coeficiente</th>
-                        <th className="border border-slate-200 px-3 py-2 text-blue-800">Diferença</th>
-                        <th className="border border-slate-200 px-3 py-2 text-blue-800">V.U. Calculado</th>
+                        <th className="border border-slate-200 px-3 py-2 text-blue-800">Ie</th>
+                        <th className="border border-slate-200 px-3 py-2 text-blue-800">Ir</th>
+                        <th className="border border-slate-200 px-3 py-2 text-blue-800">Ec</th>
+                        <th className="border border-slate-200 px-3 py-2 text-blue-800">Ka</th>
+                        <th className="border border-slate-200 px-3 py-2 text-blue-800">K</th>
+                        <th className="border border-slate-200 px-3 py-2 text-blue-800">F.FOC</th>
+                        <th className="border border-slate-200 px-3 py-2 text-blue-800">V.U. Calc.</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {resultado.elementos.map((r, i) => r.vu > 0 && (
-                        <tr key={i} className="hover:bg-slate-50">
-                          <td className="border border-slate-200 px-3 py-2 font-medium">{i + 1}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-center">{elementos[i].estadoConservacao || '—'}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-center">{getFOCDepr(elementos[i].estadoConservacao).toFixed(4)}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-center">{fmtFator(r.fatorFOC)}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-center">{fmtFator(r.fatorFOC - 1)}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-center font-medium">
-                            {fmtMoeda(r.vu * r.fatorArea * r.fatorLocal * r.fatorPadrao * r.fatorFOC)}/m²
-                          </td>
-                        </tr>
-                      ))}
+                      {resultado.elementos.map((r, i) => {
+                        if (!r.vu) return null
+                        const e = elementos[i]
+                        const dados = getPadraoData(e.padraoConstrutivo)
+                        const Ec = getFOCDepr(e.estadoConservacao)
+                        const Ie = pn(e.idade || '0')
+                        const Ka = calcularKa(Ie, dados.Ir, dados.R)
+                        const K  = Ka * (1 - Ec)
+                        return (
+                          <tr key={i} className="hover:bg-slate-50">
+                            <td className="border border-slate-200 px-3 py-2 font-medium">{i + 1}</td>
+                            <td className="border border-slate-200 px-3 py-2">{e.estadoConservacao || '—'}</td>
+                            <td className="border border-slate-200 px-3 py-2 text-center">{Ie}</td>
+                            <td className="border border-slate-200 px-3 py-2 text-center">{dados.Ir}</td>
+                            <td className="border border-slate-200 px-3 py-2 text-center">{Ec.toFixed(4)}</td>
+                            <td className="border border-slate-200 px-3 py-2 text-center">{Ka.toFixed(4)}</td>
+                            <td className="border border-slate-200 px-3 py-2 text-center">{K.toFixed(4)}</td>
+                            <td className="border border-slate-200 px-3 py-2 text-center">{fmtFator(r.fatorFOC)}</td>
+                            <td className="border border-slate-200 px-3 py-2 text-center font-medium">
+                              {fmtMoeda(r.vu * r.fatorArea * r.fatorLocal * r.fatorPadrao * r.fatorFOC)}/m²
+                            </td>
+                          </tr>
+                        )
+                      })}
                       <tr className="bg-blue-50">
-                        <td colSpan={2} className="border border-slate-200 px-3 py-2 font-semibold text-blue-800">Avaliando</td>
-                        <td className="border border-slate-200 px-3 py-2 text-center text-blue-800">
-                          {getFOCDepr(avaliando.estadoConservacao).toFixed(4)}
-                        </td>
-                        <td colSpan={3} className="border border-slate-200 px-3 py-2 text-center text-blue-800">
-                          {avaliando.estadoConservacao ? FOC_LABEL[avaliando.estadoConservacao] : '—'}
-                        </td>
+                        {(() => {
+                          const dav = getPadraoData(avaliando.padraoConstrutivo)
+                          const Ec  = getFOCDepr(avaliando.estadoConservacao)
+                          const Ie  = pn((avaliando as any).idadeAparente || '0')
+                          const Ka  = calcularKa(Ie, dav.Ir, dav.R)
+                          const K   = Ka * (1 - Ec)
+                          return (
+                            <>
+                              <td colSpan={2} className="border border-slate-200 px-3 py-2 font-semibold text-blue-800">Avaliando</td>
+                              <td className="border border-slate-200 px-3 py-2 text-center text-blue-800">{Ie}</td>
+                              <td className="border border-slate-200 px-3 py-2 text-center text-blue-800">{dav.Ir}</td>
+                              <td className="border border-slate-200 px-3 py-2 text-center text-blue-800">{Ec.toFixed(4)}</td>
+                              <td className="border border-slate-200 px-3 py-2 text-center text-blue-800">{Ka.toFixed(4)}</td>
+                              <td className="border border-slate-200 px-3 py-2 text-center text-blue-800">{K.toFixed(4)}</td>
+                              <td colSpan={2} className="border border-slate-200 px-3 py-2 text-center text-blue-800">
+                                {avaliando.estadoConservacao ? FOC_LABEL[avaliando.estadoConservacao] : '—'}
+                              </td>
+                            </>
+                          )
+                        })()}
                       </tr>
                     </tbody>
                   </table>
