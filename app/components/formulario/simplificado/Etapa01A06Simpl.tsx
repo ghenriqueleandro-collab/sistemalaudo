@@ -537,6 +537,90 @@ export default function Etapa01A06({
         </div>
       </SectionCard>
 
+      {/* ── Dados do avaliando para cálculo CDDM ──────────────────────────────── */}
+      <SectionCard title="Dados do avaliando para cálculo CDDM">
+        <p className="text-xs text-slate-400 mb-4">
+          Estes campos alimentam o cálculo de homogenização na seção de Metodologia e Pesquisas.
+        </p>
+
+        <div className="mb-4">
+          <FieldLabel>Padrão construtivo (CDDM)</FieldLabel>
+          <select
+            name="padraoCDDM"
+            value={form.padraoCDDM || ''}
+            onChange={handleChange}
+            className={selectCls()}
+          >
+            <option value="">Selecione o padrão</option>
+            <optgroup label="Apartamento">
+              {['Apto. Econômico -','Apto. Econômico','Apto. Econômico +',
+                'Apto. Simples s/elev. -','Apto. Simples s/elev.','Apto. Simples s/elev. +',
+                'Apto. Simples c/elev. -','Apto. Simples c/elev.','Apto. Simples c/elev. +',
+                'Apto. Médio s/elev. -','Apto. Médio s/elev.','Apto. Médio s/elev. +',
+                'Apto. Médio c/elev. -','Apto. Médio c/elev.','Apto. Médio c/elev. +',
+                'Apto. Superior s/elev. -','Apto. Superior s/elev.','Apto. Superior s/elev. +',
+                'Apto. Superior c/elev. -','Apto. Superior c/elev.','Apto. Superior c/elev. +',
+                'Apto. Fino -','Apto. Fino','Apto. Fino +','Apto. Luxo',
+              ].map(v => <option key={v} value={v}>{v}</option>)}
+            </optgroup>
+            <optgroup label="Casa">
+              {['Casa Padrão Rústico Mínimo','Casa Padrão Rústico Médio','Casa Padrão Rústico Máximo',
+                'Casa Padrão Proletário Mínimo','Casa Padrão Proletário Médio','Casa Padrão Proletário Máximo',
+                'Casa Padrão Econômico Mínimo','Casa Padrão Econômico Médio','Casa Padrão Econômico Máximo',
+                'Casa Padrão Simples Mínimo','Casa Padrão Simples Médio','Casa Padrão Simples Máximo',
+                'Casa Padrão Médio Mínimo','Casa Padrão Médio Médio','Casa Padrão Médio Máximo',
+                'Casa Padrão Superior Mínimo','Casa Padrão Superior Médio','Casa Padrão Superior Máximo',
+                'Casa Padrão Fino Mínimo','Casa Padrão Fino Médio','Casa Padrão Fino Máximo','Casa Padrão Luxo',
+                'CASA | Fino','CASA | Fino +','CASA | Luxo -',
+              ].map(v => <option key={v} value={v}>{v}</option>)}
+            </optgroup>
+            <optgroup label="Escritório">
+              {['Escritório Econômico -','Escritório Econômico','Escritório Econômico +',
+                'Escritório Simples s/Elevador -','Escritório Simples s/Elevador','Escritório Simples s/Elevador +',
+                'Escritório Simples c/Elevador -','Escritório Simples c/Elevador','Escritório Simples c/Elevador +',
+                'Escritório Médio s/Elevador -','Escritório Médio s/Elevador','Escritório Médio s/Elevador +',
+                'Escritório Médio c/Elevador -','Escritório Médio c/Elevador','Escritório Médio c/Elevador +',
+                'Escritório Superior s/Elevador -','Escritório Superior s/Elevador','Escritório Superior s/Elevador +',
+                'Escritório Superior c/Elevador -','Escritório Superior c/Elevador','Escritório Superior c/Elevador +',
+                'Escritório Fino -','Escritório Fino','Escritório Fino +','Escritório Luxo',
+              ].map(v => <option key={v} value={v}>{v}</option>)}
+            </optgroup>
+            <optgroup label="Galpão">
+              {['GALPÃO | Econômico -','GALPÃO | Econômico','GALPÃO | Econômico +',
+                'GALPÃO | Simples -','GALPÃO | Simples','GALPÃO | Simples +',
+                'GALPÃO | Médio -','GALPÃO | Médio','GALPÃO | Médio +','GALPÃO | Superior -',
+              ].map(v => <option key={v} value={v}>{v}</option>)}
+            </optgroup>
+            <optgroup label="Cobertura">
+              {['COBERTURA | Simples -','COBERTURA | Simples','COBERTURA | Simples +',
+                'COBERTURA | Médio -','COBERTURA | Médio','COBERTURA | Médio +',
+                'COBERTURA | Superior -','COBERTURA | Superior','COBERTURA | Superior +',
+              ].map(v => <option key={v} value={v}>{v}</option>)}
+            </optgroup>
+          </select>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <FieldLabel>Fator local (avaliando)</FieldLabel>
+            <input name="fatorLocalAvaliando" placeholder="100" type="number"
+              value={form.fatorLocalAvaliando || ''} onChange={handleChange} className={inputCls()} />
+            <p className="text-[11px] text-slate-400 mt-1">0–200. 100 = neutro.</p>
+          </div>
+          <div>
+            <FieldLabel>Fator andar (avaliando)</FieldLabel>
+            <input name="fatorAndarAvaliando" placeholder="100" type="number"
+              value={form.fatorAndarAvaliando || ''} onChange={handleChange} className={inputCls()} />
+            <p className="text-[11px] text-slate-400 mt-1">100 = neutro / térreo.</p>
+          </div>
+          <div>
+            <FieldLabel>Vagas de garagem</FieldLabel>
+            <input name="vagasAvaliando" placeholder="0" type="number"
+              value={form.vagasAvaliando || ''} onChange={handleChange} className={inputCls()} />
+          </div>
+        </div>
+      </SectionCard>
+
       {/* ── Especificações de divisões ────────────────────────────────────────── */}
       <SectionCard title="Especificações de divisões">
         <div className="grid grid-cols-[100px_1fr_44px] gap-2 pb-1 border-b border-slate-100">

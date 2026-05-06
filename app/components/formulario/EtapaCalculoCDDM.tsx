@@ -571,13 +571,14 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
   // Avaliando vem do form principal
   const avaliando = useMemo<AvalianoCDDM>(() => ({
     area: form.areaConstruidaTotal || '',
-    padraoConstrutivo: form.padrao || '',
+    padraoConstrutivo: form.padraoCDDM || form.padrao || '',
     estadoConservacao: (CONSERVACAO_PARA_FOC[form.estadoConservacao] ?? '') as FOCLetra,
-    fatorLocal: '100',
-    fatorAndar: '100',
-    vagas: '',
+    fatorLocal: form.fatorLocalAvaliando || '100',
+    fatorAndar: form.fatorAndarAvaliando || '100',
+    vagas: form.vagasAvaliando || '0',
     idadeAparente: form.idadeAparente || '0',
-  }), [form.areaConstruidaTotal, form.padrao, form.estadoConservacao, form.idadeAparente])
+  }), [form.areaConstruidaTotal, form.padraoCDDM, form.padrao, form.estadoConservacao,
+       form.idadeAparente, form.fatorLocalAvaliando, form.fatorAndarAvaliando, form.vagasAvaliando])
 
   const resultado = useMemo(
     () => calcularResultado(elementos, avaliando),
@@ -623,27 +624,50 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
 
       {/* Dados do avaliando (referência) */}
       <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-        <p className="text-xs font-semibold text-blue-800 mb-3 uppercase tracking-wide">Dados do avaliando (referência para cálculo)</p>
+        <p className="text-xs font-semibold text-blue-800 mb-3 uppercase tracking-wide">Dados do avaliando — referência para o cálculo</p>
         <div className="grid grid-cols-3 gap-3 text-sm">
           <div>
-            <span className="text-xs text-blue-600 font-medium block mb-1">Área (m²)</span>
+            <span className="text-xs text-blue-600 font-medium block mb-1">Área construída (m²)</span>
             <div className="bg-white border border-blue-200 rounded-xl px-3 py-2 font-medium text-slate-800">
               {form.areaConstruidaTotal || '—'}
             </div>
           </div>
           <div>
-            <span className="text-xs text-blue-600 font-medium block mb-1">Padrão construtivo</span>
-            <div className="bg-white border border-blue-200 rounded-xl px-3 py-2 font-medium text-slate-800">
-              {form.padrao || '—'}
+            <span className="text-xs text-blue-600 font-medium block mb-1">Padrão construtivo (CDDM)</span>
+            <div className="bg-white border border-blue-200 rounded-xl px-3 py-2 font-medium text-slate-800 truncate text-xs">
+              {form.padraoCDDM || form.padrao || <span className="text-red-400">Não preenchido</span>}
             </div>
           </div>
           <div>
             <span className="text-xs text-blue-600 font-medium block mb-1">Estado de conservação</span>
+            <div className="bg-white border border-blue-200 rounded-xl px-3 py-2 font-medium text-slate-800 text-xs">
+              {form.estadoConservacao || <span className="text-red-400">Não preenchido</span>}
+            </div>
+          </div>
+          <div>
+            <span className="text-xs text-blue-600 font-medium block mb-1">Idade aparente (anos)</span>
             <div className="bg-white border border-blue-200 rounded-xl px-3 py-2 font-medium text-slate-800">
-              {form.estadoConservacao || '—'}
+              {form.idadeAparente || '0'}
+            </div>
+          </div>
+          <div>
+            <span className="text-xs text-blue-600 font-medium block mb-1">Fator local</span>
+            <div className="bg-white border border-blue-200 rounded-xl px-3 py-2 font-medium text-slate-800">
+              {form.fatorLocalAvaliando || '100'}
+            </div>
+          </div>
+          <div>
+            <span className="text-xs text-blue-600 font-medium block mb-1">Fator andar / Vagas</span>
+            <div className="bg-white border border-blue-200 rounded-xl px-3 py-2 font-medium text-slate-800">
+              {form.fatorAndarAvaliando || '100'} / {form.vagasAvaliando || '0'}
             </div>
           </div>
         </div>
+        {(!form.padraoCDDM && !form.padrao) && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3">
+            ⚠ Preencha o <strong>Padrão construtivo (CDDM)</strong> na seção 1–6 para que o Fator Padrão seja calculado corretamente.
+          </p>
+        )}
       </div>
 
       {/* Abas de elementos */}
