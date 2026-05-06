@@ -318,7 +318,12 @@ export default function MeusLaudosPage() {
                     {podeEditar && (
                       <button
                         type="button"
-                        onClick={() => prepararLaudo(laudo.id, '/novo-laudo')}
+                        onClick={() => {
+                          const rota = (laudo as any).tipoLaudo === 'simplificado'
+                            ? '/laudo/simplificado'
+                            : '/novo-laudo'
+                          prepararLaudo(laudo.id, rota)
+                        }}
                         className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                       >
                         Editar

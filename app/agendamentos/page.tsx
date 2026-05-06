@@ -249,6 +249,11 @@ export default function AgendamentosPage() {
         referencia5: '', distancia5: '',
       })
       setMsgCoords(null)
+      // Redireciona o editor para a rota correta conforme o tipo de laudo
+      const rotaEdicao = novoLaudo.tipoLaudo === 'simplificado'
+        ? `/laudo/simplificado?id=${id}`
+        : `/novo-laudo?id=${id}`
+      router.push(rotaEdicao)
       await carregarDados()
     } finally {
       setCriandoLaudo(false)
