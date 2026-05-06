@@ -537,29 +537,16 @@ export default function NovoLaudoPage() {
       }
 
       // Verifica tamanho do payload — Redis limita 5MB por chave
-      // Se ultrapassar 4MB, remove PDFs grandes para garantir o save
       const payloadStr = JSON.stringify(payload)
       const tamanhoMB = new Blob([payloadStr]).size / 1024 / 1024
-      let payloadFinal = payload
 
-      if (tamanhoMB > 4) {
-        const semPdfs = {
-          ...payload,
-          documentacaoPdf: payload.documentacaoPdf?.startsWith('data:') ? '' : payload.documentacaoPdf,
-          calculoPdf: payload.calculoPdf?.startsWith('data:') ? '' : payload.calculoPdf,
-        }
-        const tamanhoSemPdfs = new Blob([JSON.stringify(semPdfs)]).size / 1024 / 1024
-        if (tamanhoSemPdfs <= 4) {
-          payloadFinal = semPdfs
-          alert('⚠ Os PDFs anexados são muito grandes e foram removidos para permitir o salvamento. Faça o upload de PDFs menores.')
-        } else {
-          alert('⚠ O laudo contém muitos dados de imagem. Remova algumas fotos ou use imagens menores e tente novamente.')
-          setSalvando(false)
-          return
-        }
+      if (tamanhoMB > 4.5) {
+        alert(`⚠ O laudo está muito grande (${tamanhoMB.toFixed(1)}MB). Remova algumas fotos ou use imagens menores e tente novamente.`)
+        setSalvando(false)
+        return
       }
 
-      const idSalvo = await salvarLaudo(payloadFinal)
+      const idSalvo = await salvarLaudo(payload)
 
       if (!idSalvo) {
         alert('Verifique sua conexão e tente novamente.')
