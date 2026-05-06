@@ -147,15 +147,9 @@ export default function NovoLaudoPage() {
         }
 
         setEditandoLaudoExistente(true)
-        setLaudoId(String(laudoSalvo.matricula || laudoSalvo.id || '').trim())
+        setLaudoId(String(laudoSalvo.matricula || laudoSalvo.id || '').trim()
+        )
         if (laudoSalvo.id) setLaudoUuid(laudoSalvo.id)
-
-        setForm((prev) => ({
-          ...prev,
-          ...laudoSalvo,
-          melhoramentosPublicos: laudoSalvo.melhoramentosPublicos || prev.melhoramentosPublicos,
-          croquis: laudoSalvo.croquis || [],
-        }))
 
         setFatoresSelecionados(laudoSalvo.fatoresSelecionados || [])
         setFundamentacao(laudoSalvo.fundamentacao || [
@@ -183,6 +177,50 @@ export default function NovoLaudoPage() {
         setResumoMercado(laudoSalvo.resumoMercado || [{ campo: '', descricao: '' }])
         setOutrosFatoresImovel(laudoSalvo.outrosFatoresImovel || [{ descricao: '', valor: '' }])
         setFotos(laudoSalvo.fotos || [])
+
+        // Resolve referências de binários armazenados separadamente
+        async function resolverRef(val: string): Promise<string> {
+          if (!val?.startsWith('__ref__:')) return val
+          const chave = val.replace('__ref__:', '')
+          const res = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(chave)}`)
+          if (!res.ok) return ''
+          const { dado } = await res.json()
+          return dado || ''
+        }
+
+        // Resolve fotos
+        const fotosResolvidas = await Promise.all(
+          (laudoSalvo.fotos || []).map(async (f: any) => ({
+            ...f,
+            preview: await resolverRef(f.preview),
+          }))
+        )
+        setFotos(fotosResolvidas)
+
+        // Resolve croquis, PDFs e imagens no form
+        const croquisResolvidos = await Promise.all(
+          (laudoSalvo.croquis || []).map(async (c: any) => ({
+            preview: await resolverRef(c.preview),
+          }))
+        )
+
+        const [docPdf, calcPdf, locComp, imgBenf] = await Promise.all([
+          resolverRef(laudoSalvo.documentacaoPdf || ''),
+          resolverRef(laudoSalvo.calculoPdf || ''),
+          resolverRef(laudoSalvo.localizacaoComparativos || ''),
+          resolverRef(laudoSalvo.imagemBenfeitorias || ''),
+        ])
+
+        setForm((prev) => ({
+          ...prev,
+          ...laudoSalvo,
+          croquis: croquisResolvidos,
+          documentacaoPdf: docPdf,
+          calculoPdf: calcPdf,
+          localizacaoComparativos: locComp,
+          imagemBenfeitorias: imgBenf,
+          melhoramentosPublicos: laudoSalvo.melhoramentosPublicos || prev.melhoramentosPublicos,
+        }))
         setUsarCidadeReferencia(Boolean(laudoSalvo.cidadePrincipal || laudoSalvo.distanciaCidadePrincipal))
       } catch (error) {
         console.error(error)
@@ -523,9 +561,52 @@ export default function NovoLaudoPage() {
     try {
       const status = obterStatusLaudo()
 
+      // ── Helper: salva binário em chave Redis separada, retorna referência ──────
+      async function salvarBinario(chave: string, dado: string): Promise<string> {
+        if (!dado || !dado.startsWith('data:')) return dado
+        const res = await fetch('/api/laudo-midias', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chave, dado }),
+        })
+        if (!res.ok) throw new Error(`Falha ao salvar binário (${chave})`)
+        return `__ref__:${chave}` // marcador de referência
+      }
+
+      // Salva cada foto individualmente
+      const fotosComRef = await Promise.all(
+        fotos.map(async (foto, i) => {
+          if (!foto.preview?.startsWith('data:')) return foto
+          const chave = `foto:${laudoUuid}:${i}`
+          const ref = await salvarBinario(chave, foto.preview)
+          return { ...foto, preview: ref }
+        })
+      )
+
+      // Salva croquis individualmente
+      const croquisComRef = await Promise.all(
+        (form.croquis || []).map(async (c: any, i: number) => {
+          if (!c.preview?.startsWith('data:')) return c
+          const chave = `croqui:${laudoUuid}:${i}`
+          const ref = await salvarBinario(chave, c.preview)
+          return { preview: ref }
+        })
+      )
+
+      // Salva PDFs e demais imagens grandes
+      const docPdf   = await salvarBinario(`anexo:${laudoUuid}:documentacaoPdf`,         form.documentacaoPdf || '')
+      const calcPdf  = await salvarBinario(`anexo:${laudoUuid}:calculoPdf`,              form.calculoPdf || '')
+      const locComp  = await salvarBinario(`anexo:${laudoUuid}:localizacaoComparativos`, form.localizacaoComparativos || '')
+      const imgBenf  = await salvarBinario(`anexo:${laudoUuid}:imagemBenfeitorias`,      form.imagemBenfeitorias || '')
+
       const payload = {
         ...form,
         id: laudoUuid,
+        croquis: croquisComRef,
+        documentacaoPdf: docPdf,
+        calculoPdf: calcPdf,
+        localizacaoComparativos: locComp,
+        imagemBenfeitorias: imgBenf,
         fatoresSelecionados,
         fundamentacao,
         fundamentacaoInferencia,
@@ -535,7 +616,7 @@ export default function NovoLaudoPage() {
         acabamentos,
         resumoMercado,
         outrosFatoresImovel,
-        fotos,
+        fotos: fotosComRef,
         status,
         atualizadoEm: new Date().toISOString(),
       }

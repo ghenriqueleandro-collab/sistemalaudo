@@ -508,9 +508,44 @@ function VisualizarLaudoContent() {
           ? await buscarLaudo(idParam)
           : await obterLaudoAtual()) as DadosLaudo
         if (parsed) {
+
+          // Resolve referências de binários armazenados separadamente
+          async function resolverRef(val: string): Promise<string> {
+            if (!val?.startsWith('__ref__:')) return val
+            const chave = val.replace('__ref__:', '')
+            try {
+              const res = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(chave)}`)
+              if (!res.ok) return ''
+              const { dado } = await res.json()
+              return dado || ''
+            } catch { return '' }
+          }
+
+          const fotosResolvidas = await Promise.all(
+            (parsed.fotos || []).map(async (f: any) => ({
+              ...f, preview: await resolverRef(f.preview),
+            }))
+          )
+          const croquisResolvidos = await Promise.all(
+            (parsed.croquis || []).map(async (c: any) => ({
+              preview: await resolverRef(c.preview),
+            }))
+          )
+          const [docPdf, calcPdf, locComp, imgBenf] = await Promise.all([
+            resolverRef(parsed.documentacaoPdf || ''),
+            resolverRef(parsed.calculoPdf || ''),
+            resolverRef(parsed.localizacaoComparativos || ''),
+            resolverRef(parsed.imagemBenfeitorias || ''),
+          ])
+
           setDados({
             ...parsed,
-            fotos: parsed.fotos || [],
+            fotos: fotosResolvidas,
+            croquis: croquisResolvidas,
+            documentacaoPdf: docPdf,
+            calculoPdf: calcPdf,
+            localizacaoComparativos: locComp,
+            imagemBenfeitorias: imgBenf,
             observacoesTerrenoEncravado: parsed.observacoesTerrenoEncravado || '',
             observacoesConfrontacaoCursoAgua: parsed.observacoesConfrontacaoCursoAgua || '',
             croquis: parsed.croquis || [],
