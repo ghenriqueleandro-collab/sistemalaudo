@@ -188,20 +188,28 @@ export default function NovoLaudoPage() {
           return dado || ''
         }
 
-        // Resolve fotos
+        // Resolve fotos — marca _refKey para não re-salvar no próximo save
         const fotosResolvidas = await Promise.all(
-          (laudoSalvo.fotos || []).map(async (f: any) => ({
-            ...f,
-            preview: await resolverRef(f.preview),
-          }))
+          (laudoSalvo.fotos || []).map(async (f: any) => {
+            const isRef = f.preview?.startsWith('__ref__:')
+            return {
+              ...f,
+              preview: await resolverRef(f.preview),
+              _refKey: isRef ? f.preview : undefined,
+            }
+          })
         )
         setFotos(fotosResolvidas)
 
         // Resolve croquis, PDFs e imagens no form
         const croquisResolvidos = await Promise.all(
-          (laudoSalvo.croquis || []).map(async (c: any) => ({
-            preview: await resolverRef(c.preview),
-          }))
+          (laudoSalvo.croquis || []).map(async (c: any) => {
+            const isRef = c.preview?.startsWith('__ref__:')
+            return {
+              preview: await resolverRef(c.preview),
+              _refKey: isRef ? c.preview : undefined,
+            }
+          })
         )
 
         const [docPdf, calcPdf, locComp, imgBenf] = await Promise.all([
@@ -219,6 +227,11 @@ export default function NovoLaudoPage() {
           calculoPdf: calcPdf,
           localizacaoComparativos: locComp,
           imagemBenfeitorias: imgBenf,
+          // Guarda as refs originais para não re-salvar no próximo save
+          _refDocPdf:  laudoSalvo.documentacaoPdf?.startsWith('__ref__:') ? laudoSalvo.documentacaoPdf : undefined,
+          _refCalcPdf: laudoSalvo.calculoPdf?.startsWith('__ref__:')      ? laudoSalvo.calculoPdf      : undefined,
+          _refLocComp: laudoSalvo.localizacaoComparativos?.startsWith('__ref__:') ? laudoSalvo.localizacaoComparativos : undefined,
+          _refImgBenf: laudoSalvo.imagemBenfeitorias?.startsWith('__ref__:')      ? laudoSalvo.imagemBenfeitorias      : undefined,
           melhoramentosPublicos: laudoSalvo.melhoramentosPublicos || prev.melhoramentosPublicos,
         }))
         setUsarCidadeReferencia(Boolean(laudoSalvo.cidadePrincipal || laudoSalvo.distanciaCidadePrincipal))
@@ -334,7 +347,9 @@ export default function NovoLaudoPage() {
         reader.onerror = reject
         reader.readAsDataURL(file)
       })
-      setForm((prev) => ({ ...prev, [campo]: base64 }))
+      // Limpa a ref anterior para forçar novo upload no save
+      const refField = campo === 'documentacaoPdf' ? '_refDocPdf' : '_refCalcPdf'
+      setForm((prev) => ({ ...prev, [campo]: base64, [refField]: undefined }))
     } catch (error) {
       console.error(error)
       alert('Erro ao processar o PDF.')
@@ -586,19 +601,25 @@ export default function NovoLaudoPage() {
         }
       }
 
-      // Salva cada foto individualmente
+      // Salva cada foto individualmente — pula as que já têm ref salva
       const fotosComRef = await Promise.all(
         fotos.map(async (foto, i) => {
+          // Já estava salva como ref — apenas restaura a referência sem re-upload
+          if ((foto as any)._refKey) {
+            return { legenda: foto.legenda, preview: (foto as any)._refKey }
+          }
+          // Nova foto (base64 local) — salva no Redis
           if (!foto.preview?.startsWith('data:')) return foto
           const chave = `foto:${laudoUuid}:${i}`
           const ref = await salvarBinario(chave, foto.preview)
-          return { ...foto, preview: ref }
+          return { legenda: foto.legenda, preview: ref }
         })
       )
 
-      // Salva croquis individualmente
+      // Salva croquis individualmente — pula os que já têm ref
       const croquisComRef = await Promise.all(
         (form.croquis || []).map(async (c: any, i: number) => {
+          if (c._refKey) return { preview: c._refKey }
           if (!c.preview?.startsWith('data:')) return c
           const chave = `croqui:${laudoUuid}:${i}`
           const ref = await salvarBinario(chave, c.preview)
@@ -606,11 +627,22 @@ export default function NovoLaudoPage() {
         })
       )
 
-      // Salva PDFs e demais imagens grandes
-      const docPdf   = await salvarBinario(`anexo:${laudoUuid}:documentacaoPdf`,         form.documentacaoPdf || '')
-      const calcPdf  = await salvarBinario(`anexo:${laudoUuid}:calculoPdf`,              form.calculoPdf || '')
-      const locComp  = await salvarBinario(`anexo:${laudoUuid}:localizacaoComparativos`, form.localizacaoComparativos || '')
-      const imgBenf  = await salvarBinario(`anexo:${laudoUuid}:imagemBenfeitorias`,      form.imagemBenfeitorias || '')
+      // Salva PDFs e demais imagens — pula se não foram alterados (usa ref existente)
+      async function salvarCampo(refKey: string | undefined, chave: string, dado: string): Promise<string> {
+        // Se o usuário não alterou (campo ainda tem o mesmo base64 da ref carregada),
+        // e temos a ref original, restaura direto sem re-upload
+        if (refKey && dado && !dado.startsWith('__ref__:')) {
+          // Campo foi carregado de ref mas usuário não substituiu — re-usa ref
+          // Detecta: o dado veio da resolverRef (é base64) mas refKey existe = não foi alterado
+          return refKey
+        }
+        return await salvarBinario(chave, dado)
+      }
+
+      const docPdf  = await salvarCampo(form._refDocPdf,  `anexo:${laudoUuid}:documentacaoPdf`,         form.documentacaoPdf || '')
+      const calcPdf = await salvarCampo(form._refCalcPdf, `anexo:${laudoUuid}:calculoPdf`,              form.calculoPdf || '')
+      const locComp = await salvarCampo(form._refLocComp, `anexo:${laudoUuid}:localizacaoComparativos`, form.localizacaoComparativos || '')
+      const imgBenf = await salvarCampo(form._refImgBenf, `anexo:${laudoUuid}:imagemBenfeitorias`,      form.imagemBenfeitorias || '')
 
       const payload = {
         ...form,
