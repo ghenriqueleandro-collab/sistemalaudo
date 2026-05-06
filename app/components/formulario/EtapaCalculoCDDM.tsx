@@ -279,7 +279,8 @@ function getFOCDepr(foc: string): number {
 
 function calcularResultado(
   elementos: ElementoCDDM[],
-  avaliando: AvalianoCDDM
+  avaliando: AvalianoCDDM,
+  fatores: { local: boolean; padrao: boolean; foc: boolean; andar: boolean; vaga: boolean }
 ): Resultado {
   const areaAv       = pn(avaliando.area)
   const dadosAv      = getPadraoData(avaliando.padraoConstrutivo)
@@ -304,29 +305,26 @@ function calcularResultado(
     // VU = Valor Líquido / Área
     const vu = area > 0 ? (valOfer * fOfer) / area : 0
 
-    // Fator Área: √(área_av / área_elem) — NBR 14653-2
+    // Fator Área (sempre ativo — NBR 14653-2)
     const fatorArea = area > 0 && areaAv > 0 ? Math.sqrt(areaAv / area) : 1
 
-    // Fator Local: local_av / local_elem
-    const fatorLocal = fLocalElem > 0 ? fLocalAv / fLocalElem : 1
+    // Fator Local
+    const fatorLocal = fatores.local && fLocalElem > 0 ? fLocalAv / fLocalElem : 1
 
-    // Fator Padrão: Pc_av / Pc_elem (coeficiente real da tabela ref_padrao)
-    const fatorPadrao = dadosElem.Pc > 0 ? dadosAv.Pc / dadosElem.Pc : 1
+    // Fator Padrão: Pc_av / Pc_elem
+    const fatorPadrao = fatores.padrao && dadosElem.Pc > 0 ? dadosAv.Pc / dadosElem.Pc : 1
 
-    // Fator FOC (Ross-Heidecke completo):
-    //   Ka = (1-R)*(1 - Ie/Ir)^2 + R
-    //   K  = Ka * (1 - Ec)
-    //   FOC = K_avaliando / K_elemento
+    // Fator FOC (Ross-Heidecke)
     const Kav   = calcularK(idadeAv,   dadosAv.Ir,   dadosAv.R,   deprAv)
     const Kelem = calcularK(idadeElem, dadosElem.Ir, dadosElem.R, deprElem)
-    const fatorFOC = Kelem > 0 ? Kav / Kelem : 1
+    const fatorFOC = fatores.foc && Kelem > 0 ? Kav / Kelem : 1
 
-    // Fator Andar: fAndarAv / fAndarElem
-    const fatorAndar = fAndarElem > 0 ? fAndarAv / fAndarElem : 1
+    // Fator Andar
+    const fatorAndar = fatores.andar && fAndarElem > 0 ? fAndarAv / fAndarElem : 1
 
     // Fator Vaga
     const fVagaAv  = 100
-    const fatorVaga = fVagaElem > 0 ? fVagaAv / fVagaElem : 1
+    const fatorVaga = fatores.vaga && fVagaElem > 0 ? fVagaAv / fVagaElem : 1
 
     // Coeficiente geral de homogeneização (produto de todos os fatores)
     const coefGeral = fatorArea * fatorLocal * fatorPadrao * fatorFOC * fatorAndar * fatorVaga
@@ -557,10 +555,12 @@ function GraficoScatter({ resultado }: { resultado: Resultado }) {
 
 type Props = {
   form: any
+  fatoresCDDMAtivos?: { local: boolean; padrao: boolean; foc: boolean; andar: boolean; vaga: boolean }
   onSave?: (elementos: ElementoCDDM[], resultado: Resultado) => void
 }
 
-export default function EtapaCalculoCDDM({ form, onSave }: Props) {
+export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Props) {
+  const fatores = fatoresCDDMAtivos ?? { local: true, padrao: true, foc: true, andar: true, vaga: true }
   const [elementos, setElementos] = useState<ElementoCDDM[]>([
     elemInicial(1), elemInicial(2), elemInicial(3),
     elemInicial(4), elemInicial(5),
@@ -581,8 +581,8 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
        form.idadeAparente, form.fatorLocalAvaliando, form.fatorAndarAvaliando, form.vagasAvaliando])
 
   const resultado = useMemo(
-    () => calcularResultado(elementos, avaliando),
-    [elementos, avaliando]
+    () => calcularResultado(elementos, avaliando, fatores),
+    [elementos, avaliando, fatores]
   )
 
   function updateElem(idx: number, campo: keyof ElementoCDDM, val: string) {
@@ -766,38 +766,40 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
           <div className="border-t border-slate-100 pt-4">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Características</p>
             <div className="grid grid-cols-4 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1.5">Padrão construtivo</label>
-                <select value={elem.padraoConstrutivo} onChange={e => updateElem(abaAtiva, 'padraoConstrutivo', e.target.value)} className={clsSelect}>
-                  <option value="">Selecione</option>
-                  {PADRAO_GRUPOS.map(({ grupo, prefixos }) => {
-                    const opts = Object.keys(PADRAO_TABLE).filter(k =>
-                      prefixos.some(p => k.startsWith(p))
-                    )
-                    return opts.length > 0 ? (
-                      <optgroup key={grupo} label={grupo}>
-                        {opts.map(k => (
-                          <option key={k} value={k}>{k}</option>
-                        ))}
-                      </optgroup>
-                    ) : null
-                  })}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1.5">Estado de conservação (FOC)</label>
-                <select value={elem.estadoConservacao} onChange={e => updateElem(abaAtiva, 'estadoConservacao', e.target.value as FOCLetra)} className={clsSelect}>
-                  <option value="">Selecione</option>
-                  {Object.entries(FOC_LABEL).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1.5">Idade (anos)</label>
-                <input type="number" value={elem.idade} onChange={e => updateElem(abaAtiva, 'idade', e.target.value)}
-                  placeholder="0" className={cls} />
-              </div>
+              {fatores.padrao && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1.5">Padrão construtivo</label>
+                  <select value={elem.padraoConstrutivo} onChange={e => updateElem(abaAtiva, 'padraoConstrutivo', e.target.value)} className={clsSelect}>
+                    <option value="">Selecione</option>
+                    {PADRAO_GRUPOS.map(({ grupo, prefixos }) => {
+                      const opts = Object.keys(PADRAO_TABLE).filter(k => prefixos.some(p => k.startsWith(p)))
+                      return opts.length > 0 ? (
+                        <optgroup key={grupo} label={grupo}>
+                          {opts.map(k => <option key={k} value={k}>{k}</option>)}
+                        </optgroup>
+                      ) : null
+                    })}
+                  </select>
+                </div>
+              )}
+              {fatores.foc && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1.5">Estado de conservação (FOC)</label>
+                  <select value={elem.estadoConservacao} onChange={e => updateElem(abaAtiva, 'estadoConservacao', e.target.value as FOCLetra)} className={clsSelect}>
+                    <option value="">Selecione</option>
+                    {Object.entries(FOC_LABEL).map(([k, v]) => (
+                      <option key={k} value={k}>{v}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {fatores.foc && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1.5">Idade (anos)</label>
+                  <input type="number" value={elem.idade} onChange={e => updateElem(abaAtiva, 'idade', e.target.value)}
+                    placeholder="0" className={cls} />
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1.5">Andar</label>
                 <input type="text" value={elem.andar} onChange={e => updateElem(abaAtiva, 'andar', e.target.value)}
@@ -855,21 +857,27 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
             </div>
 
             <div className="grid grid-cols-4 gap-3 mt-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1.5">Fator local (100 = mesmo)</label>
-                <input type="number" value={elem.fatorLocal} onChange={e => updateElem(abaAtiva, 'fatorLocal', e.target.value)}
-                  placeholder="100" className={cls} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1.5">Fator andar (100 = neutro)</label>
-                <input type="number" value={elem.fatorAndar} onChange={e => updateElem(abaAtiva, 'fatorAndar', e.target.value)}
-                  placeholder="100" className={cls} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1.5">Fator vaga (100 = neutro)</label>
-                <input type="number" value={elem.fatorVaga} onChange={e => updateElem(abaAtiva, 'fatorVaga', e.target.value)}
-                  placeholder="100" className={cls} />
-              </div>
+              {fatores.local && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1.5">Fator local (100 = mesmo)</label>
+                  <input type="number" value={elem.fatorLocal} onChange={e => updateElem(abaAtiva, 'fatorLocal', e.target.value)}
+                    placeholder="100" className={cls} />
+                </div>
+              )}
+              {fatores.andar && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1.5">Fator andar (100 = neutro)</label>
+                  <input type="number" value={elem.fatorAndar} onChange={e => updateElem(abaAtiva, 'fatorAndar', e.target.value)}
+                    placeholder="100" className={cls} />
+                </div>
+              )}
+              {fatores.vaga && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1.5">Fator vaga (100 = neutro)</label>
+                  <input type="number" value={elem.fatorVaga} onChange={e => updateElem(abaAtiva, 'fatorVaga', e.target.value)}
+                    placeholder="100" className={cls} />
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1.5">V.U. (auto)</label>
                 <div className={`rounded-xl px-3 py-2 text-sm font-semibold border ${
@@ -1021,6 +1029,7 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
               </div>
 
               {/* Fator Local */}
+              {fatores.local && (
               <div className="px-5 py-4 border-b border-slate-100">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Fator Local — F = Local<sub>av</sub> / Local<sub>elem</sub></p>
                 <div className="overflow-x-auto">
@@ -1049,7 +1058,7 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
                 </div>
               </div>
 
-              <div className="px-5 py-4 border-b border-slate-100">
+              {fatores.padrao && <div className="px-5 py-4 border-b border-slate-100">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Fator Padrão — F = Pc<sub>av</sub> / Pc<sub>elem</sub></p>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs border-collapse">
@@ -1085,7 +1094,7 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
               </div>
 
               {/* Fator FOC */}
-              <div className="px-5 py-4 border-b border-slate-100">
+              {fatores.foc && <div className="px-5 py-4 border-b border-slate-100">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
                   Fator FOC (Ross-Heidecke) — Ka = (1-R)×(1-Ie/Ir)² + R | K = Ka×(1-Ec) | F = K<sub>av</sub> / K<sub>elem</sub>
                 </p>
@@ -1157,7 +1166,7 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
               </div>
 
               {/* Fator Andar */}
-              <div className="px-5 py-4">
+              {fatores.andar && <div className="px-5 py-4">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Fator Andar — F = Andar<sub>av</sub> / Andar<sub>elem</sub></p>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs border-collapse">
@@ -1203,11 +1212,11 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Elem.</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">V.U. (R$/m²)</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">F. Área</th>
-                        <th className="border border-slate-200 px-3 py-2 text-blue-800">F. Local</th>
-                        <th className="border border-slate-200 px-3 py-2 text-blue-800">F. Padrão</th>
-                        <th className="border border-slate-200 px-3 py-2 text-blue-800">F. FOC</th>
-                        <th className="border border-slate-200 px-3 py-2 text-blue-800">F. Andar</th>
-                        <th className="border border-slate-200 px-3 py-2 text-blue-800">F. Vaga</th>
+                        {fatores.local && <th className="border border-slate-200 px-3 py-2 text-blue-800">F. Local</th>}
+                        {fatores.padrao && <th className="border border-slate-200 px-3 py-2 text-blue-800">F. Padrão</th>}
+                        {fatores.foc && <th className="border border-slate-200 px-3 py-2 text-blue-800">F. FOC</th>}
+                        {fatores.andar && <th className="border border-slate-200 px-3 py-2 text-blue-800">F. Andar</th>}
+                        {fatores.vaga && <th className="border border-slate-200 px-3 py-2 text-blue-800">F. Vaga</th>}
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Coef. Geral</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">V.U. Hom.</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Saneado</th>
@@ -1219,11 +1228,11 @@ export default function EtapaCalculoCDDM({ form, onSave }: Props) {
                           <td className="border border-slate-200 px-3 py-2 text-center font-medium">{i + 1}</td>
                           <td className="border border-slate-200 px-3 py-2 text-right">{fmtMoeda(r.vu)}</td>
                           <td className="border border-slate-200 px-3 py-2 text-center">{fmt(r.fatorArea, 4)}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-center">{fmt(r.fatorLocal, 4)}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-center">{fmt(r.fatorPadrao, 4)}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-center">{fmt(r.fatorFOC, 4)}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-center">{fmt(r.fatorAndar, 4)}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-center">{fmt(r.fatorVaga, 4)}</td>
+                          {fatores.local && <td className="border border-slate-200 px-3 py-2 text-center">{fmt(r.fatorLocal, 4)}</td>}
+                          {fatores.padrao && <td className="border border-slate-200 px-3 py-2 text-center">{fmt(r.fatorPadrao, 4)}</td>}
+                          {fatores.foc && <td className="border border-slate-200 px-3 py-2 text-center">{fmt(r.fatorFOC, 4)}</td>}
+                          {fatores.andar && <td className="border border-slate-200 px-3 py-2 text-center">{fmt(r.fatorAndar, 4)}</td>}
+                          {fatores.vaga && <td className="border border-slate-200 px-3 py-2 text-center">{fmt(r.fatorVaga, 4)}</td>}
                           <td className={`border border-slate-200 px-3 py-2 text-center font-semibold ${
                             r.coefGeral < 0.5 || r.coefGeral > 2.0 ? 'text-red-700' : 'text-slate-700'
                           }`}>{fmt(r.coefGeral, 4)}</td>

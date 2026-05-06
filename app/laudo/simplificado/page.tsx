@@ -42,6 +42,13 @@ export default function LaudoSimplificadoPage() {
     fatorLocalAvaliando: '',
     fatorAndarAvaliando: '',
     vagasAvaliando: '',
+    fatoresCDDMAtivos: {
+      local: true,
+      padrao: true,
+      foc: true,
+      andar: true,
+      vaga: true,
+    } as { local: boolean; padrao: boolean; foc: boolean; andar: boolean; vaga: boolean },
     coordenadasImovel: '',
     endereco: '',
     proprietario: '',
@@ -392,6 +399,16 @@ export default function LaudoSimplificadoPage() {
       console.error(error)
       alert('Erro ao processar o PDF.')
     }
+  }
+
+  function toggleFatorCDDM(fator: 'local' | 'padrao' | 'foc' | 'andar' | 'vaga') {
+    setForm((prev: any) => ({
+      ...prev,
+      fatoresCDDMAtivos: {
+        ...prev.fatoresCDDMAtivos,
+        [fator]: !prev.fatoresCDDMAtivos?.[fator],
+      },
+    }))
   }
 
   function onRemoverAnexo(campo: 'documentacaoPdf' | 'calculoPdf' | 'localizacaoComparativos') {
@@ -851,6 +868,8 @@ export default function LaudoSimplificadoPage() {
               removerCroqui={removerCroqui}
               setForm={setForm}
               tipoLaudo="simplificado"
+              fatoresCDDMAtivos={form.fatoresCDDMAtivos}
+              toggleFatorCDDM={toggleFatorCDDM}
             />
           )}
 
@@ -862,7 +881,7 @@ export default function LaudoSimplificadoPage() {
           )}
 
           {etapaAtual === '9.1' && (
-            <EtapaCalculoCDDM form={form} />
+            <EtapaCalculoCDDM form={form} fatoresCDDMAtivos={form.fatoresCDDMAtivos} />
           )}
 
           {etapaAtual === '9.2' && (

@@ -81,6 +81,8 @@ type Props = {
   handleCroqui: (e: React.ChangeEvent<HTMLInputElement>) => void
   removerCroqui: (index: number) => void
   tipoLaudo?: 'detalhado' | 'simplificado'
+  fatoresCDDMAtivos?: { local: boolean; padrao: boolean; foc: boolean; andar: boolean; vaga: boolean }
+  toggleFatorCDDM?: (fator: 'local' | 'padrao' | 'foc' | 'andar' | 'vaga') => void
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -102,7 +104,28 @@ export default function Etapa01A06({
   handleCroqui,
   removerCroqui,
   tipoLaudo,
+  fatoresCDDMAtivos,
+  toggleFatorCDDM,
 }: Props) {
+  const fatores = fatoresCDDMAtivos ?? { local: true, padrao: true, foc: true, andar: true, vaga: true }
+
+  // Toggle switch component inline
+  const Toggle = ({ fator, label }: { fator: 'local' | 'padrao' | 'foc' | 'andar' | 'vaga'; label: string }) => (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => toggleFatorCDDM?.(fator)}
+        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+          fatores[fator] ? 'bg-blue-600' : 'bg-slate-200'
+        }`}
+      >
+        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+          fatores[fator] ? 'translate-x-4' : 'translate-x-0.5'
+        }`} />
+      </button>
+      <span className={`text-xs font-medium ${fatores[fator] ? 'text-slate-700' : 'text-slate-400'}`}>{label}</span>
+    </div>
+  )
   const [buscandoCoords, setBuscandoCoords] = useState(false)
   const [msgCoords, setMsgCoords] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
 
@@ -586,84 +609,128 @@ export default function Etapa01A06({
       {/* ── Dados do avaliando para cálculo CDDM ──────────────────────────────── */}
       <SectionCard title="Dados do avaliando para cálculo CDDM">
         <p className="text-xs text-slate-400 mb-4">
-          Estes campos alimentam o cálculo de homogenização na seção de Metodologia e Pesquisas.
+          Ative ou desative cada fator. Fatores desativados são fixados em 1,0 no cálculo e removidos da seção de elementos comparativos.
         </p>
 
-        <div className="mb-4">
-          <FieldLabel>Padrão construtivo (CDDM)</FieldLabel>
-          <select
-            name="padraoCDDM"
-            value={form.padraoCDDM || ''}
-            onChange={handleChange}
-            className={selectCls()}
-          >
-            <option value="">Selecione o padrão</option>
-            <optgroup label="Apartamento">
-              {['Apto. Econômico -','Apto. Econômico','Apto. Econômico +',
-                'Apto. Simples s/elev. -','Apto. Simples s/elev.','Apto. Simples s/elev. +',
-                'Apto. Simples c/elev. -','Apto. Simples c/elev.','Apto. Simples c/elev. +',
-                'Apto. Médio s/elev. -','Apto. Médio s/elev.','Apto. Médio s/elev. +',
-                'Apto. Médio c/elev. -','Apto. Médio c/elev.','Apto. Médio c/elev. +',
-                'Apto. Superior s/elev. -','Apto. Superior s/elev.','Apto. Superior s/elev. +',
-                'Apto. Superior c/elev. -','Apto. Superior c/elev.','Apto. Superior c/elev. +',
-                'Apto. Fino -','Apto. Fino','Apto. Fino +','Apto. Luxo',
-              ].map(v => <option key={v} value={v}>{v}</option>)}
-            </optgroup>
-            <optgroup label="Casa">
-              {['Casa Padrão Rústico Mínimo','Casa Padrão Rústico Médio','Casa Padrão Rústico Máximo',
-                'Casa Padrão Proletário Mínimo','Casa Padrão Proletário Médio','Casa Padrão Proletário Máximo',
-                'Casa Padrão Econômico Mínimo','Casa Padrão Econômico Médio','Casa Padrão Econômico Máximo',
-                'Casa Padrão Simples Mínimo','Casa Padrão Simples Médio','Casa Padrão Simples Máximo',
-                'Casa Padrão Médio Mínimo','Casa Padrão Médio Médio','Casa Padrão Médio Máximo',
-                'Casa Padrão Superior Mínimo','Casa Padrão Superior Médio','Casa Padrão Superior Máximo',
-                'Casa Padrão Fino Mínimo','Casa Padrão Fino Médio','Casa Padrão Fino Máximo','Casa Padrão Luxo',
-                'CASA | Fino','CASA | Fino +','CASA | Luxo -',
-              ].map(v => <option key={v} value={v}>{v}</option>)}
-            </optgroup>
-            <optgroup label="Escritório">
-              {['Escritório Econômico -','Escritório Econômico','Escritório Econômico +',
-                'Escritório Simples s/Elevador -','Escritório Simples s/Elevador','Escritório Simples s/Elevador +',
-                'Escritório Simples c/Elevador -','Escritório Simples c/Elevador','Escritório Simples c/Elevador +',
-                'Escritório Médio s/Elevador -','Escritório Médio s/Elevador','Escritório Médio s/Elevador +',
-                'Escritório Médio c/Elevador -','Escritório Médio c/Elevador','Escritório Médio c/Elevador +',
-                'Escritório Superior s/Elevador -','Escritório Superior s/Elevador','Escritório Superior s/Elevador +',
-                'Escritório Superior c/Elevador -','Escritório Superior c/Elevador','Escritório Superior c/Elevador +',
-                'Escritório Fino -','Escritório Fino','Escritório Fino +','Escritório Luxo',
-              ].map(v => <option key={v} value={v}>{v}</option>)}
-            </optgroup>
-            <optgroup label="Galpão">
-              {['GALPÃO | Econômico -','GALPÃO | Econômico','GALPÃO | Econômico +',
-                'GALPÃO | Simples -','GALPÃO | Simples','GALPÃO | Simples +',
-                'GALPÃO | Médio -','GALPÃO | Médio','GALPÃO | Médio +','GALPÃO | Superior -',
-              ].map(v => <option key={v} value={v}>{v}</option>)}
-            </optgroup>
-            <optgroup label="Cobertura">
-              {['COBERTURA | Simples -','COBERTURA | Simples','COBERTURA | Simples +',
-                'COBERTURA | Médio -','COBERTURA | Médio','COBERTURA | Médio +',
-                'COBERTURA | Superior -','COBERTURA | Superior','COBERTURA | Superior +',
-              ].map(v => <option key={v} value={v}>{v}</option>)}
-            </optgroup>
-          </select>
+        {/* Fator Padrão */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-700">Fator Padrão</span>
+            <Toggle fator="padrao" label={fatores.padrao ? 'Ativo' : 'Desativado'} />
+          </div>
+          {fatores.padrao && (
+            <select
+              name="padraoCDDM"
+              value={form.padraoCDDM || ''}
+              onChange={handleChange}
+              className={selectCls()}
+            >
+              <option value="">Selecione o padrão (CDDM)</option>
+              <optgroup label="Apartamento">
+                {['Apto. Econômico -','Apto. Econômico','Apto. Econômico +',
+                  'Apto. Simples s/elev. -','Apto. Simples s/elev.','Apto. Simples s/elev. +',
+                  'Apto. Simples c/elev. -','Apto. Simples c/elev.','Apto. Simples c/elev. +',
+                  'Apto. Médio s/elev. -','Apto. Médio s/elev.','Apto. Médio s/elev. +',
+                  'Apto. Médio c/elev. -','Apto. Médio c/elev.','Apto. Médio c/elev. +',
+                  'Apto. Superior s/elev. -','Apto. Superior s/elev.','Apto. Superior s/elev. +',
+                  'Apto. Superior c/elev. -','Apto. Superior c/elev.','Apto. Superior c/elev. +',
+                  'Apto. Fino -','Apto. Fino','Apto. Fino +','Apto. Luxo',
+                ].map(v => <option key={v} value={v}>{v}</option>)}
+              </optgroup>
+              <optgroup label="Casa">
+                {['Casa Padrão Rústico Mínimo','Casa Padrão Rústico Médio','Casa Padrão Rústico Máximo',
+                  'Casa Padrão Proletário Mínimo','Casa Padrão Proletário Médio','Casa Padrão Proletário Máximo',
+                  'Casa Padrão Econômico Mínimo','Casa Padrão Econômico Médio','Casa Padrão Econômico Máximo',
+                  'Casa Padrão Simples Mínimo','Casa Padrão Simples Médio','Casa Padrão Simples Máximo',
+                  'Casa Padrão Médio Mínimo','Casa Padrão Médio Médio','Casa Padrão Médio Máximo',
+                  'Casa Padrão Superior Mínimo','Casa Padrão Superior Médio','Casa Padrão Superior Máximo',
+                  'Casa Padrão Fino Mínimo','Casa Padrão Fino Médio','Casa Padrão Fino Máximo','Casa Padrão Luxo',
+                  'CASA | Fino','CASA | Fino +','CASA | Luxo -',
+                ].map(v => <option key={v} value={v}>{v}</option>)}
+              </optgroup>
+              <optgroup label="Escritório">
+                {['Escritório Econômico -','Escritório Econômico','Escritório Econômico +',
+                  'Escritório Simples s/Elevador -','Escritório Simples s/Elevador','Escritório Simples s/Elevador +',
+                  'Escritório Simples c/Elevador -','Escritório Simples c/Elevador','Escritório Simples c/Elevador +',
+                  'Escritório Médio s/Elevador -','Escritório Médio s/Elevador','Escritório Médio s/Elevador +',
+                  'Escritório Médio c/Elevador -','Escritório Médio c/Elevador','Escritório Médio c/Elevador +',
+                  'Escritório Superior s/Elevador -','Escritório Superior s/Elevador','Escritório Superior s/Elevador +',
+                  'Escritório Superior c/Elevador -','Escritório Superior c/Elevador','Escritório Superior c/Elevador +',
+                  'Escritório Fino -','Escritório Fino','Escritório Fino +','Escritório Luxo',
+                ].map(v => <option key={v} value={v}>{v}</option>)}
+              </optgroup>
+              <optgroup label="Galpão">
+                {['GALPÃO | Econômico -','GALPÃO | Econômico','GALPÃO | Econômico +',
+                  'GALPÃO | Simples -','GALPÃO | Simples','GALPÃO | Simples +',
+                  'GALPÃO | Médio -','GALPÃO | Médio','GALPÃO | Médio +','GALPÃO | Superior -',
+                ].map(v => <option key={v} value={v}>{v}</option>)}
+              </optgroup>
+              <optgroup label="Cobertura">
+                {['COBERTURA | Simples -','COBERTURA | Simples','COBERTURA | Simples +',
+                  'COBERTURA | Médio -','COBERTURA | Médio','COBERTURA | Médio +',
+                  'COBERTURA | Superior -','COBERTURA | Superior','COBERTURA | Superior +',
+                ].map(v => <option key={v} value={v}>{v}</option>)}
+              </optgroup>
+            </select>
+          )}
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <FieldLabel>Fator local (avaliando)</FieldLabel>
-            <input name="fatorLocalAvaliando" placeholder="100" type="number"
-              value={form.fatorLocalAvaliando || ''} onChange={handleChange} className={inputCls()} />
-            <p className="text-[11px] text-slate-400 mt-1">0–200. 100 = neutro.</p>
+        {/* Fator FOC */}
+        <div className="mb-5 border-t border-slate-100 pt-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-700">Fator FOC (Ross-Heidecke)</span>
+            <Toggle fator="foc" label={fatores.foc ? 'Ativo' : 'Desativado'} />
           </div>
-          <div>
-            <FieldLabel>Fator andar (avaliando)</FieldLabel>
-            <input name="fatorAndarAvaliando" placeholder="100" type="number"
-              value={form.fatorAndarAvaliando || ''} onChange={handleChange} className={inputCls()} />
-            <p className="text-[11px] text-slate-400 mt-1">100 = neutro / térreo.</p>
+          {fatores.foc && (
+            <p className="text-xs text-slate-400">
+              Usa Estado de conservação e Idade aparente preenchidos nos campos acima.
+            </p>
+          )}
+        </div>
+
+        {/* Fator Local */}
+        <div className="mb-5 border-t border-slate-100 pt-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-700">Fator Local</span>
+            <Toggle fator="local" label={fatores.local ? 'Ativo' : 'Desativado'} />
           </div>
-          <div>
-            <FieldLabel>Vagas de garagem</FieldLabel>
-            <input name="vagasAvaliando" placeholder="0" type="number"
-              value={form.vagasAvaliando || ''} onChange={handleChange} className={inputCls()} />
+          {fatores.local && (
+            <div>
+              <input name="fatorLocalAvaliando" placeholder="100" type="number"
+                value={form.fatorLocalAvaliando || ''} onChange={handleChange} className={inputCls()} />
+              <p className="text-[11px] text-slate-400 mt-1">Índice de localização do avaliando (0–200). 100 = neutro.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Fator Andar */}
+        <div className="mb-5 border-t border-slate-100 pt-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-700">Fator Andar</span>
+            <Toggle fator="andar" label={fatores.andar ? 'Ativo' : 'Desativado'} />
           </div>
+          {fatores.andar && (
+            <div>
+              <input name="fatorAndarAvaliando" placeholder="100" type="number"
+                value={form.fatorAndarAvaliando || ''} onChange={handleChange} className={inputCls()} />
+              <p className="text-[11px] text-slate-400 mt-1">Coeficiente de andar. 100 = neutro / térreo.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Fator Vaga */}
+        <div className="border-t border-slate-100 pt-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-700">Fator Vaga</span>
+            <Toggle fator="vaga" label={fatores.vaga ? 'Ativo' : 'Desativado'} />
+          </div>
+          {fatores.vaga && (
+            <div>
+              <input name="vagasAvaliando" placeholder="0" type="number"
+                value={form.vagasAvaliando || ''} onChange={handleChange} className={inputCls()} />
+              <p className="text-[11px] text-slate-400 mt-1">Número de vagas de garagem do avaliando.</p>
+            </div>
+          )}
         </div>
       </SectionCard>
 
