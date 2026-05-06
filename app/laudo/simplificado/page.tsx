@@ -710,6 +710,7 @@ export default function LaudoSimplificadoPage() {
         resumoMercado,
         outrosFatoresImovel,
         fotos: fotosComRef,
+        valorFinalImovel,
         status,
         atualizadoEm: new Date().toISOString(),
       }

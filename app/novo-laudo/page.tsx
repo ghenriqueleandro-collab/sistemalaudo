@@ -720,6 +720,7 @@ export default function NovoLaudoPage() {
         resumoMercado,
         outrosFatoresImovel,
         fotos: fotosComRef,
+        valorFinalImovel,
         status,
         atualizadoEm: new Date().toISOString(),
       }
