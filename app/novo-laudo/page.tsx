@@ -564,13 +564,26 @@ export default function NovoLaudoPage() {
       // ── Helper: salva binário em chave Redis separada, retorna referência ──────
       async function salvarBinario(chave: string, dado: string): Promise<string> {
         if (!dado || !dado.startsWith('data:')) return dado
-        const res = await fetch('/api/laudo-midias', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chave, dado }),
-        })
-        if (!res.ok) throw new Error(`Falha ao salvar binário (${chave})`)
-        return `__ref__:${chave}` // marcador de referência
+        // Verifica tamanho antes de enviar (~3MB = limite seguro por requisição)
+        const tamanhoKB = Math.round(dado.length * 0.75 / 1024)
+        if (tamanhoKB > 3000) {
+          console.warn(`Binário ${chave} muito grande (${tamanhoKB}KB), não será salvo.`)
+          return dado // mantém localmente mas não salva no Redis
+        }
+        try {
+          const res = await fetch('/api/laudo-midias', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chave, dado }),
+          })
+          if (!res.ok) {
+            console.warn(`Falha ao salvar binário ${chave}, mantendo dado local.`)
+            return dado // fallback: mantém o dado inline no payload
+          }
+          return `__ref__:${chave}`
+        } catch {
+          return dado // fallback silencioso
+        }
       }
 
       // Salva cada foto individualmente
