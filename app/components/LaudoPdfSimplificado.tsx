@@ -23,7 +23,13 @@ function fm(valor: number) {
 }
 function cn(valor?: string) {
   if (!valor) return 0
-  return Number(valor.replace(/\s/g,'').replace(/\./g,'').replace(',','.').replace(/[^\d.-]/g,'')) || 0
+  const limpo = valor
+    .replace(/[R$\s]/g, '')
+    .replace(/\.(?=\d{3}[,.])/g, '')
+    .replace(/\.(?=\d{3}$)/g, '')
+    .replace(',', '.')
+    .replace(/[^\d.-]/g, '')
+  return Number(limpo) || 0
 }
 function numeroPorExtenso(valor: number): string {
   const un = ['','um','dois','três','quatro','cinco','seis','sete','oito','nove','dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove']
@@ -56,7 +62,7 @@ function metLabel(m?: string) {
   if (m==='evolutivo')   return 'Método Evolutivo'
   return m||'-'
 }
-function arredondar(v: number) { return Math.round(v/100)*100 }
+function arredondar(v: number) { return Math.round(v * 100) / 100 }
 function fa(valor?: string) {
   if (!valor) return '-'
   const n = parseFloat(valor.replace(',','.'))

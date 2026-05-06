@@ -112,19 +112,32 @@ function fm(valor: number) {
 
 function cn(valor: string) {
   if (!valor) return 0
-  return Number(valor.replace(/\s/g, '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0
+  // Remove R$, espaços, depois remove pontos de milhar (ponto seguido de 3 dígitos)
+  // e converte vírgula decimal em ponto
+  const limpo = valor
+    .replace(/[R$\s]/g, '')
+    .replace(/\.(?=\d{3}[,\.])/g, '')  // remove pontos de milhar
+    .replace(/\.(?=\d{3}$)/g, '')       // remove ponto de milhar no final
+    .replace(',', '.')
+    .replace(/[^\d.-]/g, '')
+  return Number(limpo) || 0
 }
 
 function formatarArea(valor?: string): string {
   if (!valor) return ''
   const numStr = valor.replace(/m²/g, '').replace(/ /g, '').trim()
-  const num = parseFloat(numStr.replace(',', '.'))
+  const limpo = numStr
+    .replace(/\.(?=\d{3}[,.])/g, '')
+    .replace(/\.(?=\d{3}$)/g, '')
+    .replace(',', '.')
+  const num = parseFloat(limpo)
   if (isNaN(num)) return valor
   return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' m²'
 }
 
 function arredondar(valor: number) {
-  return Math.round(valor / 100) * 100
+  // Arredonda para 2 casas decimais, sem perder centavos
+  return Math.round(valor * 100) / 100
 }
 
 // Extrai a cidade do campo endereço (formato: "Rua – Bairro – Cidade – Estado – CEP ...")
