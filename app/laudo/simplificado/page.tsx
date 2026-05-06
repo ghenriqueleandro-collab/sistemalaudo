@@ -8,7 +8,7 @@ import NavegacaoEtapasSimpl from '../../components/formulario/simplificado/Naveg
 import Etapa01A06Simpl from '../../components/formulario/simplificado/Etapa01A06Simpl'
 import EtapaConsideracoesMercadoSimpl from '../../components/formulario/simplificado/EtapaConsideracoesMercadoSimpl'
 import EtapaCalculoCDDM from '../../components/formulario/EtapaCalculoCDDM'
-import EtapaCalculoBenfeitorias from '../../components/formulario/simplificado/EtapaCalculoBenfeitorias'
+import EtapaCalculoBenfeitoriasSimpl from '../../components/formulario/simplificado/EtapaCalculoBenfeitoriasSimpl'
 import EtapaValorImovelSimpl from '../../components/formulario/simplificado/EtapaValorImovelSimpl'
 import EtapaFundamentacaoPrecisaoSimpl from '../../components/formulario/simplificado/EtapaFundamentacaoPrecisaoSimpl'
 import EtapaConclusaoSimpl from '../../components/formulario/simplificado/EtapaConclusaoSimpl'
@@ -835,7 +835,7 @@ export default function LaudoSimplificadoPage() {
           )}
 
           {etapaAtual === '9.2' && (
-            <EtapaCalculoBenfeitorias
+            <EtapaCalculoBenfeitoriasSimpl
               form={form}
               handleImagemBenfeitorias={handleImagemBenfeitorias}
             />
