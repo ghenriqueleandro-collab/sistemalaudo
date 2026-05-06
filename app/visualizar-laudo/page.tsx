@@ -541,7 +541,7 @@ function VisualizarLaudoContent() {
           setDados({
             ...parsed,
             fotos: fotosResolvidas,
-            croquis: croquisResolvidas,
+            croquis: croquisResolvidos,
             documentacaoPdf: docPdf,
             calculoPdf: calcPdf,
             localizacaoComparativos: locComp,
