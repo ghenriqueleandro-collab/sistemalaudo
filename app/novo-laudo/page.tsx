@@ -184,7 +184,24 @@ export default function NovoLaudoPage() {
 
         // Resolve referências de binários armazenados separadamente
         async function resolverRef(val: string): Promise<string> {
-          if (!val?.startsWith('__ref__:')) return val
+          if (!val) return val
+          if (val.startsWith('__chunks__:')) {
+            // Reassembla chunks: __chunks__:chave:numChunks
+            const sem = val.replace('__chunks__:', '')
+            const lastColon = sem.lastIndexOf(':')
+            const chave = sem.slice(0, lastColon)
+            const num = parseInt(sem.slice(lastColon + 1))
+            const partes = await Promise.all(
+              Array.from({ length: num }, async (_, i) => {
+                const res = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(`${chave}__c${i}`)}`)
+                if (!res.ok) return ''
+                const { dado } = await res.json()
+                return dado || ''
+              })
+            )
+            return partes.join('')
+          }
+          if (!val.startsWith('__ref__:')) return val
           const chave = val.replace('__ref__:', '')
           const res = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(chave)}`)
           if (!res.ok) return ''
@@ -580,29 +597,51 @@ export default function NovoLaudoPage() {
     try {
       const status = obterStatusLaudo()
 
-      // ── Helper: salva binário em chave Redis separada, retorna referência ──────
-      async function salvarBinario(chave: string, dado: string): Promise<string> {
-        if (!dado || !dado.startsWith('data:')) return dado
-        // Verifica tamanho antes de enviar (~3MB = limite seguro por requisição)
-        const tamanhoKB = Math.round(dado.length * 0.75 / 1024)
-        if (tamanhoKB > 3000) {
-          console.warn(`Binário ${chave} muito grande (${tamanhoKB}KB), não será salvo.`)
-          return dado // mantém localmente mas não salva no Redis
-        }
+      // ── Helper: salva binário em chave Redis separada usando chunks ──────────
+      const CHUNK_KB = 900  // cada chunk < 1MB (limite Upstash free)
+
+      async function salvarChunk(chave: string, dado: string): Promise<boolean> {
         try {
           const res = await fetch('/api/laudo-midias', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ chave, dado }),
           })
-          if (!res.ok) {
-            console.warn(`Falha ao salvar binário ${chave}, mantendo dado local.`)
-            return dado // fallback: mantém o dado inline no payload
-          }
-          return `__ref__:${chave}`
-        } catch {
-          return dado // fallback silencioso
+          return res.ok
+        } catch { return false }
+      }
+
+      async function salvarBinario(chave: string, dado: string): Promise<string> {
+        if (!dado || !dado.startsWith('data:')) return dado
+
+        const tamanho = dado.length
+        const chunkSize = CHUNK_KB * 1024 * (4 / 3)  // base64 chars por chunk
+
+        if (tamanho <= chunkSize) {
+          // Pequeno o suficiente para um único chunk
+          const ok = await salvarChunk(chave, dado)
+          return ok ? `__ref__:${chave}` : dado
         }
+
+        // Grande: divide em chunks
+        const chunks: string[] = []
+        for (let i = 0; i < tamanho; i += chunkSize) {
+          chunks.push(dado.slice(i, i + chunkSize))
+        }
+
+        const resultados = await Promise.all(
+          chunks.map((chunk, i) => salvarChunk(`${chave}__c${i}`, chunk))
+        )
+
+        if (!resultados.every(Boolean)) {
+          // Algum chunk falhou — não inclui no payload para não causar 413
+          console.warn(`Falha em chunks de ${chave}, arquivo será excluído do save`)
+          return ''
+        }
+
+        // Salva manifesto com número de chunks
+        await salvarChunk(`${chave}__manifest`, String(chunks.length))
+        return `__chunks__:${chave}:${chunks.length}`
       }
 
       // Salva cada foto individualmente — pula as que já têm ref salva

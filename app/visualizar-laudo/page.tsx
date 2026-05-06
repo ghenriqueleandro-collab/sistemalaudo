@@ -509,8 +509,25 @@ function VisualizarLaudoContent() {
           : await obterLaudoAtual()) as DadosLaudo
         if (parsed) {
 
-          // Resolve referências de binários armazenados separadamente
           async function resolverRef(val: string): Promise<string> {
+            if (!val) return val
+            if (val.startsWith('__chunks__:')) {
+              const sem = val.replace('__chunks__:', '')
+              const lastColon = sem.lastIndexOf(':')
+              const chave = sem.slice(0, lastColon)
+              const num = parseInt(sem.slice(lastColon + 1))
+              const partes = await Promise.all(
+                Array.from({ length: num }, async (_, i) => {
+                  try {
+                    const res = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(`${chave}__c${i}`)}`)
+                    if (!res.ok) return ''
+                    const { dado } = await res.json()
+                    return dado || ''
+                  } catch { return '' }
+                })
+              )
+              return partes.join('')
+            }
             if (!val?.startsWith('__ref__:')) return val
             const chave = val.replace('__ref__:', '')
             try {
