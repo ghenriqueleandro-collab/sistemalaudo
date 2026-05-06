@@ -251,7 +251,6 @@ export default function AgendamentosPage() {
         areaTotal: '',
         fracaoIdeal: '',
         fatoresCDDMAtivos: { local: true, padrao: true, foc: true, andar: true, vaga: true },
-        coordenadasImovel: '',
         coordenadasImovel: '', endereco: '', proprietario: '', solicitante: '',
         tipo: '', finalidade: '', areaConstruidaTotal: '', areaConstruidaAverbada: '',
         areaTerrenoTotal: '', areaTerrenoAverbada: '', matricula: '', iptu: '',
