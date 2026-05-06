@@ -176,7 +176,7 @@ export default function NovoLaudoPage() {
         setAcabamentos(laudoSalvo.acabamentos || [{ ambiente: '', acabamento: '' }])
         setResumoMercado(laudoSalvo.resumoMercado || [{ campo: '', descricao: '' }])
         setOutrosFatoresImovel(laudoSalvo.outrosFatoresImovel || [{ descricao: '', valor: '' }])
-        setFotos(laudoSalvo.fotos || [])
+        // Não chama setFotos aqui — será chamado após resolver refs abaixo
 
         // Resolve referências de binários armazenados separadamente
         async function resolverRef(val: string): Promise<string> {

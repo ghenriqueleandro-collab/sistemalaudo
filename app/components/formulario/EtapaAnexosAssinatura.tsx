@@ -286,7 +286,7 @@ useEffect(() => {
               >
                 {fotos.map((foto, index) => (
                   <div
-                    key={foto.preview}
+                    key={`foto-${index}-${foto.legenda || ''}`}
                     draggable
                     onDragStart={() => setDragIndex(index)}
                     onDragOver={(e) => e.preventDefault()}
