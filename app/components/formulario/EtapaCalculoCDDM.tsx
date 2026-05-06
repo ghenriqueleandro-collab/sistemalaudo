@@ -782,7 +782,6 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Pr
                   </select>
                 </div>
               )}
-              )}
               {fatores.foc && (
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1.5">Estado de conservação (FOC)</label>
@@ -794,14 +793,12 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Pr
                   </select>
                 </div>
               )}
-              )}
               {fatores.foc && (
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1.5">Idade (anos)</label>
                   <input type="number" value={elem.idade} onChange={e => updateElem(abaAtiva, 'idade', e.target.value)}
                     placeholder="0" className={cls} />
                 </div>
-              )}
               )}
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1.5">Andar</label>
@@ -867,7 +864,6 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Pr
                     placeholder="100" className={cls} />
                 </div>
               )}
-              )}
               {fatores.andar && (
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1.5">Fator andar (100 = neutro)</label>
@@ -875,14 +871,12 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Pr
                     placeholder="100" className={cls} />
                 </div>
               )}
-              )}
               {fatores.vaga && (
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1.5">Fator vaga (100 = neutro)</label>
                   <input type="number" value={elem.fatorVaga} onChange={e => updateElem(abaAtiva, 'fatorVaga', e.target.value)}
                     placeholder="100" className={cls} />
                 </div>
-              )}
               )}
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1.5">V.U. (auto)</label>
