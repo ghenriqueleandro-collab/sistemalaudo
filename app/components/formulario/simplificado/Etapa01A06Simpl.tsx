@@ -145,51 +145,19 @@ export default function Etapa01A06({
 
     setGerandoCroqui(true)
     try {
-      const latN = Number(lat)
-      const lngN = Number(lng)
-      const zoom = 18  // zoom alto para satélite detalhado
+      const res = await fetch(`/api/mapa-estatico?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`)
+      if (!res.ok) throw new Error(`Status ${res.status}`)
 
-      // Calcula tile central
-      const tileX = Math.floor((lngN + 180) / 360 * Math.pow(2, zoom))
-      const tileY = Math.floor((1 - Math.log(Math.tan(latN * Math.PI / 180) + 1 / Math.cos(latN * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom))
-
-      // Monta canvas 3x3 tiles (768x768px)
-      const size = 256
-      const cols = 3, rows = 3
-      const canvas = document.createElement('canvas')
-      canvas.width = cols * size
-      canvas.height = rows * size
-      const ctx = canvas.getContext('2d')!
-
-      // Carrega tiles satélite ESRI via proxy
-      const tilePromises: Promise<void>[] = []
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          const tx = tileX + dx
-          const ty = tileY + dy
-          const col = dx + 1
-          const row = dy + 1
-          tilePromises.push(
-            new Promise<void>((resolve) => {
-              const img = new window.Image()
-              img.crossOrigin = 'anonymous'
-              img.onload = () => {
-                ctx.drawImage(img, col * size, row * size, size, size)
-                resolve()
-              }
-              img.onerror = () => resolve()
-              img.src = `/api/mapa-estatico?z=${zoom}&x=${tx}&y=${ty}`
-            })
-          )
-        }
-      }
-      await Promise.all(tilePromises)
-
-      const base64 = canvas.toDataURL('image/jpeg', 0.92)
+      const blob = await res.blob()
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })
 
       const novosCroquis = [
         { preview: base64, automatico: true },
-        // Mantém apenas uploads manuais explícitos (com automatico === false ou undefined mas não o primeiro)
         ...(form.croquis || []).filter((c: any) => c.automatico === false),
       ]
       if (setFormDirect) {
