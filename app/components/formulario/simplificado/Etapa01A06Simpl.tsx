@@ -133,42 +133,7 @@ export default function Etapa01A06({
   )
   const [buscandoCoords, setBuscandoCoords] = useState(false)
   const [msgCoords, setMsgCoords] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
-  const [gerandoCroqui, setGerandoCroqui] = useState(false)
 
-  async function gerarCroquiAutomatico(coordsOverride?: string) {
-    const coords = (coordsOverride || form.coordenadasImovel || '').trim()
-    if (!coords) return
-    const partes = coords.split(',').map((s: string) => s.trim())
-    if (partes.length < 2) return
-    const [lat, lng] = partes
-    if (!lat || !lng || isNaN(Number(lat)) || isNaN(Number(lng))) return
-
-    setGerandoCroqui(true)
-    try {
-      const res = await fetch(`/api/mapa-estatico?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`)
-      if (!res.ok) throw new Error(`Status ${res.status}`)
-
-      const blob = await res.blob()
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsDataURL(blob)
-      })
-
-      const novosCroquis = [
-        { preview: base64, automatico: true },
-        ...(form.croquis || []).filter((c: any) => c.automatico === false),
-      ]
-      if (setFormDirect) {
-        setFormDirect((prev: any) => ({ ...prev, croquis: novosCroquis }))
-      }
-    } catch (err) {
-      console.error('Erro ao gerar croqui:', err)
-    } finally {
-      setGerandoCroqui(false)
-    }
-  }
 
   function setField(name: string, value: string) {
     handleChange({
@@ -311,7 +276,6 @@ export default function Etapa01A06({
     setBuscandoCoords(false)
 
     // Gera croqui automático após preencher dados — passa as coords direto para evitar estado stale
-    gerarCroquiAutomatico(raw)
   }
 
   return (
@@ -936,51 +900,6 @@ export default function Etapa01A06({
 
       {/* ── Croqui / Imagem ───────────────────────────────────────────────────── */}
       <SectionCard title="Croqui / imagem do item 6">
-
-        {/* Mapa automático pelas coordenadas */}
-        {form.coordenadasImovel && (
-          <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-blue-800">📍 Mapa automático — baseado nas coordenadas</span>
-              <button
-                type="button"
-                onClick={() => gerarCroquiAutomatico()}
-                disabled={gerandoCroqui}
-                className="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition font-medium"
-              >
-                {gerandoCroqui ? 'Gerando...' : '↺ Atualizar mapa'}
-              </button>
-            </div>
-            {(form.croquis || []).find((c: any) => c.automatico) ? (
-              <div className="relative">
-                <img
-                  src={(form.croquis || []).find((c: any) => c.automatico)?.preview}
-                  alt="Mapa automático"
-                  className="w-full max-h-64 object-cover rounded-lg border border-blue-200"
-                />
-                {/* Pin sobreposto no centro — representa a coordenada */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="relative">
-                    <div className="w-6 h-6 rounded-full bg-red-600 border-2 border-white shadow-lg flex items-center justify-center">
-                      <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                    </div>
-                    <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-0 h-0"
-                      style={{ borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '7px solid #dc2626' }} />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-24 text-sm text-blue-500 bg-white rounded-lg border border-blue-200">
-                {gerandoCroqui
-                  ? 'Gerando mapa...'
-                  : 'Clique em "Atualizar mapa" ou em "Preencher dados" para gerar automaticamente.'}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Upload manual adicional */}
-        <p className="text-xs text-slate-400 mb-2">Imagens adicionais (opcional)</p>
         <input
           type="file"
           accept="image/*"
@@ -988,32 +907,28 @@ export default function Etapa01A06({
           onChange={handleCroqui}
           className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white text-slate-500 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 transition"
         />
+        <p className="text-xs text-slate-400 mt-2">Faça upload da foto ou imagem do croqui do imóvel.</p>
 
-        {/* Imagens manuais */}
-        {(form.croquis || []).filter((c: any) => !c.automatico).length > 0 && (
+        {form.croquis && form.croquis.length > 0 && (
           <div className="mt-3 space-y-4">
-            {(form.croquis || []).map((croqui: any, index: number) => (
-              !croqui.automatico && (
-                <div key={index} className="rounded-xl border border-slate-200 p-4 space-y-3 bg-slate-50">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-medium text-slate-700">Imagem {index + 1}</span>
-                    <button
-                      type="button"
-                      onClick={() => removerCroqui(index)}
-                      className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 transition font-medium"
-                    >
-                      Excluir imagem
-                    </button>
-                  </div>
-                  <div className="flex justify-center">
-                    <img
-                      src={croqui.preview}
-                      alt={`Croqui ${index + 1}`}
-                      className="w-full max-h-80 object-contain rounded-lg border border-slate-200"
-                    />
-                  </div>
+            {form.croquis.map((croqui: any, index: number) => (
+              <div key={`croqui-${index}`} className="rounded-xl border border-slate-200 p-4 space-y-3 bg-slate-50">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-slate-700">Imagem {index + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => removerCroqui(index)}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 transition font-medium"
+                  >
+                    Excluir
+                  </button>
                 </div>
-              )
+                <img
+                  src={croqui.preview}
+                  alt={`Croqui ${index + 1}`}
+                  className="w-full max-h-80 object-contain rounded-lg border border-slate-200"
+                />
+              </div>
             ))}
           </div>
         )}
