@@ -153,14 +153,6 @@ export default function Etapa01A06({
       const tileX = Math.floor((lngN + 180) / 360 * Math.pow(2, zoom))
       const tileY = Math.floor((1 - Math.log(Math.tan(latN * Math.PI / 180) + 1 / Math.cos(latN * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom))
 
-      // Posição exata da coordenada dentro do tile central (0–256px)
-      const fracX = ((lngN + 180) / 360 * Math.pow(2, zoom) - tileX) * size
-      const fracY = ((1 - Math.log(Math.tan(latN * Math.PI / 180) + 1 / Math.cos(latN * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom) - tileY) * size
-
-      // O tile central ocupa col=1, row=1 no canvas (offset de 1*size pixels)
-      const pinX = Math.round(1 * size + fracX)
-      const pinY = Math.round(1 * size + fracY)
-
       // Monta canvas 3x3 tiles (768x768px)
       const size = 256
       const cols = 3, rows = 3
@@ -168,6 +160,14 @@ export default function Etapa01A06({
       canvas.width = cols * size
       canvas.height = rows * size
       const ctx = canvas.getContext('2d')!
+
+      // Posição exata da coordenada dentro do tile central (0–256px)
+      const fracX = ((lngN + 180) / 360 * Math.pow(2, zoom) - tileX) * size
+      const fracY = ((1 - Math.log(Math.tan(latN * Math.PI / 180) + 1 / Math.cos(latN * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom) - tileY) * size
+
+      // O tile central ocupa col=1, row=1 no canvas (offset de 1*size pixels)
+      const pinX = Math.round(1 * size + fracX)
+      const pinY = Math.round(1 * size + fracY)
 
       // Carrega tiles satélite ESRI via proxy
       const tilePromises: Promise<void>[] = []
