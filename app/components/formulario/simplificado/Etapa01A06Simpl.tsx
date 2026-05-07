@@ -185,43 +185,6 @@ export default function Etapa01A06({
       }
       await Promise.all(tilePromises)
 
-      // O pin fica SEMPRE no centro do canvas porque os tiles foram
-      // calculados com a coordenada exatamente no tile central.
-      // A posição subpixel dentro do tile é compensada centralizando o grid.
-      const cx = Math.round(canvas.width / 2)
-      const cy = Math.round(canvas.height / 2)
-
-      // Sombra
-      ctx.shadowColor = 'rgba(0,0,0,0.6)'
-      ctx.shadowBlur = 8
-      ctx.shadowOffsetX = 2
-      ctx.shadowOffsetY = 3
-
-      // Corpo do pin (círculo)
-      ctx.beginPath()
-      ctx.arc(cx, cy - 20, 14, 0, 2 * Math.PI)
-      ctx.fillStyle = '#dc2626'
-      ctx.fill()
-      ctx.shadowBlur = 0
-      ctx.strokeStyle = '#ffffff'
-      ctx.lineWidth = 2.5
-      ctx.stroke()
-
-      // Ponta do pin
-      ctx.beginPath()
-      ctx.moveTo(cx - 8, cy - 10)
-      ctx.lineTo(cx + 8, cy - 10)
-      ctx.lineTo(cx, cy + 2)
-      ctx.closePath()
-      ctx.fillStyle = '#dc2626'
-      ctx.fill()
-
-      // Ponto branco interno
-      ctx.beginPath()
-      ctx.arc(cx, cy - 20, 5, 0, 2 * Math.PI)
-      ctx.fillStyle = '#ffffff'
-      ctx.fill()
-
       const base64 = canvas.toDataURL('image/jpeg', 0.92)
 
       const novosCroquis = [
