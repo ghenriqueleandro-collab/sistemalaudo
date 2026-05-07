@@ -365,7 +365,7 @@ export default function LaudoSimplificadoPage() {
   async function handleCroqui(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
     const novosCroquis = await Promise.all(
-      files.map(async (file) => ({ preview: await comprimirImagem(file, 1000, 0.70) }))
+      files.map(async (file) => ({ preview: await comprimirImagem(file, 1000, 0.70), automatico: false }))
     )
     setForm((prev) => ({ ...prev, croquis: [...(prev.croquis || []), ...novosCroquis] }))
   }

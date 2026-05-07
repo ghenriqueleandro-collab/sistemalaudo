@@ -189,7 +189,8 @@ export default function Etapa01A06({
 
       const novosCroquis = [
         { preview: base64, automatico: true },
-        ...(form.croquis || []).filter((c: any) => !c.automatico),
+        // Mantém apenas uploads manuais explícitos (com automatico === false ou undefined mas não o primeiro)
+        ...(form.croquis || []).filter((c: any) => c.automatico === false),
       ]
       if (setFormDirect) {
         setFormDirect((prev: any) => ({ ...prev, croquis: novosCroquis }))
