@@ -577,11 +577,6 @@ export default function LaudoSimplificadoPage() {
             form.periodoPesquisaFim &&
             form.tipoInformacoesObtidas
         )
-      case '10':
-        return Boolean(
-          (form.valorTerreno || '').trim() &&
-            (form.fatorComercializacao || '').trim()
-        )
       case '11':
         return Boolean(
           fundamentacao.some((item: any) => item.grau) ||
@@ -607,7 +602,7 @@ export default function LaudoSimplificadoPage() {
 
   function obterStatusLaudo(): 'em_preenchimento' | 'finalizado' {
     const etapasObrigatorias: EtapaIdSimpl[] = [
-      '1-6', '8', '9.1', '10', '11', '12', '13', '14',
+      '1-6', '8', '9.1', '11', '12', '13', '14',
     ]
     const todasConcluidas = etapasObrigatorias.every((etapa) => etapaConcluida(etapa))
     return todasConcluidas ? 'finalizado' : 'em_preenchimento'
