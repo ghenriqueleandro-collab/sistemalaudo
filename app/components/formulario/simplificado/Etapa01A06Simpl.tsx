@@ -114,6 +114,23 @@ export default function Etapa01A06({
   const fatores = fatoresCDDMAtivos ?? { local: true, padrao: true, foc: true, andar: true, vaga: true }
   const isFracao = tipoImovelCDDM === 'fracao'
 
+  // Hook para escutar Ctrl+V globalmente
+  function usePasteListener(onImage: (file: File) => void) {
+    useEffect(() => {
+      function handler(e: ClipboardEvent) {
+        if (!e.clipboardData) return
+        const items = Array.from(e.clipboardData.items)
+        const imageItem = items.find(item => item.type.startsWith('image/'))
+        if (!imageItem) return
+        const file = imageItem.getAsFile()
+        if (file) onImage(file)
+      }
+      window.addEventListener('paste', handler)
+      return () => window.removeEventListener('paste', handler)
+    }, [onImage])
+    return null
+  }
+
   // Toggle switch component inline
   const Toggle = ({ fator, label }: { fator: 'local' | 'padrao' | 'foc' | 'andar' | 'vaga'; label: string }) => (
     <div className="flex items-center gap-2">
@@ -900,32 +917,22 @@ export default function Etapa01A06({
 
       {/* ── Croqui / Imagem ───────────────────────────────────────────────────── */}
       <SectionCard title="Croqui / imagem do item 6">
-        {/* Área de upload e colar */}
-        <div
-          className="relative border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-blue-300 hover:bg-blue-50 transition cursor-pointer"
-          onPaste={(e) => {
-            const items = Array.from(e.clipboardData.items)
-            const imageItems = items.filter(item => item.type.startsWith('image/'))
-            if (imageItems.length === 0) return
-            e.preventDefault()
-            imageItems.forEach(item => {
-              const file = item.getAsFile()
-              if (!file) return
-              const reader = new FileReader()
-              reader.onload = () => {
-                const preview = reader.result as string
-                if (setFormDirect) {
-                  setFormDirect((prev: any) => ({
-                    ...prev,
-                    croquis: [...(prev.croquis || []), { preview, automatico: false }],
-                  }))
-                }
-              }
-              reader.readAsDataURL(file)
-            })
-          }}
-          tabIndex={0}
-        >
+        {/* Listener global de paste — captura Ctrl+V em qualquer lugar da página */}
+        {usePasteListener((file: File) => {
+          const reader = new FileReader()
+          reader.onload = () => {
+            const preview = reader.result as string
+            if (setFormDirect) {
+              setFormDirect((prev: any) => ({
+                ...prev,
+                croquis: [...(prev.croquis || []), { preview, automatico: false }],
+              }))
+            }
+          }
+          reader.readAsDataURL(file)
+        })}
+
+        <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-blue-300 hover:bg-blue-50 transition relative">
           <input
             type="file"
             accept="image/*"
@@ -933,9 +940,13 @@ export default function Etapa01A06({
             onChange={handleCroqui}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />
-          <div className="pointer-events-none">
-            <p className="text-sm font-medium text-slate-600 mb-1">Clique para selecionar ou <kbd className="px-1.5 py-0.5 text-xs bg-slate-100 border border-slate-300 rounded">Ctrl+V</kbd> para colar</p>
-            <p className="text-xs text-slate-400">Suporta PNG, JPG e qualquer imagem copiada</p>
+          <div className="pointer-events-none space-y-1">
+            <p className="text-sm font-medium text-slate-600">
+              Clique para selecionar arquivo
+            </p>
+            <p className="text-xs text-slate-400">
+              ou pressione <kbd className="px-1.5 py-0.5 text-xs bg-slate-100 border border-slate-300 rounded font-mono">Ctrl+V</kbd> para colar imagem do clipboard
+            </p>
           </div>
         </div>
 
