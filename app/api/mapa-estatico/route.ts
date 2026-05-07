@@ -20,8 +20,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ erro: 'GEOAPIFY_KEY não configurada' }, { status: 500 })
   }
 
-  const marker = `lonlat:${lng},${lat};type:material;color:%23ff0000;size:large`
-  const url = `https://maps.geoapify.com/v1/staticmap?style=satellite&width=600&height=400&center=lonlat:${lng},${lat}&zoom=18&marker=${encodeURIComponent(marker)}&apiKey=${apiKey}`
+  // Marker: lonlat:LNG,LAT — NÃO usar encodeURIComponent no marcador completo
+  // pois : e ; são separadores da API. Apenas # vira %23
+  const markerColor = '%23ff0000'
+  const url = `https://maps.geoapify.com/v1/staticmap?style=satellite&width=600&height=400&center=lonlat:${lng},${lat}&zoom=18&marker=lonlat:${lng},${lat};type:material;color:${markerColor};size:large&apiKey=${apiKey}`
 
   try {
     const res = await fetch(url)
