@@ -135,8 +135,8 @@ export default function Etapa01A06({
   const [msgCoords, setMsgCoords] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
   const [gerandoCroqui, setGerandoCroqui] = useState(false)
 
-  async function gerarCroquiAutomatico() {
-    const coords = (form.coordenadasImovel || '').trim()
+  async function gerarCroquiAutomatico(coordsOverride?: string) {
+    const coords = (coordsOverride || form.coordenadasImovel || '').trim()
     if (!coords) return
     const partes = coords.split(',').map((s: string) => s.trim())
     if (partes.length < 2) return
@@ -310,8 +310,8 @@ export default function Etapa01A06({
 
     setBuscandoCoords(false)
 
-    // Gera croqui automático após preencher dados
-    gerarCroquiAutomatico()
+    // Gera croqui automático após preencher dados — passa as coords direto para evitar estado stale
+    gerarCroquiAutomatico(raw)
   }
 
   return (
@@ -952,11 +952,23 @@ export default function Etapa01A06({
               </button>
             </div>
             {(form.croquis || []).find((c: any) => c.automatico) ? (
-              <img
-                src={(form.croquis || []).find((c: any) => c.automatico)?.preview}
-                alt="Mapa automático"
-                className="w-full max-h-64 object-cover rounded-lg border border-blue-200"
-              />
+              <div className="relative">
+                <img
+                  src={(form.croquis || []).find((c: any) => c.automatico)?.preview}
+                  alt="Mapa automático"
+                  className="w-full max-h-64 object-cover rounded-lg border border-blue-200"
+                />
+                {/* Pin sobreposto no centro — representa a coordenada */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="relative">
+                    <div className="w-6 h-6 rounded-full bg-red-600 border-2 border-white shadow-lg flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                    </div>
+                    <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-0 h-0"
+                      style={{ borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '7px solid #dc2626' }} />
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="flex items-center justify-center h-24 text-sm text-blue-500 bg-white rounded-lg border border-blue-200">
                 {gerandoCroqui
