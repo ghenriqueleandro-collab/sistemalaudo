@@ -161,14 +161,6 @@ export default function Etapa01A06({
       canvas.height = rows * size
       const ctx = canvas.getContext('2d')!
 
-      // Posição exata da coordenada dentro do tile central (0–256px)
-      const fracX = ((lngN + 180) / 360 * Math.pow(2, zoom) - tileX) * size
-      const fracY = ((1 - Math.log(Math.tan(latN * Math.PI / 180) + 1 / Math.cos(latN * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom) - tileY) * size
-
-      // O tile central ocupa col=1, row=1 no canvas (offset de 1*size pixels)
-      const pinX = Math.round(1 * size + fracX)
-      const pinY = Math.round(1 * size + fracY)
-
       // Carrega tiles satélite ESRI via proxy
       const tilePromises: Promise<void>[] = []
       for (let dy = -1; dy <= 1; dy++) {
@@ -193,30 +185,32 @@ export default function Etapa01A06({
       }
       await Promise.all(tilePromises)
 
-      // Pin vermelho na posição exata da coordenada
-      const cx = pinX
-      const cy = pinY
+      // O pin fica SEMPRE no centro do canvas porque os tiles foram
+      // calculados com a coordenada exatamente no tile central.
+      // A posição subpixel dentro do tile é compensada centralizando o grid.
+      const cx = Math.round(canvas.width / 2)
+      const cy = Math.round(canvas.height / 2)
 
-      // Sombra do pin
-      ctx.shadowColor = 'rgba(0,0,0,0.5)'
-      ctx.shadowBlur = 6
+      // Sombra
+      ctx.shadowColor = 'rgba(0,0,0,0.6)'
+      ctx.shadowBlur = 8
       ctx.shadowOffsetX = 2
-      ctx.shadowOffsetY = 2
+      ctx.shadowOffsetY = 3
 
       // Corpo do pin (círculo)
       ctx.beginPath()
       ctx.arc(cx, cy - 20, 14, 0, 2 * Math.PI)
       ctx.fillStyle = '#dc2626'
       ctx.fill()
+      ctx.shadowBlur = 0
       ctx.strokeStyle = '#ffffff'
       ctx.lineWidth = 2.5
       ctx.stroke()
 
-      // Ponta do pin (triângulo)
-      ctx.shadowBlur = 0
+      // Ponta do pin
       ctx.beginPath()
-      ctx.moveTo(cx - 7, cy - 10)
-      ctx.lineTo(cx + 7, cy - 10)
+      ctx.moveTo(cx - 8, cy - 10)
+      ctx.lineTo(cx + 8, cy - 10)
       ctx.lineTo(cx, cy + 2)
       ctx.closePath()
       ctx.fillStyle = '#dc2626'
