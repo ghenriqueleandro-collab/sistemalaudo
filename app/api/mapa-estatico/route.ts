@@ -72,17 +72,19 @@ export async function GET(req: NextRequest) {
   // string no formato "lonlat:LNG,LAT;prop1:val1;prop2:val2..."
   // Importante: separadores `:` e `;` NÃO devem ser URL-encoded; apenas o `#`
   // do hex de cor (que vira %23).
+  // Nota: usamos apenas props essenciais (type, color, icon/text, size) para
+  // evitar 400 Bad Request com atributos não suportados pela Geoapify.
   const markers: string[] = []
 
   // Avaliando — pin vermelho com ícone de casa, tamanho extra-grande
   markers.push(
-    `lonlat:${lng},${lat};type:material;color:%23dc2626;icon:home;iconcolor:%23ffffff;size:x-large`
+    `lonlat:${lng},${lat};type:material;color:%23dc2626;icon:home;size:x-large`
   )
 
   // Comparativos — pins azuis com número (1, 2, 3...), tamanho grande
   comparativos.forEach((p, i) => {
     markers.push(
-      `lonlat:${p.lng},${p.lat};type:material;color:%232563eb;contentsize:medium;text:${i + 1};textsize:medium;size:large`
+      `lonlat:${p.lng},${p.lat};type:material;color:%232563eb;text:${i + 1};size:large`
     )
   })
 
