@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ erro: 'GEOAPIFY_KEY não configurada' }, { status: 500 })
   }
 
-  const marker = `lonlat:${lng},${lat};type:material;color:%23dc2626;size:large;icon:home;icontype:awesome`
+  const marker = `lonlat:${lng},${lat};type:material;color:%23ff0000;size:large`
   const url = `https://maps.geoapify.com/v1/staticmap?style=satellite&width=600&height=400&center=lonlat:${lng},${lat}&zoom=18&marker=${encodeURIComponent(marker)}&apiKey=${apiKey}`
 
   try {
