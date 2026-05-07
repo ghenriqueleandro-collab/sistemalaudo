@@ -142,7 +142,7 @@ export default function LaudoSimplificadoPage() {
   const [formPronto, setFormPronto] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [laudoUuid, setLaudoUuid] = useState(() => crypto.randomUUID())
+  const [laudoUuid, setLaudoUuid] = useState('')
 
   // Sincroniza as divisões internas com a lista de acabamentos
   // preservando os valores já preenchidos pelo usuário
