@@ -894,7 +894,7 @@ export default function LaudoSimplificadoPage() {
           )}
 
           {etapaAtual === '9.1' && (
-            <EtapaCalculoCDDM form={form} fatoresCDDMAtivos={form.fatoresCDDMAtivos} />
+            <EtapaCalculoCDDM form={form} setForm={setForm} fatoresCDDMAtivos={form.fatoresCDDMAtivos} />
           )}
 
           {etapaAtual === '10' && (
@@ -947,6 +947,7 @@ export default function LaudoSimplificadoPage() {
           {etapaAtual === '14' && (
             <EtapaAnexosAssinaturaSimpl
               form={form}
+              setForm={setForm}
               handleChange={handleChange}
               formatarDataBR={formatarDataBR}
               handlePdfUpload={handlePdfUpload}

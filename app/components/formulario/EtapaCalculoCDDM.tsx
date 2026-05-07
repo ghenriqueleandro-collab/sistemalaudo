@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -557,14 +557,34 @@ type Props = {
   form: any
   fatoresCDDMAtivos?: { local: boolean; padrao: boolean; foc: boolean; andar: boolean; vaga: boolean }
   onSave?: (elementos: ElementoCDDM[], resultado: Resultado) => void
+  /**
+   * Opcional. Quando passado, os elementos comparativos são automaticamente
+   * persistidos em `form.elementosComparativos` para que outras etapas (ex:
+   * EtapaAnexosAssinaturaSimpl) possam ler as coordenadas e gerar o mapa.
+   */
+  setForm?: React.Dispatch<React.SetStateAction<any>>
 }
 
-export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Props) {
+export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setForm }: Props) {
   const fatores = fatoresCDDMAtivos ?? { local: true, padrao: true, foc: true, andar: true, vaga: true }
-  const [elementos, setElementos] = useState<ElementoCDDM[]>([
-    elemInicial(1), elemInicial(2), elemInicial(3),
-    elemInicial(4), elemInicial(5),
-  ])
+  // Inicialização lazy: se já existe elementosComparativos no form (ex: laudo
+  // recarregado do Redis), retoma de lá. Senão, começa com 5 vazios.
+  const [elementos, setElementos] = useState<ElementoCDDM[]>(() => {
+    const salvos = form?.elementosComparativos
+    if (Array.isArray(salvos) && salvos.length >= 3) {
+      return salvos as ElementoCDDM[]
+    }
+    return [
+      elemInicial(1), elemInicial(2), elemInicial(3),
+      elemInicial(4), elemInicial(5),
+    ]
+  })
+
+  // Sincroniza elementos -> form.elementosComparativos (para a seção 15 ler depois)
+  useEffect(() => {
+    if (!setForm) return
+    setForm((prev: any) => ({ ...prev, elementosComparativos: elementos }))
+  }, [elementos, setForm])
   const [abaAtiva, setAbaAtiva] = useState(0)
   const [mostrarCalculo, setMostrarCalculo] = useState<'cddm' | 'homog' | 'fund'>('cddm')
 

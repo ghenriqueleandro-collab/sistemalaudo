@@ -27,6 +27,12 @@ type Props = {
   handleLegenda: (index: number, valor: string) => void
   onRemoverFoto: (index: number) => void
   onReordenarFotos: (origem: number, destino: number) => void
+  /**
+   * Opcional. Quando passado, habilita o botão "Gerar mapa automaticamente"
+   * que monta o mapa com pin vermelho do avaliando + pins azuis numerados
+   * dos elementos comparativos e salva diretamente em form.localizacaoComparativos.
+   */
+  setForm?: React.Dispatch<React.SetStateAction<any>>
 }
 
 export default function EtapaAnexosAssinatura({
@@ -41,10 +47,13 @@ export default function EtapaAnexosAssinatura({
   handleLegenda,
   onRemoverFoto,
   onReordenarFotos,
+  setForm,
 }: Props) {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [fotoAmpliada, setFotoAmpliada] = useState<{ preview: string; legenda: string; index: number } | null>(null)
+  const [gerandoMapa, setGerandoMapa] = useState(false)
+  const [erroMapa, setErroMapa] = useState<string | null>(null)
 
   async function baixarFoto(preview: string, legenda: string, index: number) {
     try {
@@ -60,6 +69,76 @@ export default function EtapaAnexosAssinatura({
       URL.revokeObjectURL(url)
     } catch {
       alert('Não foi possível baixar a imagem. Tente abrir em nova aba.')
+    }
+  }
+
+  // ─── Geração automática do mapa de localização dos comparativos ─────────────
+  // Lê as coordenadas do avaliando (form.coordenadasImovel) e dos elementos
+  // comparativos (form.elementosComparativos[i].coordenadas), monta a query e
+  // chama /api/mapa-estatico. Salva o JPEG retornado em base64 no campo
+  // form.localizacaoComparativos — que é o mesmo lido pelo PDF/visualização.
+
+  function parseCoords(raw: string): { lat: number; lng: number } | null {
+    if (!raw) return null
+    const m = raw.trim().match(/(-?\d+[.,]?\d*)[,\s]+(-?\d+[.,]?\d*)/)
+    if (!m) return null
+    const lat = parseFloat(m[1].replace(',', '.'))
+    const lng = parseFloat(m[2].replace(',', '.'))
+    if (!isFinite(lat) || !isFinite(lng)) return null
+    return { lat, lng }
+  }
+
+  async function gerarMapaAutomatico() {
+    setErroMapa(null)
+    if (!setForm) {
+      setErroMapa('setForm não foi passado pelo parent. Adicione setForm={setForm} no <EtapaAnexosAssinaturaSimpl /> em page-simplificado.tsx.')
+      return
+    }
+
+    const aval = parseCoords(form?.coordenadasImovel || '')
+    if (!aval) {
+      setErroMapa('Coordenadas do imóvel avaliando não preenchidas (etapa 1 a 6).')
+      return
+    }
+
+    const elementos: any[] = Array.isArray(form?.elementosComparativos) ? form.elementosComparativos : []
+    const comparativos = elementos
+      .map(el => parseCoords(el?.coordenadas || ''))
+      .filter((c): c is { lat: number; lng: number } => c !== null)
+
+    if (comparativos.length === 0) {
+      setErroMapa('Nenhum comparativo com coordenadas válidas. Preencha o campo "Coordenadas" de pelo menos 1 elemento na etapa 10.')
+      return
+    }
+
+    setGerandoMapa(true)
+    try {
+      const compStr = comparativos.map(c => `${c.lat},${c.lng}`).join('|')
+      const url = `/api/mapa-estatico?lat=${aval.lat}&lng=${aval.lng}&comparativos=${encodeURIComponent(compStr)}`
+
+      const res = await fetch(url)
+      if (!res.ok) {
+        let detalhe = ''
+        try {
+          const j = await res.json()
+          detalhe = j?.detail || j?.error || ''
+        } catch {}
+        throw new Error(`Status ${res.status}${detalhe ? ' — ' + detalhe : ''}`)
+      }
+
+      const blob = await res.blob()
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader()
+        r.onload = () => resolve(r.result as string)
+        r.onerror = reject
+        r.readAsDataURL(blob)
+      })
+
+      setForm((prev: any) => ({ ...prev, localizacaoComparativos: base64 }))
+    } catch (err: any) {
+      setErroMapa(`Não foi possível gerar o mapa: ${err?.message || err}`)
+    } finally {
+      setGerandoMapa(false)
     }
   }
 
@@ -228,6 +307,44 @@ useEffect(() => {
           <label className="block font-medium mb-1">
             Localização dos comparativos
           </label>
+
+          {/* ── Botão de geração automática ── */}
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 mb-3">
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-blue-900 mb-0.5">
+                  Gerar mapa automaticamente
+                </p>
+                <p className="text-xs text-blue-700">
+                  Pin vermelho no avaliando, pins azuis numerados nos comparativos com coordenadas preenchidas.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={gerarMapaAutomatico}
+                disabled={gerandoMapa}
+                className="shrink-0 px-3 py-2 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition whitespace-nowrap"
+              >
+                {gerandoMapa ? (
+                  <span className="flex items-center gap-1.5">
+                    <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    Gerando…
+                  </span>
+                ) : (
+                  '🗺 Gerar mapa'
+                )}
+              </button>
+            </div>
+            {erroMapa && (
+              <p className="mt-2 text-xs rounded-lg bg-red-100 text-red-800 px-2.5 py-1.5">
+                ⚠️ {erroMapa}
+              </p>
+            )}
+          </div>
+
           <div
             className="border-2 border-dashed border-slate-200 rounded-xl p-5 text-center hover:border-blue-300 hover:bg-blue-50 transition relative"
             onPaste={(e) => {
@@ -253,9 +370,9 @@ useEffect(() => {
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
             <div className="pointer-events-none space-y-1">
-              <p className="text-sm font-medium text-slate-600">Clique para selecionar arquivo</p>
+              <p className="text-sm font-medium text-slate-600">Ou envie uma imagem manualmente</p>
               <p className="text-xs text-slate-400">
-                ou pressione <kbd className="px-1.5 py-0.5 text-xs bg-slate-100 border border-slate-300 rounded font-mono">Ctrl+V</kbd> para colar imagem
+                clique para selecionar ou pressione <kbd className="px-1.5 py-0.5 text-xs bg-slate-100 border border-slate-300 rounded font-mono">Ctrl+V</kbd> para colar
               </p>
             </div>
           </div>
