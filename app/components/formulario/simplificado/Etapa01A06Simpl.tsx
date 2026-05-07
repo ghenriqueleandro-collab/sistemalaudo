@@ -141,19 +141,15 @@ export default function Etapa01A06({
     const partes = coords.split(',').map((s: string) => s.trim())
     if (partes.length < 2) return
     const [lat, lng] = partes
+    if (!lat || !lng || isNaN(Number(lat)) || isNaN(Number(lng))) return
 
     setGerandoCroqui(true)
     try {
-      // Usa OpenStreetMap Static Maps (gratuito, sem API key)
-      const zoom = 16
-      const w = 600
-      const h = 400
-      const url = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=${zoom}&size=${w}x${h}&maptype=mapnik&markers=${lat},${lng},red-pushpin`
+      // Usa rota proxy interna para evitar CORS
+      const res = await fetch(`/api/mapa-estatico?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`)
+      if (!res.ok) throw new Error(`Status ${res.status}`)
 
-      const res = await fetch(url)
-      if (!res.ok) throw new Error('Falha ao buscar mapa')
       const blob = await res.blob()
-
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader()
         reader.onload = () => resolve(reader.result as string)
@@ -161,7 +157,7 @@ export default function Etapa01A06({
         reader.readAsDataURL(blob)
       })
 
-      // Adiciona como primeiro croqui (ou substitui o existente automático)
+      // Substitui o croqui automático, preserva uploads manuais
       const novosCroquis = [
         { preview: base64, automatico: true },
         ...(form.croquis || []).filter((c: any) => !c.automatico),
