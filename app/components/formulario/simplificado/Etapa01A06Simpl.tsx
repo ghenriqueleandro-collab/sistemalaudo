@@ -846,74 +846,6 @@ export default function Etapa01A06({
         </button>
       </SectionCard>
 
-      {/* ── Cidade de referência ──────────────────────────────────────────────── */}
-      <SectionCard title="Cidade de referência">
-        <div>
-          <FieldLabel>O imóvel precisa de cidade de referência?</FieldLabel>
-          <select
-            value={usarCidadeReferencia ? 'sim' : 'nao'}
-            onChange={(e) => setUsarCidadeReferencia(e.target.value === 'sim')}
-            className={selectCls()}
-          >
-            <option value="sim">Sim, adicionar cidade de referência</option>
-            <option value="nao">Não, o imóvel já está em uma cidade referência</option>
-          </select>
-        </div>
-
-        {usarCidadeReferencia && (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <FieldLabel>Cidade principal</FieldLabel>
-              <input
-                name="cidadePrincipal"
-                placeholder="Cidade principal"
-                value={form.cidadePrincipal}
-                onChange={handleChange}
-                className={inputCls()}
-              />
-            </div>
-
-            <div>
-              <FieldLabel>Distância até a cidade principal</FieldLabel>
-              <input
-                name="distanciaCidadePrincipal"
-                placeholder="Distância até a cidade principal"
-                value={form.distanciaCidadePrincipal}
-                onChange={handleChange}
-                className={inputCls()}
-              />
-            </div>
-          </div>
-        )}
-      </SectionCard>
-
-      {/* ── Pontos de referência ──────────────────────────────────────────────── */}
-      <SectionCard title="Pontos de referência">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <div key={n} className="grid grid-cols-2 gap-4">
-            <div>
-              <FieldLabel>Local de referência {n}</FieldLabel>
-              <input
-                name={`referencia${n}`}
-                placeholder={`Local de referência ${n}`}
-                value={form[`referencia${n}`] || ''}
-                onChange={handleChange}
-                className={inputCls()}
-              />
-            </div>
-            <div>
-              <FieldLabel>Distância da referência {n}</FieldLabel>
-              <input
-                name={`distancia${n}`}
-                placeholder={`Distância da referência ${n}`}
-                value={form[`distancia${n}`] || ''}
-                onChange={handleChange}
-                className={inputCls()}
-              />
-            </div>
-          </div>
-        ))}
-      </SectionCard>
 
       {/* ── Melhoramentos públicos — apenas laudo detalhado ──────────────────────── */}
       {tipoLaudo !== 'simplificado' && (
@@ -999,55 +931,6 @@ export default function Etapa01A06({
             ))}
           </div>
         )}
-      </SectionCard>
-
-      {/* ── Condições específicas do terreno ─────────────────────────────────── */}
-      <SectionCard title="Condições específicas do terreno">
-        <div className="space-y-2">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              name="terrenoEncravado"
-              checked={Boolean(form.terrenoEncravado)}
-              onChange={handleChange}
-              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-slate-700">Terreno encravado</span>
-          </label>
-
-          {form.terrenoEncravado && (
-            <textarea
-              name="observacoesTerrenoEncravado"
-              value={form.observacoesTerrenoEncravado || ''}
-              onChange={handleChange}
-              placeholder="Observações sobre o terreno encravado"
-              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition min-h-[100px]"
-            />
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              name="confrontacaoCursoAgua"
-              checked={Boolean(form.confrontacaoCursoAgua)}
-              onChange={handleChange}
-              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-slate-700">Confrontação com o curso d&apos;água</span>
-          </label>
-
-          {form.confrontacaoCursoAgua && (
-            <textarea
-              name="observacoesConfrontacaoCursoAgua"
-              value={form.observacoesConfrontacaoCursoAgua || ''}
-              onChange={handleChange}
-              placeholder="Observações sobre a confrontação com o curso d'água"
-              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition min-h-[100px]"
-            />
-          )}
-        </div>
       </SectionCard>
 
       {/* Espaço para a barra de navegação fixa não cobrir o último card */}

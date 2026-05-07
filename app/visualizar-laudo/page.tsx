@@ -1068,11 +1068,6 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
                       <tbody>
                         {dados.coordenadasImovel && <tr><TDL>Coordenadas</TDL><TDV>{dados.coordenadasImovel}</TDV></tr>}
-                        {dados.referencia1 && <tr><TDL>Ref. 1 ({dados.distancia1})</TDL><TDV>{dados.referencia1}</TDV></tr>}
-                        {dados.referencia2 && <tr><TDL>Ref. 2 ({dados.distancia2})</TDL><TDV>{dados.referencia2}</TDV></tr>}
-                        {dados.referencia3 && <tr><TDL>Ref. 3 ({dados.distancia3})</TDL><TDV>{dados.referencia3}</TDV></tr>}
-                        {dados.referencia4 && <tr><TDL>Ref. 4 ({dados.distancia4})</TDL><TDV>{dados.referencia4}</TDV></tr>}
-                        {dados.referencia5 && <tr><TDL>Ref. 5 ({dados.distancia5})</TDL><TDV>{dados.referencia5}</TDV></tr>}
                       </tbody>
                     </table>
 

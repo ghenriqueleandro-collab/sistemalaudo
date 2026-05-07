@@ -442,14 +442,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
           {/* 8 — Localização */}
           <SecHeader num="8" titulo="Localização" />
           <View style={s.table}>
-            {dados.coordenadasImovel && <Row label="Coordenadas" value={dados.coordenadasImovel} />}
-            {dados.referencia1 && <Row label={`Ref. 1 (${dados.distancia1||'-'})`} value={dados.referencia1} />}
-            {dados.referencia2 && <Row label={`Ref. 2 (${dados.distancia2||'-'})`} value={dados.referencia2} />}
-            {dados.referencia3 && <Row label={`Ref. 3 (${dados.distancia3||'-'})`} value={dados.referencia3} />}
-            {dados.referencia4 && <Row label={`Ref. 4 (${dados.distancia4||'-'})`} value={dados.referencia4} />}
-            {dados.referencia5
-              ? <Row label={`Ref. 5 (${dados.distancia5||'-'})`} value={dados.referencia5} last />
-              : null}
+            {dados.coordenadasImovel && <Row label="Coordenadas" value={dados.coordenadasImovel} last />}
           </View>
 
           {/* 9 — Pesquisa */}
