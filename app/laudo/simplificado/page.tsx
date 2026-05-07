@@ -8,7 +8,6 @@ import NavegacaoEtapasSimpl from '../../components/formulario/simplificado/Naveg
 import Etapa01A06Simpl from '../../components/formulario/simplificado/Etapa01A06Simpl'
 import EtapaConsideracoesMercadoSimpl from '../../components/formulario/simplificado/EtapaConsideracoesMercadoSimpl'
 import EtapaCalculoCDDM from '../../components/formulario/EtapaCalculoCDDM'
-import EtapaValorImovelSimpl from '../../components/formulario/simplificado/EtapaValorImovelSimpl'
 import EtapaFundamentacaoPrecisaoSimpl from '../../components/formulario/simplificado/EtapaFundamentacaoPrecisaoSimpl'
 import EtapaConclusaoSimpl from '../../components/formulario/simplificado/EtapaConclusaoSimpl'
 import EtapaGarantiaSimpl from '../../components/formulario/simplificado/EtapaGarantiaSimpl'
@@ -895,23 +894,6 @@ export default function LaudoSimplificadoPage() {
 
           {etapaAtual === '9.1' && (
             <EtapaCalculoCDDM form={form} setForm={setForm} fatoresCDDMAtivos={form.fatoresCDDMAtivos} />
-          )}
-
-          {etapaAtual === '10' && (
-            <EtapaValorImovelSimpl
-              form={form}
-              handleChange={handleChange}
-              outrosFatoresImovel={outrosFatoresImovel}
-              handleOutroFatorImovelChange={handleOutroFatorImovelChange}
-              adicionarLinhaOutroFatorImovel={adicionarLinhaOutroFatorImovel}
-              removerLinhaOutroFatorImovel={removerLinhaOutroFatorImovel}
-              subtotalImovel={subtotalImovel}
-              produtoOutrosFatores={produtoOutrosFatores}
-              valorFinalImovel={valorFinalImovel}
-              formatarMoeda={formatarMoeda}
-              modoValorImovel={form.modoValorImovel as 'separado' | 'total'}
-              onModoChange={(modo: 'separado' | 'total') => setForm((prev) => ({ ...prev, modoValorImovel: modo }))}
-            />
           )}
 
           {etapaAtual === '11' && (

@@ -558,17 +558,19 @@ type Props = {
   fatoresCDDMAtivos?: { local: boolean; padrao: boolean; foc: boolean; andar: boolean; vaga: boolean }
   onSave?: (elementos: ElementoCDDM[], resultado: Resultado) => void
   /**
-   * Opcional. Quando passado, os elementos comparativos são automaticamente
-   * persistidos em `form.elementosComparativos` para que outras etapas (ex:
-   * EtapaAnexosAssinaturaSimpl) possam ler as coordenadas e gerar o mapa.
+   * Opcional. Quando passado, sincroniza automaticamente:
+   *  - elementos comparativos -> form.elementosComparativos (para a etapa 14
+   *    gerar o mapa com pins)
+   *  - valor médio do CDDM -> form.valorTotal + modoValorImovel='total'
+   *    (substitui a antiga etapa "Valor do Imóvel")
+   *  - campo manual de liquidez forçada -> form.valorLiquidezForcada
    */
   setForm?: React.Dispatch<React.SetStateAction<any>>
 }
 
 export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setForm }: Props) {
   const fatores = fatoresCDDMAtivos ?? { local: true, padrao: true, foc: true, andar: true, vaga: true }
-  // Inicialização lazy: se já existe elementosComparativos no form (ex: laudo
-  // recarregado do Redis), retoma de lá. Senão, começa com 5 vazios.
+  // Inicialização lazy: retoma elementos do form se já existirem (laudo recarregado).
   const [elementos, setElementos] = useState<ElementoCDDM[]>(() => {
     const salvos = form?.elementosComparativos
     if (Array.isArray(salvos) && salvos.length >= 3) {
@@ -579,12 +581,6 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
       elemInicial(4), elemInicial(5),
     ]
   })
-
-  // Sincroniza elementos -> form.elementosComparativos (para a seção 15 ler depois)
-  useEffect(() => {
-    if (!setForm) return
-    setForm((prev: any) => ({ ...prev, elementosComparativos: elementos }))
-  }, [elementos, setForm])
   const [abaAtiva, setAbaAtiva] = useState(0)
   const [mostrarCalculo, setMostrarCalculo] = useState<'cddm' | 'homog' | 'fund'>('cddm')
 
@@ -604,6 +600,33 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
     () => calcularResultado(elementos, avaliando, fatores),
     [elementos, avaliando, fatores]
   )
+
+  // Sincroniza elementos -> form.elementosComparativos (para a seção 15 ler depois)
+  useEffect(() => {
+    if (!setForm) return
+    setForm((prev: any) => ({ ...prev, elementosComparativos: elementos }))
+  }, [elementos, setForm])
+
+  // Sincroniza valor médio do CDDM -> form.valorTotal (substitui a antiga
+  // etapa "Valor do Imóvel"). Só sincroniza se houver resultado válido,
+  // preservando dados de laudos antigos onde o usuário pode ter digitado
+  // valores manualmente.
+  useEffect(() => {
+    if (!setForm) return
+    const vu = resultado.mediaSaneada
+    const area = pn(avaliando.area)
+    if (vu > 0 && area > 0) {
+      const valorMedio = vu * area
+      setForm((prev: any) => ({
+        ...prev,
+        valorTotal: valorMedio.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        modoValorImovel: 'total',
+      }))
+    }
+  }, [resultado.mediaSaneada, avaliando.area, setForm])
 
   function updateElem(idx: number, campo: keyof ElementoCDDM, val: string) {
     setElementos(prev => prev.map((e, i) => i === idx ? { ...e, [campo]: val } : e))
@@ -1336,6 +1359,49 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
                       <p className="text-lg font-semibold text-white">{fmtMoeda(resultado.mediaSaneada)}/m²</p>
                     </div>
                   </div>
+                </div>
+
+                {/* Liquidez forçada — entrada manual com sugestão de 75% */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Valor de liquidez forçada</p>
+                      <p className="text-xs text-slate-500">
+                        Valor estimado de venda em condições de pressa (geralmente 60% a 75% do valor de mercado).
+                      </p>
+                    </div>
+                    {(() => {
+                      const valorMedio = resultado.mediaSaneada * pn(avaliando.area)
+                      const sugestao = valorMedio * 0.75
+                      if (sugestao <= 0) return null
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!setForm) return
+                            setForm((prev: any) => ({
+                              ...prev,
+                              valorLiquidezForcada: sugestao.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                            }))
+                          }}
+                          className="shrink-0 px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition whitespace-nowrap"
+                          title={`Aplica 75% de ${fmtMoeda(valorMedio)}`}
+                        >
+                          Sugerir 75%: {fmtMoeda(sugestao)}
+                        </button>
+                      )
+                    })()}
+                  </div>
+                  <input
+                    type="text"
+                    value={form?.valorLiquidezForcada || ''}
+                    onChange={(e) => {
+                      if (!setForm) return
+                      setForm((prev: any) => ({ ...prev, valorLiquidezForcada: e.target.value }))
+                    }}
+                    placeholder="Ex: 750.000,00"
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition"
+                  />
                 </div>
 
                 {/* Gráfico Resíduos Relativos */}

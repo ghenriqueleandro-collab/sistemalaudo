@@ -488,20 +488,6 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
               </View>
             )}
           </View>
-          <View style={s.table}>
-            <View style={s.row}>
-              <View style={[s.cellLbl,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Valor do terreno</Text></View>
-              <View style={[s.cellVal,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{valorTerreno>0?fm(valorTerreno):'-'}</Text></View>
-              <View style={[s.cellLbl,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Valor das benfeitorias</Text></View>
-              <View style={[s.cellVal,{flex:1.5}]}><Text>{valorBenfeits>0?fm(valorBenfeits):'-'}</Text></View>
-            </View>
-            <View style={s.rowLast}>
-              <View style={[s.cellLbl,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Fator de comercialização</Text></View>
-              <View style={[s.cellVal,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{dados.fatorComercializacao||'1,00'}</Text></View>
-              <View style={[s.cellLbl,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Valor arredondado</Text></View>
-              <View style={[s.cellVal,{flex:1.5}]}><Text style={{fontFamily:'Helvetica-Bold',color:AZUL}}>{fm(vlFinal)}</Text></View>
-            </View>
-          </View>
 
           {/* Graus */}
           <SecHeader num={secGraus} titulo="Grau de Fundamentação e Precisão" />
