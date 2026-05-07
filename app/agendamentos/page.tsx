@@ -470,8 +470,49 @@ export default function AgendamentosPage() {
                     placeholder="Proprietário" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
                   <input value={novoLaudo.solicitante} onChange={(e) => setNovoLaudoField('solicitante', e.target.value)}
                     placeholder="Solicitante" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
-                  <input value={novoLaudo.tipo} onChange={(e) => setNovoLaudoField('tipo', e.target.value)}
-                    placeholder="Tipo do imóvel" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
+                  <select value={novoLaudo.tipo} onChange={(e) => setNovoLaudoField('tipo', e.target.value)}
+                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400">
+                    <option value="">Tipo do imóvel</option>
+                    <optgroup label="Residencial">
+                      <option>Apartamento</option>
+                      <option>Casa</option>
+                      <option>Sobrado</option>
+                      <option>Cobertura</option>
+                      <option>Kitnet / Studio</option>
+                      <option>Flat</option>
+                      <option>Terreno residencial</option>
+                      <option>Sítio / Chácara</option>
+                      <option>Fazenda</option>
+                    </optgroup>
+                    <optgroup label="Comercial">
+                      <option>Sala comercial</option>
+                      <option>Loja comercial</option>
+                      <option>Conjunto comercial</option>
+                      <option>Ponto comercial</option>
+                      <option>Escritório</option>
+                      <option>Hotel / Pousada</option>
+                      <option>Motel</option>
+                      <option>Restaurante / Lanchonete</option>
+                      <option>Posto de combustíveis</option>
+                    </optgroup>
+                    <optgroup label="Industrial / Logístico">
+                      <option>Galpão industrial</option>
+                      <option>Galpão logístico</option>
+                      <option>Indústria</option>
+                      <option>Depósito / Armazém</option>
+                      <option>Centro de distribuição</option>
+                    </optgroup>
+                    <optgroup label="Especial">
+                      <option>Hospital / Clínica</option>
+                      <option>Escola / Creche</option>
+                      <option>Igreja / Templo</option>
+                      <option>Posto de saúde</option>
+                      <option>Edifício de uso misto</option>
+                      <option>Estacionamento</option>
+                      <option>Terreno comercial</option>
+                      <option>Terreno industrial</option>
+                    </optgroup>
+                  </select>
                   <input value={novoLaudo.finalidade} onChange={(e) => setNovoLaudoField('finalidade', e.target.value)}
                     placeholder="Finalidade" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
                   <input value={novoLaudo.matricula} onChange={(e) => setNovoLaudoField('matricula', e.target.value)}

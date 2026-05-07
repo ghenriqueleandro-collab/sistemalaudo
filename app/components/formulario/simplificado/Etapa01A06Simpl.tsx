@@ -422,13 +422,67 @@ export default function Etapa01A06({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <FieldLabel>Tipo do imóvel</FieldLabel>
-            <input
+            <select
               name="tipo"
-              placeholder="Tipo do imóvel"
               value={form.tipo}
               onChange={handleChange}
-              className={inputCls()}
-            />
+              className={selectCls()}
+            >
+              <option value="">Selecione o tipo</option>
+              <optgroup label="Residencial">
+                <option>Apartamento</option>
+                <option>Casa</option>
+                <option>Sobrado</option>
+                <option>Cobertura</option>
+                <option>Kitnet / Studio</option>
+                <option>Flat</option>
+                <option>Terreno residencial</option>
+                <option>Sítio / Chácara</option>
+                <option>Fazenda</option>
+              </optgroup>
+              <optgroup label="Comercial">
+                <option>Sala comercial</option>
+                <option>Loja comercial</option>
+                <option>Conjunto comercial</option>
+                <option>Ponto comercial</option>
+                <option>Escritório</option>
+                <option>Hotel / Pousada</option>
+                <option>Motel</option>
+                <option>Restaurante / Lanchonete</option>
+                <option>Posto de combustíveis</option>
+              </optgroup>
+              <optgroup label="Industrial / Logístico">
+                <option>Galpão industrial</option>
+                <option>Galpão logístico</option>
+                <option>Indústria</option>
+                <option>Depósito / Armazém</option>
+                <option>Centro de distribuição</option>
+              </optgroup>
+              <optgroup label="Especial">
+                <option>Hospital / Clínica</option>
+                <option>Escola / Creche</option>
+                <option>Igreja / Templo</option>
+                <option>Posto de saúde</option>
+                <option>Edifício de uso misto</option>
+                <option>Estacionamento</option>
+                <option>Terreno comercial</option>
+                <option>Terreno industrial</option>
+              </optgroup>
+            </select>
+            {form.tipo && !['Apartamento','Casa','Sobrado','Cobertura','Kitnet / Studio','Flat',
+              'Terreno residencial','Sítio / Chácara','Fazenda','Sala comercial','Loja comercial',
+              'Conjunto comercial','Ponto comercial','Escritório','Hotel / Pousada','Motel',
+              'Restaurante / Lanchonete','Posto de combustíveis','Galpão industrial','Galpão logístico',
+              'Indústria','Depósito / Armazém','Centro de distribuição','Hospital / Clínica',
+              'Escola / Creche','Igreja / Templo','Posto de saúde','Edifício de uso misto',
+              'Estacionamento','Terreno comercial','Terreno industrial'].includes(form.tipo) && (
+              <input name="tipo" value={form.tipo} onChange={handleChange}
+                placeholder="Tipo personalizado" className={`${inputCls()} mt-2`} />
+            )}
+            {form.tipo === '' && (
+              <input name="tipo" value={form.tipo} onChange={handleChange}
+                placeholder="Ou digite um tipo personalizado" className={`${inputCls()} mt-2`} />
+            )}
           </div>
 
           <div>
