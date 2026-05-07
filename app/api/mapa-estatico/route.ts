@@ -1,45 +1,47 @@
 /**
  * SALVAR EM: src/app/api/mapa-estatico/route.ts
  *
- * Proxy server-side para buscar imagem do OpenStreetMap Static Maps.
- * Evita erro de CORS ao fazer fetch do browser diretamente.
+ * Proxy server-side para tiles do OpenStreetMap.
+ * Evita CORS ao buscar imagens de mapa no browser.
  *
- * Uso: GET /api/mapa-estatico?lat=-23.55&lng=-46.63
+ * Modo tile: GET /api/mapa-estatico?tile=1&z=16&x=37123&y=23456
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(req: NextRequest) {
-  const lat = req.nextUrl.searchParams.get('lat')
-  const lng = req.nextUrl.searchParams.get('lng')
+  const z = req.nextUrl.searchParams.get('z')
+  const x = req.nextUrl.searchParams.get('x')
+  const y = req.nextUrl.searchParams.get('y')
 
-  if (!lat || !lng) {
-    return NextResponse.json({ erro: 'lat e lng são obrigatórios' }, { status: 400 })
+  if (!z || !x || !y) {
+    return NextResponse.json({ erro: 'z, x, y obrigatórios' }, { status: 400 })
   }
 
-  const url = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=16&size=600x400&maptype=mapnik&markers=${lat},${lng},red-pushpin`
+  // Alterna entre subdomínios a/b/c para não sobrecarregar um único servidor
+  const sub = ['a', 'b', 'c'][parseInt(x) % 3]
+  const url = `https://${sub}.tile.openstreetmap.org/${z}/${x}/${y}.png`
 
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Lesath-Engenharia/1.0' },
+      headers: {
+        'User-Agent': 'Lesath-Engenharia/1.0 (sistema interno de avaliacao imobiliaria)',
+        'Accept': 'image/png',
+      },
     })
 
-    if (!res.ok) {
-      return NextResponse.json({ erro: 'Falha ao buscar mapa' }, { status: 502 })
-    }
+    if (!res.ok) return new NextResponse(null, { status: res.status })
 
     const buffer = await res.arrayBuffer()
-    const contentType = res.headers.get('content-type') || 'image/png'
-
     return new NextResponse(buffer, {
       status: 200,
       headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=3600',
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=86400',
       },
     })
   } catch (err) {
-    console.error('Erro ao buscar mapa:', err)
-    return NextResponse.json({ erro: 'Erro interno' }, { status: 500 })
+    console.error('Erro ao buscar tile OSM:', err)
+    return new NextResponse(null, { status: 502 })
   }
 }
