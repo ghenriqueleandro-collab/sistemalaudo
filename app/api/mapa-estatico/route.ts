@@ -1,10 +1,8 @@
 /**
  * SALVAR EM: src/app/api/mapa-estatico/route.ts
  *
- * Proxy server-side para tiles do OpenStreetMap.
- * Evita CORS ao buscar imagens de mapa no browser.
- *
- * Modo tile: GET /api/mapa-estatico?tile=1&z=16&x=37123&y=23456
+ * Proxy para tiles ESRI World Imagery (satélite, gratuito, sem API key).
+ * URL: /api/mapa-estatico?z=18&x=123&y=456
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -18,30 +16,33 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ erro: 'z, x, y obrigatórios' }, { status: 400 })
   }
 
-  // Alterna entre subdomínios a/b/c para não sobrecarregar um único servidor
-  const sub = ['a', 'b', 'c'][parseInt(x) % 3]
-  const url = `https://${sub}.tile.openstreetmap.org/${z}/${x}/${y}.png`
+  // ESRI World Imagery — satélite gratuito, sem API key
+  // Nota: o formato de URL do ESRI é {z}/{y}/{x} (y antes de x)
+  const url = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`
 
   try {
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'Lesath-Engenharia/1.0 (sistema interno de avaliacao imobiliaria)',
-        'Accept': 'image/png',
+        'User-Agent': 'Lesath-Engenharia/1.0',
+        'Accept': 'image/jpeg,image/png,image/*',
+        'Referer': 'https://www.arcgis.com/',
       },
     })
 
     if (!res.ok) return new NextResponse(null, { status: res.status })
 
     const buffer = await res.arrayBuffer()
+    const contentType = res.headers.get('content-type') || 'image/jpeg'
+
     return new NextResponse(buffer, {
       status: 200,
       headers: {
-        'Content-Type': 'image/png',
+        'Content-Type': contentType,
         'Cache-Control': 'public, max-age=86400',
       },
     })
   } catch (err) {
-    console.error('Erro ao buscar tile OSM:', err)
+    console.error('Erro ao buscar tile satélite:', err)
     return new NextResponse(null, { status: 502 })
   }
 }

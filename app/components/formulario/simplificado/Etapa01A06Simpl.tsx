@@ -145,17 +145,15 @@ export default function Etapa01A06({
 
     setGerandoCroqui(true)
     try {
-      // Renderiza mapa via iframe do OpenStreetMap usando tiles públicos
-      // Converte o embed OSM para imagem capturando o tile PNG via proxy
       const latN = Number(lat)
       const lngN = Number(lng)
-      const zoom = 16
+      const zoom = 18  // zoom alto para satélite detalhado
 
-      // Calcula tile x,y para o zoom dado
+      // Calcula tile central
       const tileX = Math.floor((lngN + 180) / 360 * Math.pow(2, zoom))
       const tileY = Math.floor((1 - Math.log(Math.tan(latN * Math.PI / 180) + 1 / Math.cos(latN * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom))
 
-      // Busca 3x3 tiles para ter contexto
+      // Monta canvas 3x3 tiles (768x768px)
       const size = 256
       const cols = 3, rows = 3
       const canvas = document.createElement('canvas')
@@ -163,7 +161,7 @@ export default function Etapa01A06({
       canvas.height = rows * size
       const ctx = canvas.getContext('2d')!
 
-      // Carrega tiles via proxy
+      // Carrega tiles satélite ESRI via proxy
       const tilePromises: Promise<void>[] = []
       for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
@@ -171,7 +169,6 @@ export default function Etapa01A06({
           const ty = tileY + dy
           const col = dx + 1
           const row = dy + 1
-          const tileUrl = `/api/mapa-estatico?tile=1&z=${zoom}&x=${tx}&y=${ty}`
           tilePromises.push(
             new Promise<void>((resolve) => {
               const img = new window.Image()
@@ -180,39 +177,50 @@ export default function Etapa01A06({
                 ctx.drawImage(img, col * size, row * size, size, size)
                 resolve()
               }
-              img.onerror = () => resolve() // ignora tile com erro
-              img.src = tileUrl
+              img.onerror = () => resolve()
+              img.src = `/api/mapa-estatico?z=${zoom}&x=${tx}&y=${ty}`
             })
           )
         }
       }
       await Promise.all(tilePromises)
 
-      // Desenha marcador (círculo vermelho) no centro
+      // Pin vermelho no centro
       const cx = canvas.width / 2
       const cy = canvas.height / 2
+
+      // Sombra do pin
+      ctx.shadowColor = 'rgba(0,0,0,0.5)'
+      ctx.shadowBlur = 6
+      ctx.shadowOffsetX = 2
+      ctx.shadowOffsetY = 2
+
+      // Corpo do pin (círculo)
       ctx.beginPath()
-      ctx.arc(cx, cy - 16, 12, 0, 2 * Math.PI)
+      ctx.arc(cx, cy - 20, 14, 0, 2 * Math.PI)
       ctx.fillStyle = '#dc2626'
       ctx.fill()
       ctx.strokeStyle = '#ffffff'
-      ctx.lineWidth = 2
+      ctx.lineWidth = 2.5
       ctx.stroke()
-      // Sombra da ponta do pin
+
+      // Ponta do pin (triângulo)
+      ctx.shadowBlur = 0
       ctx.beginPath()
-      ctx.moveTo(cx - 6, cy - 8)
-      ctx.lineTo(cx + 6, cy - 8)
-      ctx.lineTo(cx, cy)
+      ctx.moveTo(cx - 7, cy - 10)
+      ctx.lineTo(cx + 7, cy - 10)
+      ctx.lineTo(cx, cy + 2)
       ctx.closePath()
       ctx.fillStyle = '#dc2626'
       ctx.fill()
+
       // Ponto branco interno
       ctx.beginPath()
-      ctx.arc(cx, cy - 16, 4, 0, 2 * Math.PI)
+      ctx.arc(cx, cy - 20, 5, 0, 2 * Math.PI)
       ctx.fillStyle = '#ffffff'
       ctx.fill()
 
-      const base64 = canvas.toDataURL('image/png')
+      const base64 = canvas.toDataURL('image/jpeg', 0.92)
 
       const novosCroquis = [
         { preview: base64, automatico: true },
