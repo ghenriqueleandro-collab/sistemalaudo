@@ -900,14 +900,44 @@ export default function Etapa01A06({
 
       {/* ── Croqui / Imagem ───────────────────────────────────────────────────── */}
       <SectionCard title="Croqui / imagem do item 6">
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handleCroqui}
-          className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white text-slate-500 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 transition"
-        />
-        <p className="text-xs text-slate-400 mt-2">Faça upload da foto ou imagem do croqui do imóvel.</p>
+        {/* Área de upload e colar */}
+        <div
+          className="relative border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-blue-300 hover:bg-blue-50 transition cursor-pointer"
+          onPaste={(e) => {
+            const items = Array.from(e.clipboardData.items)
+            const imageItems = items.filter(item => item.type.startsWith('image/'))
+            if (imageItems.length === 0) return
+            e.preventDefault()
+            imageItems.forEach(item => {
+              const file = item.getAsFile()
+              if (!file) return
+              const reader = new FileReader()
+              reader.onload = () => {
+                const preview = reader.result as string
+                if (setFormDirect) {
+                  setFormDirect((prev: any) => ({
+                    ...prev,
+                    croquis: [...(prev.croquis || []), { preview, automatico: false }],
+                  }))
+                }
+              }
+              reader.readAsDataURL(file)
+            })
+          }}
+          tabIndex={0}
+        >
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleCroqui}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          />
+          <div className="pointer-events-none">
+            <p className="text-sm font-medium text-slate-600 mb-1">Clique para selecionar ou <kbd className="px-1.5 py-0.5 text-xs bg-slate-100 border border-slate-300 rounded">Ctrl+V</kbd> para colar</p>
+            <p className="text-xs text-slate-400">Suporta PNG, JPG e qualquer imagem copiada</p>
+          </div>
+        </div>
 
         {form.croquis && form.croquis.length > 0 && (
           <div className="mt-3 space-y-4">
