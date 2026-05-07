@@ -944,7 +944,7 @@ export default function Etapa01A06({
               <span className="text-xs font-semibold text-blue-800">📍 Mapa automático — baseado nas coordenadas</span>
               <button
                 type="button"
-                onClick={gerarCroquiAutomatico}
+                onClick={() => gerarCroquiAutomatico()}
                 disabled={gerandoCroqui}
                 className="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition font-medium"
               >
