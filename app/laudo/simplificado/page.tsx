@@ -8,7 +8,6 @@ import NavegacaoEtapasSimpl from '../../components/formulario/simplificado/Naveg
 import Etapa01A06Simpl from '../../components/formulario/simplificado/Etapa01A06Simpl'
 import EtapaConsideracoesMercadoSimpl from '../../components/formulario/simplificado/EtapaConsideracoesMercadoSimpl'
 import EtapaCalculoCDDM from '../../components/formulario/EtapaCalculoCDDM'
-import EtapaCalculoBenfeitoriasSimpl from '../../components/formulario/simplificado/EtapaCalculoBenfeitoriasSimpl'
 import EtapaValorImovelSimpl from '../../components/formulario/simplificado/EtapaValorImovelSimpl'
 import EtapaFundamentacaoPrecisaoSimpl from '../../components/formulario/simplificado/EtapaFundamentacaoPrecisaoSimpl'
 import EtapaConclusaoSimpl from '../../components/formulario/simplificado/EtapaConclusaoSimpl'
@@ -579,8 +578,6 @@ export default function LaudoSimplificadoPage() {
             form.periodoPesquisaFim &&
             form.tipoInformacoesObtidas
         )
-      case '9.2':
-        return Boolean(form.imagemBenfeitorias)
       case '10':
         return Boolean(
           (form.valorTerreno || '').trim() &&
@@ -611,7 +608,7 @@ export default function LaudoSimplificadoPage() {
 
   function obterStatusLaudo(): 'em_preenchimento' | 'finalizado' {
     const etapasObrigatorias: EtapaIdSimpl[] = [
-      '1-6', '8', '9.1', '9.2', '10', '11', '12', '13', '14',
+      '1-6', '8', '9.1', '10', '11', '12', '13', '14',
     ]
     const todasConcluidas = etapasObrigatorias.every((etapa) => etapaConcluida(etapa))
     return todasConcluidas ? 'finalizado' : 'em_preenchimento'
@@ -898,13 +895,6 @@ export default function LaudoSimplificadoPage() {
 
           {etapaAtual === '9.1' && (
             <EtapaCalculoCDDM form={form} fatoresCDDMAtivos={form.fatoresCDDMAtivos} />
-          )}
-
-          {etapaAtual === '9.2' && (
-            <EtapaCalculoBenfeitoriasSimpl
-              form={form}
-              handleImagemBenfeitorias={handleImagemBenfeitorias}
-            />
           )}
 
           {etapaAtual === '10' && (
