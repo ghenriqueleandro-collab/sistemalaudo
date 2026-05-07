@@ -18,10 +18,10 @@ type Props = {
   formatarDataBR: (data: string) => string
   handlePdfUpload: (
     e: React.ChangeEvent<HTMLInputElement>,
-    campo: 'documentacaoPdf' | 'calculoPdf'
+    campo: 'documentacaoPdf'
   ) => void
   handleLocalizacaoComparativos: (e: React.ChangeEvent<HTMLInputElement>) => void
-  onRemoverAnexo: (campo: 'documentacaoPdf' | 'calculoPdf' | 'localizacaoComparativos') => void
+  onRemoverAnexo: (campo: 'documentacaoPdf' | 'localizacaoComparativos') => void
   handleFotos: (e: React.ChangeEvent<HTMLInputElement>) => void
   fotos: FotoItem[]
   handleLegenda: (index: number, valor: string) => void
@@ -228,34 +228,47 @@ useEffect(() => {
           <label className="block font-medium mb-1">
             Localização dos comparativos
           </label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleLocalizacaoComparativos}
-            className="w-full border p-2 rounded"
-          />
-          {form.localizacaoComparativos && (
-            <div className="mt-1.5 flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-              <span>✓</span>
-              <span className="font-medium">Imagem enviada</span>
+          <div
+            className="border-2 border-dashed border-slate-200 rounded-xl p-5 text-center hover:border-blue-300 hover:bg-blue-50 transition relative"
+            onPaste={(e) => {
+              const items = Array.from(e.clipboardData.items)
+              const imageItem = items.find(item => item.type.startsWith('image/'))
+              if (!imageItem) return
+              e.preventDefault()
+              const file = imageItem.getAsFile()
+              if (!file) return
+              const reader = new FileReader()
+              reader.onload = () => {
+                const fakeEvent = { target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>
+                handleLocalizacaoComparativos(fakeEvent)
+              }
+              reader.readAsDataURL(file)
+            }}
+            tabIndex={0}
+          >
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleLocalizacaoComparativos}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            />
+            <div className="pointer-events-none space-y-1">
+              <p className="text-sm font-medium text-slate-600">Clique para selecionar arquivo</p>
+              <p className="text-xs text-slate-400">
+                ou pressione <kbd className="px-1.5 py-0.5 text-xs bg-slate-100 border border-slate-300 rounded font-mono">Ctrl+V</kbd> para colar imagem
+              </p>
             </div>
-          )}
-        </div>
-
-        <div>
-          <label className="block font-medium mb-1">Cálculos em PDF</label>
-          <input
-            type="file"
-            accept="application/pdf"
-            onChange={(e) => handlePdfUpload(e, 'calculoPdf')}
-            className="w-full border p-2 rounded"
-          />
-          {form.calculoPdf && (
-            <div className="mt-1.5 flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-              <span>✓</span>
-              <span className="font-medium">Arquivo enviado</span>
-              <button type="button" onClick={() => onRemoverAnexo('calculoPdf')}
-                className="ml-auto text-xs text-slate-500 hover:text-red-600">Remover</button>
+          </div>
+          {form.localizacaoComparativos && (
+            <div className="mt-2 space-y-2">
+              <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                <span>✓</span>
+                <span className="font-medium">Imagem enviada</span>
+                <button type="button" onClick={() => onRemoverAnexo('localizacaoComparativos')}
+                  className="ml-auto text-xs text-slate-500 hover:text-red-600">Remover</button>
+              </div>
+              <img src={form.localizacaoComparativos} alt="Localização dos comparativos"
+                className="w-full max-h-64 object-contain rounded-xl border border-slate-200" />
             </div>
           )}
         </div>
