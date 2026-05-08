@@ -1139,12 +1139,20 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                       const valorLiq = el.valorOferta > 0 && el.fatorOferta
                         ? formatarMoeda(el.valorOferta * (parseFloat(String(el.fatorOferta).replace(',', '.')) || 1))
                         : valorOf
-                      const labelStyle: React.CSSProperties = { background: '#EAF0FB', padding: '2.5px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', borderRight: '0.5px solid #C9D3E6', whiteSpace: 'nowrap' }
-                      const valStyle: React.CSSProperties = { padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', borderRight: '0.5px solid #C9D3E6' }
-                      const valLast: React.CSSProperties = { padding: '2.5px 5px', fontSize: '7px', color: '#1e293b' }
+                      // Estilos exatamente iguais ao PDF
+                      const L: React.CSSProperties = {
+                        background: '#EAF0FB', padding: '2.5px 5px', fontSize: '7px',
+                        fontWeight: 700, color: '#17325C', borderRight: '0.5px solid #C9D3E6',
+                        whiteSpace: 'nowrap', width: '11%',
+                      }
+                      const V: React.CSSProperties = {
+                        padding: '2.5px 5px', fontSize: '7px', color: '#1e293b',
+                        borderRight: '0.5px solid #C9D3E6',
+                      }
+                      const VL: React.CSSProperties = { padding: '2.5px 5px', fontSize: '7px', color: '#1e293b' }
+                      const brd: React.CSSProperties = { borderTop: '0.5px solid #C9D3E6' }
                       return (
                         <div key={`elem-${i}`} style={{ marginBottom: '5px', breakInside: 'avoid' }}>
-                          {/* Header */}
                           <div style={{ background: '#2347C6', padding: '3px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '8px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
                               ELEMENTO COMPARATIVO {String(i + 1).padStart(2, '0')}
@@ -1153,93 +1161,90 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                               {el.data ? formatarDataBR(el.data) : ''}{el.fonte ? ` • ${el.fonte}` : ''}
                             </span>
                           </div>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', borderTop: 'none' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', borderTop: 'none', tableLayout: 'fixed' }}>
                             <tbody>
                               {/* Tipo / Empreendimento */}
                               <tr>
-                                <td style={{ ...labelStyle, width: '12%' }}>Tipo</td>
-                                <td style={{ ...valStyle, width: '38%' }}>{el.tipo || '—'}</td>
-                                <td style={{ ...labelStyle, width: '12%' }}>Empreendimento</td>
-                                <td style={valLast}>{el.empreendimento || '—'}</td>
+                                <td style={{ ...L, width: '11%' }}>Tipo</td>
+                                <td style={{ ...V, width: '39%' }}>{el.tipo || '—'}</td>
+                                <td style={{ ...L, width: '11%' }}>Empreendimento</td>
+                                <td style={VL}>{el.empreendimento || '—'}</td>
                               </tr>
-                              {/* Logradouro / Cidade-UF */}
-                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
-                                <td style={labelStyle}>Logradouro</td>
-                                <td style={valStyle} colSpan={2}>{el.logradouro || el.endereco || '—'}</td>
-                                <td style={valLast}>{[el.cidade, el.uf].filter(Boolean).join(' · ') || '—'}</td>
+                              {/* Logradouro / Cidade·UF */}
+                              <tr style={brd}>
+                                <td style={L}>Logradouro</td>
+                                <td style={{ ...V, width: '39%' }}>{el.logradouro || el.endereco || '—'}</td>
+                                <td style={{ ...L, width: '11%' }}>Cidade · UF</td>
+                                <td style={VL}>{[el.cidade, el.uf].filter(Boolean).join(' · ') || '—'}</td>
                               </tr>
                               {/* Bairro / Distância */}
-                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
-                                <td style={labelStyle}>Bairro</td>
-                                <td style={valStyle}>{el.bairro || '—'}</td>
-                                <td style={labelStyle}>Distância</td>
-                                <td style={valLast}>{el.distanciaAvaliando || '—'}</td>
+                              <tr style={brd}>
+                                <td style={L}>Bairro</td>
+                                <td style={V}>{el.bairro || '—'}</td>
+                                <td style={L}>Distância</td>
+                                <td style={VL}>{el.distanciaAvaliando || '—'}</td>
                               </tr>
                               {/* Conservação / Idade / Andar */}
-                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
-                                <td style={labelStyle}>Conservação</td>
-                                <td style={valStyle}>{el.estadoConservacao || '—'}</td>
-                                <td style={labelStyle}>Idade · Andar</td>
-                                <td style={valLast}>
+                              <tr style={brd}>
+                                <td style={L}>Conservação</td>
+                                <td style={{ ...V, width: '22%' }}>{el.estadoConservacao || '—'}</td>
+                                <td style={{ ...L, width: '8%' }}>Idade · Andar</td>
+                                <td style={{ ...VL }}>
                                   {el.idadeAparente > 0 ? `${el.idadeAparente} anos` : '—'} · andar {el.andar > 0 ? el.andar : '—'}
                                 </td>
                               </tr>
                               {/* Área / Padrão */}
-                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
-                                <td style={labelStyle}>Área constr./útil</td>
-                                <td style={valStyle}>{el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '—'}</td>
-                                <td style={labelStyle}>Padrão constr.</td>
-                                <td style={valLast}>{el.padraoConstrutivo || '—'}</td>
+                              <tr style={brd}>
+                                <td style={L}>Área constr./útil</td>
+                                <td style={V}>{el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '—'}</td>
+                                <td style={{ ...L, whiteSpace: 'nowrap' }}>Padrão constr.</td>
+                                <td style={VL}>{el.padraoConstrutivo || '—'}</td>
                               </tr>
-                              {/* Dorm. / Suítes / Vagas */}
-                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
-                                <td style={labelStyle}>Dormitórios</td>
-                                <td style={valStyle}>{el.dormitorios > 0 ? el.dormitorios : '—'}</td>
-                                <td style={labelStyle}>Suítes · Vagas</td>
-                                <td style={valLast}>
-                                  {el.suites > 0 ? el.suites : '—'} · {el.vagas > 0 ? el.vagas : '—'}
-                                </td>
+                              {/* Dormitórios / Suítes / Vagas */}
+                              <tr style={brd}>
+                                <td style={L}>Dormitórios</td>
+                                <td style={V}>{el.dormitorios > 0 ? el.dormitorios : '—'}</td>
+                                <td style={L}>Suítes · Vagas</td>
+                                <td style={VL}>{(el.suites > 0 ? el.suites : '—')} · {(el.vagas > 0 ? el.vagas : '—')}</td>
                               </tr>
-                              {/* Valor oferta / V.U. */}
-                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
-                                <td style={labelStyle}>Valor oferta</td>
-                                <td style={{ ...valStyle, fontWeight: 700, color: '#17325C' }}>{valorOf}</td>
-                                <td style={labelStyle}>V. líquido · V.U./m²</td>
-                                <td style={valLast}>
+                              {/* Valor oferta / V. líquido / V.U./m² */}
+                              <tr style={brd}>
+                                <td style={L}>Valor oferta</td>
+                                <td style={{ ...V, fontWeight: 700, color: '#17325C' }}>{valorOf}</td>
+                                <td style={L}>V. líquido · V.U./m²</td>
+                                <td style={VL}>
                                   {valorLiq} · <strong style={{ color: '#2347C6' }}>{el.valorUnitarioOferta > 0 ? formatarMoeda(el.valorUnitarioOferta) : '—'}</strong>
                                 </td>
                               </tr>
-                              {/* Fatores brutos */}
-                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
-                                <td style={labelStyle}>F. Oferta · Local</td>
-                                <td style={valStyle}>
+                              {/* F. Oferta · Local / F. Andar · FOC */}
+                              <tr style={brd}>
+                                <td style={L}>F. Oferta · Local</td>
+                                <td style={V}>
                                   {(el.fatorOferta || '0,90').toString().replace('.', ',')} · {(el.fatorLocalBruto || '100').toString()}
                                 </td>
-                                <td style={labelStyle}>F. Andar · FOC</td>
-                                <td style={valLast}>
-                                  {(el.fatorAndarBruto || '100').toString()} · {el.estadoConservacao || '—'}
-                                </td>
+                                <td style={L}>F. Andar · FOC</td>
+                                <td style={VL}>{(el.fatorAndarBruto || '100').toString()} · {el.estadoConservacao || '—'}</td>
                               </tr>
                               {/* Tipo oferta / Status / Telefone */}
-                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
-                                <td style={labelStyle}>Tipo oferta</td>
-                                <td style={valStyle}>{el.tipoOferta || 'Venda'} · {el.status || 'Em oferta'}</td>
-                                <td style={labelStyle}>Telefone</td>
-                                <td style={valLast}>{el.telefone || '—'}</td>
+                              <tr style={brd}>
+                                <td style={L}>Tipo oferta</td>
+                                <td style={V}>{el.tipoOferta || 'Venda'} · {el.status || 'Em oferta'}</td>
+                                <td style={L}>Telefone</td>
+                                <td style={VL}>{el.telefone || '—'}</td>
                               </tr>
                               {/* Coordenadas / Fonte */}
                               {(el.coordenadas || el.fonte) && (
-                                <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
-                                  <td style={labelStyle}>Coordenadas</td>
-                                  <td style={valStyle}>{el.coordenadas || '—'}</td>
-                                  <td style={labelStyle}>Fonte</td>
-                                  <td style={valLast}>{el.fonte || '—'}</td>
+                                <tr style={brd}>
+                                  <td style={L}>Coordenadas</td>
+                                  <td style={V}>{el.coordenadas || '—'}</td>
+                                  <td style={L}>Fonte</td>
+                                  <td style={VL}>{el.fonte || '—'}</td>
                                 </tr>
                               )}
                               {/* Link */}
                               {el.link && (
-                                <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
-                                  <td style={labelStyle}>Link</td>
+                                <tr style={brd}>
+                                  <td style={L}>Link</td>
                                   <td colSpan={3} style={{ padding: '2.5px 5px', fontSize: '6.5px', color: '#2347C6', wordBreak: 'break-all' }}>
                                     {String(el.link)}
                                   </td>
@@ -1247,8 +1252,8 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                               )}
                               {/* Observações */}
                               {el.observacoes && (
-                                <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
-                                  <td style={labelStyle}>Obs.</td>
+                                <tr style={brd}>
+                                  <td style={L}>Obs.</td>
                                   <td colSpan={3} style={{ padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', lineHeight: 1.4 }}>
                                     {el.observacoes}
                                   </td>
