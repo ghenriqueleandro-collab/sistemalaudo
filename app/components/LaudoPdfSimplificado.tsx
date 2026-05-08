@@ -9,7 +9,9 @@ import {
   Image,
   StyleSheet,
 } from '@react-pdf/renderer'
-import type { DadosLaudo } from '../visualizar-laudo/LaudoPdf'
+// Tipo local — evita dependência de caminho relativo que varia conforme a
+// localização do arquivo no projeto. Mantém compatibilidade com DadosLaudo.
+type DadosLaudo = Record<string, any>
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -619,50 +621,48 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                     <View style={[s.elemCellValLast,{flex:0.7}]}><Text>{el.andar > 0 ? el.andar : '-'}</Text></View>
                   </View>
 
-                  {/* Área / Padrão de construção */}
-                  {linhaPar('Área constr./útil', el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '-', 'Padrão de construção', el.padraoConstrutivo || '-')}
+                  {/* Área / Padrão constr. */}
+                  {linhaPar('Área constr./útil', el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '-', 'Padrão constr.', el.padraoConstrutivo || '-')}
 
                   {/* Dormitórios / Suítes / Vagas */}
                   <View style={s.elemRowB}>
                     <View style={[s.elemCellLbl,{width:60}]}><Text>Dormitórios</Text></View>
                     <View style={[s.elemCellVal,{flex:1}]}><Text>{el.dormitorios > 0 ? el.dormitorios : '-'}</Text></View>
-                    <View style={[s.elemCellLbl,{width:40}]}><Text>Suítes</Text></View>
+                    <View style={[s.elemCellLbl,{width:35}]}><Text>Suítes</Text></View>
                     <View style={[s.elemCellVal,{flex:0.7}]}><Text>{el.suites > 0 ? el.suites : '-'}</Text></View>
-                    <View style={[s.elemCellLbl,{width:40}]}><Text>Vagas</Text></View>
+                    <View style={[s.elemCellLbl,{width:35}]}><Text>Vagas</Text></View>
                     <View style={[s.elemCellValLast,{flex:0.7}]}><Text>{el.vagas > 0 ? el.vagas : '-'}</Text></View>
                   </View>
 
-                  {/* Valor de oferta / Valor unitário */}
+                  {/* Valor oferta / V. líquido · V.U./m² */}
                   <View style={s.elemRowB}>
                     <View style={[s.elemCellLbl,{width:60}]}><Text>Valor oferta</Text></View>
-                    <View style={[s.elemCellVal,{flex:1, fontFamily: 'Helvetica-Bold', color: AZUL}]}><Text>{valorOf}</Text></View>
-                    <View style={[s.elemCellLbl,{width:60}]}><Text>Valor líquido</Text></View>
-                    <View style={[s.elemCellVal,{flex:1}]}><Text>{valorLiq}</Text></View>
-                    <View style={[s.elemCellLbl,{width:55}]}><Text>V.U./m²</Text></View>
-                    <View style={[s.elemCellValLast,{flex:1, fontFamily: 'Helvetica-Bold', color: AZUL2}]}>
-                      <Text>{el.valorUnitarioOferta > 0 ? fm(el.valorUnitarioOferta) : '-'}</Text>
+                    <View style={[s.elemCellVal,{flex:1, fontFamily:'Helvetica-Bold', color:AZUL}]}><Text>{valorOf}</Text></View>
+                    <View style={[s.elemCellLbl,{width:65}]}><Text>V. líquido · V.U./m²</Text></View>
+                    <View style={[s.elemCellValLast,{flex:1.2}]}>
+                      <Text>{valorLiq} · <Text style={{fontFamily:'Helvetica-Bold',color:AZUL2}}>{el.valorUnitarioOferta > 0 ? fm(el.valorUnitarioOferta) : '-'}</Text></Text>
                     </View>
                   </View>
 
-                  {/* Fatores aplicados (linha de 4 colunas) */}
+                  {/* F. Oferta · Local / F. Andar · FOC */}
                   <View style={s.elemRowB}>
-                    <View style={[s.elemCellLbl,{width:60}]}><Text>F. Oferta</Text></View>
-                    <View style={[s.elemCellVal,{flex:0.8}]}><Text>{(el.fatorOferta || '0,90').toString().replace('.', ',')}</Text></View>
-                    <View style={[s.elemCellLbl,{width:50}]}><Text>F. Local</Text></View>
-                    <View style={[s.elemCellVal,{flex:0.8}]}><Text>{(el.fatorLocalBruto || '100').toString()}</Text></View>
-                    <View style={[s.elemCellLbl,{width:50}]}><Text>F. Andar</Text></View>
-                    <View style={[s.elemCellVal,{flex:0.8}]}><Text>{(el.fatorAndarBruto || '100').toString()}</Text></View>
-                    <View style={[s.elemCellLbl,{width:50}]}><Text>FOC</Text></View>
-                    <View style={[s.elemCellValLast,{flex:0.8}]}><Text>{el.estadoConservacao || '-'}</Text></View>
+                    <View style={[s.elemCellLbl,{width:60}]}><Text>F. Oferta · Local</Text></View>
+                    <View style={[s.elemCellVal,{flex:1}]}>
+                      <Text>{(el.fatorOferta || '0,90').toString().replace('.', ',')} · {(el.fatorLocalBruto || '100').toString()}</Text>
+                    </View>
+                    <View style={[s.elemCellLbl,{width:65}]}><Text>F. Andar · FOC</Text></View>
+                    <View style={[s.elemCellValLast,{flex:1.2}]}>
+                      <Text>{(el.fatorAndarBruto || '100').toString()} · {el.estadoConservacao || '-'}</Text>
+                    </View>
                   </View>
 
                   {/* Tipo oferta / Status / Telefone */}
                   <View style={s.elemRowB}>
                     <View style={[s.elemCellLbl,{width:60}]}><Text>Tipo oferta</Text></View>
-                    <View style={[s.elemCellVal,{flex:1}]}><Text>{el.tipoOferta || 'Venda'}</Text></View>
-                    <View style={[s.elemCellLbl,{width:50}]}><Text>Status</Text></View>
-                    <View style={[s.elemCellVal,{flex:1}]}><Text>{el.status || 'Em oferta'}</Text></View>
-                    <View style={[s.elemCellLbl,{width:55}]}><Text>Telefone</Text></View>
+                    <View style={[s.elemCellVal,{flex:0.8}]}><Text>{el.tipoOferta || 'Venda'}</Text></View>
+                    <View style={[s.elemCellLbl,{width:35}]}><Text>Status</Text></View>
+                    <View style={[s.elemCellVal,{flex:0.9}]}><Text>{el.status || 'Em oferta'}</Text></View>
+                    <View style={[s.elemCellLbl,{width:50}]}><Text>Telefone</Text></View>
                     <View style={[s.elemCellValLast,{flex:1}]}><Text>{el.telefone || '-'}</Text></View>
                   </View>
 
