@@ -9,7 +9,9 @@ import {
   Image,
   StyleSheet,
 } from '@react-pdf/renderer'
-import type { DadosLaudo } from '../visualizar-laudo/LaudoPdf'
+// Tipo local — evita dependência de caminho relativo que varia conforme a
+// localização do arquivo no projeto. Mantém compatibilidade com DadosLaudo.
+type DadosLaudo = Record<string, any>
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
