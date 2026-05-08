@@ -562,14 +562,15 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
 
           {/* Cards detalhados de cada elemento — estilo planilha "Exemplo_impressão" */}
           {temCddm && elementosCddm.map((el: any, i: number) => {
-            // Helper interno: linha rótulo+valor (par à esquerda, par à direita)
-            const linhaPar = (l1: string, v1: string, l2?: string, v2?: string, last = false) => (
+            // Helper interno — aceita largura customizada para cada rótulo
+            // w1 = largura do rótulo esquerdo, w2 = largura do rótulo direito
+            const linhaPar = (l1: string, v1: string, l2?: string, v2?: string, last = false, w1 = 65, w2 = 75) => (
               <View style={last ? s.elemRow : s.elemRowB}>
-                <View style={[s.elemCellLbl,{width:60}]}><Text>{l1}</Text></View>
+                <View style={[s.elemCellLbl,{width:w1}]}><Text>{l1}</Text></View>
                 <View style={[s.elemCellVal,{flex:1}]}><Text>{v1 || '-'}</Text></View>
                 {l2 !== undefined ? (
                   <>
-                    <View style={[s.elemCellLbl,{width:60}]}><Text>{l2}</Text></View>
+                    <View style={[s.elemCellLbl,{width:w2}]}><Text>{l2}</Text></View>
                     <View style={[s.elemCellValLast,{flex:1}]}><Text>{v2 || '-'}</Text></View>
                   </>
                 ) : (
@@ -598,7 +599,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
 
                   {/* Logradouro / Cidade-UF — usa endereco combinado como fallback */}
                   <View style={s.elemRowB}>
-                    <View style={[s.elemCellLbl,{width:60}]}><Text>Logradouro</Text></View>
+                    <View style={[s.elemCellLbl,{width:65}]}><Text>Logradouro</Text></View>
                     <View style={[s.elemCellVal,{flex:2.5}]}>
                       <Text>{el.logradouro || el.endereco || '-'}</Text>
                     </View>
@@ -613,7 +614,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
 
                   {/* Estado de conservação / Idade / Andar — 3 colunas */}
                   <View style={s.elemRowB}>
-                    <View style={[s.elemCellLbl,{width:60}]}><Text>Conservação</Text></View>
+                    <View style={[s.elemCellLbl,{width:65}]}><Text>Conservação</Text></View>
                     <View style={[s.elemCellVal,{flex:1}]}><Text>{el.estadoConservacao || '-'}</Text></View>
                     <View style={[s.elemCellLbl,{width:40}]}><Text>Idade</Text></View>
                     <View style={[s.elemCellVal,{flex:0.7}]}><Text>{el.idadeAparente > 0 ? `${el.idadeAparente} anos` : '-'}</Text></View>
@@ -626,7 +627,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
 
                   {/* Dormitórios / Suítes / Vagas */}
                   <View style={s.elemRowB}>
-                    <View style={[s.elemCellLbl,{width:60}]}><Text>Dormitórios</Text></View>
+                    <View style={[s.elemCellLbl,{width:65}]}><Text>Dormitórios</Text></View>
                     <View style={[s.elemCellVal,{flex:1}]}><Text>{el.dormitorios > 0 ? el.dormitorios : '-'}</Text></View>
                     <View style={[s.elemCellLbl,{width:35}]}><Text>Suítes</Text></View>
                     <View style={[s.elemCellVal,{flex:0.7}]}><Text>{el.suites > 0 ? el.suites : '-'}</Text></View>
@@ -636,7 +637,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
 
                   {/* Valor oferta / V. líquido · V.U./m² */}
                   <View style={s.elemRowB}>
-                    <View style={[s.elemCellLbl,{width:60}]}><Text>Valor oferta</Text></View>
+                    <View style={[s.elemCellLbl,{width:65}]}><Text>Valor oferta</Text></View>
                     <View style={[s.elemCellVal,{flex:1, fontFamily:'Helvetica-Bold', color:AZUL}]}><Text>{valorOf}</Text></View>
                     <View style={[s.elemCellLbl,{width:65}]}><Text>V. líquido · V.U./m²</Text></View>
                     <View style={[s.elemCellValLast,{flex:1.2}]}>
@@ -646,7 +647,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
 
                   {/* F. Oferta · Local / F. Andar · FOC */}
                   <View style={s.elemRowB}>
-                    <View style={[s.elemCellLbl,{width:60}]}><Text>F. Oferta · Local</Text></View>
+                    <View style={[s.elemCellLbl,{width:65}]}><Text>F. Oferta · Local</Text></View>
                     <View style={[s.elemCellVal,{flex:1}]}>
                       <Text>{(el.fatorOferta || '0,90').toString().replace('.', ',')} · {(el.fatorLocalBruto || '100').toString()}</Text>
                     </View>
@@ -658,7 +659,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
 
                   {/* Tipo oferta / Status / Telefone */}
                   <View style={s.elemRowB}>
-                    <View style={[s.elemCellLbl,{width:60}]}><Text>Tipo oferta</Text></View>
+                    <View style={[s.elemCellLbl,{width:65}]}><Text>Tipo oferta</Text></View>
                     <View style={[s.elemCellVal,{flex:0.8}]}><Text>{el.tipoOferta || 'Venda'}</Text></View>
                     <View style={[s.elemCellLbl,{width:35}]}><Text>Status</Text></View>
                     <View style={[s.elemCellVal,{flex:0.9}]}><Text>{el.status || 'Em oferta'}</Text></View>
@@ -672,7 +673,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                   {/* Link */}
                   {el.link && (
                     <View style={s.elemRowB}>
-                      <View style={[s.elemCellLbl,{width:60}]}><Text>Link</Text></View>
+                      <View style={[s.elemCellLbl,{width:65}]}><Text>Link</Text></View>
                       <View style={{flex:1, paddingVertical:2.5, paddingHorizontal:4}}>
                         <Text style={{fontSize:6.3, color:AZUL2}}>
                           {String(el.link).slice(0, 165)}{String(el.link).length > 165 ? '...' : ''}
@@ -684,7 +685,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                   {/* Observações */}
                   {el.observacoes && (
                     <View style={s.elemRow}>
-                      <View style={[s.elemCellLbl,{width:60}]}><Text>Obs.</Text></View>
+                      <View style={[s.elemCellLbl,{width:65}]}><Text>Obs.</Text></View>
                       <View style={{flex:1, paddingVertical:2.5, paddingHorizontal:4}}>
                         <Text style={{fontSize:6.8, color:TEXTO}}>{el.observacoes}</Text>
                       </View>
