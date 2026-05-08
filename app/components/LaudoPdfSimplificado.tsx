@@ -594,12 +594,16 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                   {/* Tipo / Empreendimento */}
                   {linhaPar('Tipo', el.tipo || '-', 'Empreendimento', el.empreendimento || '-')}
 
-                  {/* Logradouro / Cidade / UF */}
+                  {/* Logradouro / Cidade-UF — usa endereco combinado como fallback */}
                   <View style={s.elemRowB}>
                     <View style={[s.elemCellLbl,{width:60}]}><Text>Logradouro</Text></View>
-                    <View style={[s.elemCellVal,{flex:2.5}]}><Text>{el.logradouro || '-'}</Text></View>
+                    <View style={[s.elemCellVal,{flex:2.5}]}>
+                      <Text>{el.logradouro || el.endereco || '-'}</Text>
+                    </View>
                     <View style={[s.elemCellLbl,{width:55}]}><Text>Cidade · UF</Text></View>
-                    <View style={[s.elemCellValLast,{flex:1}]}><Text>{[el.cidade, el.uf].filter(Boolean).join(' · ') || '-'}</Text></View>
+                    <View style={[s.elemCellValLast,{flex:1}]}>
+                      <Text>{[el.cidade, el.uf].filter(Boolean).join(' · ') || '-'}</Text>
+                    </View>
                   </View>
 
                   {/* Bairro / Distância avaliando */}
