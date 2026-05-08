@@ -616,13 +616,6 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
 
             if (camposOrdenados.length === 0) return null
 
-            // Marca o último campo como "last" (sem borda inferior)
-            const campos = camposOrdenados.map((c, idx) => {
-              if (idx < camposOrdenados.length - 1) return c
-              // Recriar o último com isLast=true
-              return React.cloneElement(c as React.ReactElement, { style: s.elemRow })
-            })
-
             return (
               <View key={`elem-${i}`} wrap={false} style={{ marginTop: 5 }}>
                 <View style={s.elemHeader}>
@@ -632,7 +625,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                   </Text>
                 </View>
                 <View style={s.elemTable}>
-                  {campos}
+                  {camposOrdenados}
                 </View>
               </View>
             )
