@@ -902,6 +902,32 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               const vlFinal = valorArredondadoLaudo
               const vlf = valorLiquidezForcadaNumero
 
+              // Dados completos do CDDM (persistidos pelo EtapaCalculoCDDM)
+              const cddm = (dados as any).dadosCalculoCDDM as {
+                elementos: any[]
+                avaliando: { area: number; padraoConstrutivo: string; estadoConservacao: string }
+                media: number
+                mediaSaneada: number
+                desvioPadrao: number
+                coefVariacao: number
+                tStudent: number
+                intervaloConfianca: number
+                limiteInferior: number
+                limiteSuperior: number
+                limiteInf30: number
+                limiteSup30: number
+                grauPrecisao: string
+                valorImovel: number
+                outliersDescartados: number
+              } | undefined
+              const elementosCddm = cddm?.elementos || []
+              const temCddm = elementosCddm.length > 0
+              const formatarDataBR = (data?: string) => {
+                if (!data) return ''
+                const [ano, mes, dia] = data.split('-')
+                return `${dia}/${mes}/${ano}`
+              }
+
               return (
                 <>
                   {/* ─── PÁGINA 1 ─────────────────────────────────────── */}
@@ -1090,14 +1116,202 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                               : '—'}
                           </TDV>
                           <TDV>{dados.tipoInformacoesObtidas || '—'}</TDV>
-                          <td style={{ border: '0.5px solid #C9D3E6', padding: '3.5px 6px', fontSize: '8px', textAlign: 'center' }}>{dados.quantidadeElementos || '—'}</td>
+                          <td style={{ border: '0.5px solid #C9D3E6', padding: '3.5px 6px', fontSize: '8px', textAlign: 'center' }}>
+                            {(temCddm ? elementosCddm.length : Number(dados.quantidadeElementos || 0)) || '—'}
+                          </td>
                           <TDV>{metLabel}</TDV>
                         </tr>
                       </tbody>
                     </table>
 
+                    {/* Cards de cada elemento (estilo MK Rodobens) */}
+                    {temCddm && elementosCddm.map((el: any, i: number) => (
+                      <div key={`elem-${i}`} style={{ marginBottom: '5px' }}>
+                        <div style={{ background: '#2347C6', padding: '3px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '8px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
+                            ELEMENTO COMPARATIVO {String(i + 1).padStart(2, '0')}
+                          </span>
+                          <span style={{ fontSize: '7.5px', color: '#cfddef' }}>
+                            {el.tipo ? `${el.tipo} • ` : ''}{el.fonte || (el.link ? 'Site de imobiliária' : 'Pesquisa de mercado')}
+                          </span>
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', borderTop: 'none' }}>
+                          <tbody>
+                            <tr>
+                              <td style={{ background: '#EAF0FB', padding: '2.5px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', width: '11%', borderRight: '0.5px solid #C9D3E6' }}>Endereço</td>
+                              <td style={{ padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', width: '50%', borderRight: '0.5px solid #C9D3E6' }}>{el.endereco || '—'}</td>
+                              <td style={{ background: '#EAF0FB', padding: '2.5px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', width: '8%', borderRight: '0.5px solid #C9D3E6' }}>Data</td>
+                              <td style={{ padding: '2.5px 5px', fontSize: '7px', color: '#1e293b' }}>{el.data ? formatarDataBR(el.data) : '—'}</td>
+                            </tr>
+                            <tr>
+                              <td style={{ background: '#EAF0FB', padding: '2.5px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', borderTop: '0.5px solid #C9D3E6', borderRight: '0.5px solid #C9D3E6' }}>Área</td>
+                              <td style={{ padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', borderTop: '0.5px solid #C9D3E6', borderRight: '0.5px solid #C9D3E6' }}>{el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '—'}</td>
+                              <td style={{ background: '#EAF0FB', padding: '2.5px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', borderTop: '0.5px solid #C9D3E6', borderRight: '0.5px solid #C9D3E6' }}>V. oferta</td>
+                              <td style={{ padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', borderTop: '0.5px solid #C9D3E6' }}>
+                                {el.valorOferta > 0 ? formatarMoeda(el.valorOferta) : '—'}
+                                {' · '}
+                                <span style={{ color: '#475569' }}>V.U./m² {el.valorUnitarioOferta > 0 ? formatarMoeda(el.valorUnitarioOferta) : '—'}</span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style={{ background: '#EAF0FB', padding: '2.5px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', borderTop: '0.5px solid #C9D3E6', borderRight: '0.5px solid #C9D3E6' }}>Padrão</td>
+                              <td style={{ padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', borderTop: '0.5px solid #C9D3E6', borderRight: '0.5px solid #C9D3E6' }}>{el.padraoConstrutivo || '—'}</td>
+                              <td style={{ background: '#EAF0FB', padding: '2.5px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', borderTop: '0.5px solid #C9D3E6', borderRight: '0.5px solid #C9D3E6' }}>Conserv.</td>
+                              <td style={{ padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', borderTop: '0.5px solid #C9D3E6' }}>{el.estadoConservacao || '—'} · Idade {el.idadeAparente ?? '—'} anos · {el.vagas ?? 0} vagas</td>
+                            </tr>
+                            {el.link && (
+                              <tr>
+                                <td colSpan={4} style={{ padding: '2px 5px', fontSize: '6.5px', color: '#2347C6', borderTop: '0.5px solid #C9D3E6' }}>
+                                  Fonte: {String(el.link).slice(0, 130)}{String(el.link).length > 130 ? '…' : ''}
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
+
+                    {/* 9.1 — Homogeneização */}
+                    {temCddm && (
+                      <>
+                        <SecHeader num="9.1" titulo="Homogeneização" />
+                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
+                          <thead>
+                            <tr style={{ background: '#2347C6' }}>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>Elem.</th>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>VU/m²</th>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>F.Local</th>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>F.Padrão</th>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>F.FOC</th>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>F.Andar</th>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>F.Vaga</th>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>F.Área</th>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center' }}>VU/m² Hom.</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {elementosCddm.map((el: any, i: number) => {
+                              const isSan = el.saneado
+                              const cellStyle: React.CSSProperties = {
+                                padding: '2.5px 2px', fontSize: '7px',
+                                color: isSan ? '#1e293b' : '#9ca3af',
+                                fontStyle: isSan ? 'normal' : 'italic',
+                                textAlign: 'center', borderRight: '0.5px solid #C9D3E6', borderTop: '0.5px solid #C9D3E6',
+                              }
+                              return (
+                                <tr key={`h-${i}`}>
+                                  <td style={cellStyle}>{i + 1}</td>
+                                  <td style={cellStyle}>{formatarMoeda(el.valorUnitarioOferta || 0)}</td>
+                                  <td style={cellStyle}>{(el.fatorLocal || 1).toFixed(4)}</td>
+                                  <td style={cellStyle}>{(el.fatorPadrao || 1).toFixed(4)}</td>
+                                  <td style={cellStyle}>{(el.fatorFOC || 1).toFixed(4)}</td>
+                                  <td style={cellStyle}>{(el.fatorAndar || 1).toFixed(4)}</td>
+                                  <td style={cellStyle}>{(el.fatorVaga || 1).toFixed(4)}</td>
+                                  <td style={cellStyle}>{(el.fatorArea || 1).toFixed(4)}</td>
+                                  <td style={{ ...cellStyle, borderRight: 'none', fontWeight: 700, color: isSan ? '#17325C' : '#9ca3af' }}>
+                                    {formatarMoeda(el.vuHomog || 0)}
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+
+                        <div style={{ background: '#EAF0FB', border: '0.5px solid #C9D3E6', padding: '5px', marginTop: '4px', fontSize: '7px', color: '#1e293b', lineHeight: 1.4 }}>
+                          <div style={{ fontWeight: 700, marginBottom: 2 }}>Legenda dos fatores aplicados:</div>
+                          <div>F.Local = Fator de Localização &nbsp;·&nbsp; F.Padrão = Fator de Padrão Construtivo &nbsp;·&nbsp; F.FOC = Fator de Obsolescência e Conservação</div>
+                          <div>F.Andar = Fator de Andar &nbsp;·&nbsp; F.Vaga = Fator de Vaga de Garagem &nbsp;·&nbsp; F.Área = Fator de Adequação por Área</div>
+                          {cddm && cddm.outliersDescartados > 0 && (
+                            <div style={{ marginTop: 3, color: '#94a3b8', fontStyle: 'italic' }}>
+                              Elementos em itálico/cinza foram descartados pelo saneamento estatístico (Critério de Chauvenet — fora do intervalo ±30% da média).
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Memorial de cálculos (estilo MK) */}
+                        {cddm && (
+                          <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                            <div style={{ flex: 1.3, border: '0.5px solid #C9D3E6' }}>
+                              <div style={{ background: '#17325C', padding: '3px 5px', textAlign: 'center', fontSize: '8px', fontWeight: 700, color: '#fff' }}>
+                                ENQUADRAMENTO DA AVALIAÇÃO
+                              </div>
+                              <div style={{ display: 'flex', borderBottom: '0.5px solid #C9D3E6' }}>
+                                <div style={{ flex: 1.6, padding: '3px 5px', fontSize: '7px', color: '#1e293b', borderRight: '0.5px solid #C9D3E6' }}>
+                                  Amplitude do intervalo de confiança de 80% em torno da estimativa central
+                                </div>
+                                <div style={{ flex: 1.5 }}>
+                                  <div style={{ display: 'flex', background: '#EAF0FB', borderBottom: '0.5px solid #C9D3E6' }}>
+                                    <div style={{ flex: 1, fontSize: '7px', fontWeight: 700, color: '#17325C', textAlign: 'center', padding: '2px', borderRight: '0.5px solid #C9D3E6' }}>III</div>
+                                    <div style={{ flex: 1, fontSize: '7px', fontWeight: 700, color: '#17325C', textAlign: 'center', padding: '2px', borderRight: '0.5px solid #C9D3E6' }}>II</div>
+                                    <div style={{ flex: 1, fontSize: '7px', fontWeight: 700, color: '#17325C', textAlign: 'center', padding: '2px' }}>I</div>
+                                  </div>
+                                  <div style={{ display: 'flex' }}>
+                                    <div style={{ flex: 1, fontSize: '7px', color: '#1e293b', textAlign: 'center', padding: '2px', borderRight: '0.5px solid #C9D3E6' }}>≤ 30%</div>
+                                    <div style={{ flex: 1, fontSize: '7px', color: '#1e293b', textAlign: 'center', padding: '2px', borderRight: '0.5px solid #C9D3E6' }}>≤ 40%</div>
+                                    <div style={{ flex: 1, fontSize: '7px', color: '#1e293b', textAlign: 'center', padding: '2px' }}>≤ 50%</div>
+                                  </div>
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', borderBottom: '0.5px solid #C9D3E6' }}>
+                                <div style={{ flex: 2, padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#1e293b', borderRight: '0.5px solid #C9D3E6' }}>Intervalo de confiança</div>
+                                <div style={{ flex: 1.1, padding: '3px 5px', fontSize: '7.5px', fontWeight: 700, color: '#2347C6', textAlign: 'center' }}>{cddm.intervaloConfianca.toFixed(2).replace('.', ',')}%</div>
+                              </div>
+                              <div style={{ display: 'flex' }}>
+                                <div style={{ flex: 2, padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', background: '#17325C', borderRight: '0.5px solid #C9D3E6' }}>GRAU DE PRECISÃO</div>
+                                <div style={{ flex: 1.1, padding: '3px 5px', fontSize: '10px', fontWeight: 700, color: '#2347C6', textAlign: 'center', background: '#dbeafe' }}>{cddm.grauPrecisao || '—'}</div>
+                              </div>
+                            </div>
+
+                            <div style={{ flex: 1, border: '0.5px solid #C9D3E6' }}>
+                              <div style={{ background: '#17325C', padding: '3px 5px', textAlign: 'center', fontSize: '8px', fontWeight: 700, color: '#fff' }}>
+                                MEMORIAL DE CÁLCULOS
+                              </div>
+                              {[
+                                ['Média Saneada', formatarMoeda(cddm.mediaSaneada)],
+                                ['Limite superior (+30%)', formatarMoeda(cddm.limiteSup30)],
+                                ['Limite inferior (-30%)', formatarMoeda(cddm.limiteInf30)],
+                                ['Desvio Padrão', cddm.desvioPadrao.toFixed(2).replace('.', ',')],
+                                ['Coef. de Variação', cddm.coefVariacao.toFixed(2).replace('.', ',') + '%'],
+                                ['Elementos saneados', `${elementosCddm.filter((e: any) => e.saneado).length} de ${elementosCddm.length}`],
+                                ['T de Student', cddm.tStudent.toFixed(3).replace('.', ',')],
+                                ['Limite Sup. IC', formatarMoeda(cddm.limiteSuperior)],
+                                ['Limite Inf. IC', formatarMoeda(cddm.limiteInferior)],
+                              ].map(([lbl, val], idx, arr) => (
+                                <div key={lbl} style={{ display: 'flex', borderBottom: idx === arr.length - 1 ? 'none' : '0.5px solid #C9D3E6' }}>
+                                  <div style={{ flex: 1.5, padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', borderRight: '0.5px solid #C9D3E6' }}>{lbl}</div>
+                                  <div style={{ flex: 1, padding: '2.5px 5px', fontSize: '7px', fontWeight: 700, color: '#2347C6', textAlign: 'right' }}>{val}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div style={{ marginTop: 4, marginBottom: 2, fontSize: '7px', fontStyle: 'italic', color: '#475569' }}>
+                          * Quando a amplitude do intervalo de confiança ultrapassar 50% não há classificação do resultado quanto à precisão e é necessária justificativa com base no diagnóstico do mercado. (ABNT 14653-2 - 2011 - Item 13.4)
+                        </div>
+                      </>
+                    )}
+
                     {/* 10 — Valor final */}
                     <SecHeader num="10" titulo="Valor Final da Avaliação" />
+                    {temCddm && cddm && (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px', marginBottom: '4px' }}>
+                        <thead>
+                          <tr>
+                            <TH style={{ textAlign: 'center', width: '33%' }}>Área</TH>
+                            <TH style={{ textAlign: 'center', width: '33%' }}>Valor/m²</TH>
+                            <TH style={{ textAlign: 'center' }}>Valor Total</TH>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td style={{ border: '0.5px solid #C9D3E6', padding: '4px 6px', fontSize: '8px', textAlign: 'center' }}>{cddm.avaliando.area.toLocaleString('pt-BR')} m²</td>
+                            <td style={{ border: '0.5px solid #C9D3E6', padding: '4px 6px', fontSize: '8px', textAlign: 'center' }}>{formatarMoeda(cddm.mediaSaneada)}</td>
+                            <td style={{ border: '0.5px solid #C9D3E6', padding: '4px 6px', fontSize: '8.5px', textAlign: 'center', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(cddm.valorImovel)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    )}
                     <div style={{ display: 'flex', gap: '6px', margin: '6px 0 4px' }}>
                       <div style={{ flex: 1, background: '#17325C', padding: '8px 10px', borderRadius: '3px' }}>
                         <div style={{ fontSize: '7.5px', color: '#8FA4C7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>VALOR DA AVALIAÇÃO</div>
@@ -1112,22 +1326,6 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                         </div>
                       )}
                     </div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginBottom: '6px' }}>
-                      <tbody>
-                        <tr>
-                          <TDL>Valor do terreno</TDL>
-                          <TDV>{valorTerrenoNumero > 0 ? formatarMoeda(valorTerrenoNumero) : '—'}</TDV>
-                          <TDL>Valor das benfeitorias</TDL>
-                          <TDV>{valorBenfeitoriasNumero > 0 ? formatarMoeda(valorBenfeitoriasNumero) : '—'}</TDV>
-                        </tr>
-                        <tr>
-                          <TDL>Fator de comercialização</TDL>
-                          <TDV>{dados.fatorComercializacao || '1,00'}</TDV>
-                          <TDL>Valor arredondado</TDL>
-                          <td style={{ border: '0.5px solid #C9D3E6', padding: '3.5px 6px', fontSize: '8px', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(vlFinal)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
 
                     {/* 11 — Graus */}
                     <SecHeader num="11" titulo="Grau de Fundamentação e Precisão" />
@@ -1143,6 +1341,101 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                         </div>
                       ))}
                     </div>
+
+                    {/* 11.1 — Tabela detalhada de Fundamentação */}
+                    {temCddm && (() => {
+                      const fund = (dados.fundamentacao || []) as any[]
+                      const itensPadrao = [
+                        { id: '01', desc: 'Caracterização do imóvel avaliando', g3: 'Completa quanto a todos os fatores analisados', g2: 'Completa quanto aos fatores utilizados no tratamento', g1: 'Adoção de situação paradigma' },
+                        { id: '02', desc: 'Quantidade mínima de dados de mercado, efetivamente utilizados', g3: '12', g2: '5', g1: '3' },
+                        { id: '03', desc: 'Identificação dos dados de mercado', g3: 'Apresentação de informações relativas a todas as características dos dados analisados, com foto e características observadas pelo autor do laudo', g2: 'Apresentação de informações relativas a todas as características dos dados analisados', g1: 'Apresentação de informações relativas a todas as características dos dados correspondentes aos fatores utilizados' },
+                        { id: '04', desc: 'Intervalo admissível de ajuste para o conjunto de fatores', g3: '0,80 a 1,25', g2: '0,50 a 2,00', g1: '0,40 a 2,50' },
+                      ]
+                      const cellGrau = (active: boolean, isLast = false): React.CSSProperties => ({
+                        padding: '3px 4px', fontSize: '7px', textAlign: 'center', verticalAlign: 'middle',
+                        borderRight: isLast ? 'none' : '0.5px solid #C9D3E6',
+                        background: active ? '#dbeafe' : '#fff',
+                        color: active ? '#17325C' : '#1e293b',
+                        fontWeight: active ? 700 : 400,
+                        lineHeight: 1.3,
+                      })
+                      return (
+                        <>
+                          <SecHeader num="11.1" titulo="Grau de Fundamentação — Tratamento por Fatores" />
+                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
+                            <thead>
+                              <tr style={{ background: '#17325C' }}>
+                                <th style={{ width: '5%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #475e9b' }}>Item</th>
+                                <th style={{ width: '25%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'left', padding: '3px 5px', borderRight: '0.5px solid #475e9b' }}>Descrição</th>
+                                <th style={{ width: '23.3%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #475e9b' }}>Grau III</th>
+                                <th style={{ width: '23.3%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #475e9b' }}>Grau II</th>
+                                <th style={{ width: '23.3%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px' }}>Grau I</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {itensPadrao.map((it, idx) => {
+                                const grauAtual = fund[idx]?.grau || ''
+                                return (
+                                  <tr key={it.id} style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                    <td style={{ fontSize: '7px', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #C9D3E6' }}>{it.id}</td>
+                                    <td style={{ fontSize: '7px', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}>{it.desc}</td>
+                                    <td style={cellGrau(grauAtual === 'III')}>{it.g3}</td>
+                                    <td style={cellGrau(grauAtual === 'II')}>{it.g2}</td>
+                                    <td style={cellGrau(grauAtual === 'I', true)}>{it.g1}</td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                          <div style={{ marginTop: 3, fontSize: '7px', fontStyle: 'italic', color: '#475569' }}>
+                            No caso de utilização de menos de cinco dados de mercado, o intervalo admissível de ajuste é de 0,80 a 1,25.
+                          </div>
+
+                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
+                            <tbody>
+                              <tr style={{ background: '#EAF0FB' }}>
+                                <td style={{ width: '20%', fontSize: '7px', fontWeight: 700, color: '#17325C', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}>Graus</td>
+                                <td style={{ width: '26.6%', fontSize: '7px', fontWeight: 700, color: '#17325C', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #C9D3E6' }}>III</td>
+                                <td style={{ width: '26.6%', fontSize: '7px', fontWeight: 700, color: '#17325C', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #C9D3E6' }}>II</td>
+                                <td style={{ width: '26.6%', fontSize: '7px', fontWeight: 700, color: '#17325C', textAlign: 'center', padding: '3px' }}>I</td>
+                              </tr>
+                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                <td style={{ fontSize: '7px', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}>Pontos Mínimos</td>
+                                <td style={{ fontSize: '7px', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #C9D3E6' }}>10</td>
+                                <td style={{ fontSize: '7px', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #C9D3E6' }}>6</td>
+                                <td style={{ fontSize: '7px', textAlign: 'center', padding: '3px' }}>4</td>
+                              </tr>
+                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                <td style={{ fontSize: '7px', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}>Itens obrigatórios</td>
+                                <td style={{ fontSize: '6.5px', padding: '3px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', lineHeight: 1.3 }}>Itens 2 e 4 no grau III, com os demais, no mín., grau II</td>
+                                <td style={{ fontSize: '6.5px', padding: '3px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', lineHeight: 1.3 }}>Itens 2 e 4, no mín., grau II e demais, no mín., grau I</td>
+                                <td style={{ fontSize: '6.5px', padding: '3px', textAlign: 'center', lineHeight: 1.3 }}>Todos, no mín., no grau I</td>
+                              </tr>
+                            </tbody>
+                          </table>
+
+                          <SecHeader num="11.2" titulo="Grau de Precisão — Tratamento por Fatores" />
+                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
+                            <thead>
+                              <tr style={{ background: '#17325C' }}>
+                                <th style={{ width: '40%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'left', padding: '3px 5px', borderRight: '0.5px solid #475e9b' }}>Descrição</th>
+                                <th style={{ width: '20%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #475e9b' }}>Grau III</th>
+                                <th style={{ width: '20%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #475e9b' }}>Grau II</th>
+                                <th style={{ width: '20%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px' }}>Grau I</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                <td style={{ fontSize: '7px', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}>Amplitude do intervalo de confiança de 80% em torno da estimativa de tendência central</td>
+                                <td style={cellGrau(capaGrauPrec === 'III')}>≤ 30%</td>
+                                <td style={cellGrau(capaGrauPrec === 'II')}>≤ 40%</td>
+                                <td style={cellGrau(capaGrauPrec === 'I', true)}>≤ 50%</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </>
+                      )
+                    })()}
 
                     {/* 12 — Conclusão + Assinatura */}
                     <SecHeader num="12" titulo="Considerações Finais" />

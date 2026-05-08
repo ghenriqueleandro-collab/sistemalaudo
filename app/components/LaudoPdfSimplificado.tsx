@@ -181,6 +181,64 @@ const s = StyleSheet.create({
   // Texto
   txt:     { fontSize: 8, color: TEXTO, lineHeight: 1.5, marginTop: 4 },
   txtBold: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: AZUL },
+
+  // ─── Estilos MK-style (Pesquisa + Homog + Memorial) ──────────────
+  // Card de elemento comparativo
+  elemHeader: {
+    backgroundColor: AZUL2,
+    paddingVertical: 2.5,
+    paddingHorizontal: 6,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 5,
+  },
+  elemHeaderTxt: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BRANCO, letterSpacing: 0.5 },
+  elemHeaderSub: { fontSize: 7, color: '#cfddef' },
+  elemTable: { borderWidth: 0.5, borderColor: CINZA, borderTopWidth: 0 },
+  elemRow: { flexDirection: 'row' },
+  elemRowB: { flexDirection: 'row', borderBottomWidth: 0.5, borderColor: CINZA },
+  elemCellLbl: { backgroundColor: AZULLT, paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, fontFamily: 'Helvetica-Bold', color: AZUL, borderRightWidth: 0.5, borderColor: CINZA },
+  elemCellVal: { paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, color: TEXTO, borderRightWidth: 0.5, borderColor: CINZA },
+  elemCellValLast: { paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, color: TEXTO },
+  elemLink: { fontSize: 6.5, color: AZUL2, paddingHorizontal: 4, paddingVertical: 2 },
+
+  // Tabela de homogeneização
+  homogTable: { borderWidth: 0.5, borderColor: CINZA, marginTop: 4 },
+  homogRowH: { flexDirection: 'row', backgroundColor: AZUL2, borderBottomWidth: 0.5, borderColor: CINZA },
+  homogRowB: { flexDirection: 'row', borderBottomWidth: 0.5, borderColor: CINZA },
+  homogRow: { flexDirection: 'row' },
+  homogTh: { fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, paddingVertical: 3, textAlign: 'center', borderRightWidth: 0.5, borderColor: '#475e9b' },
+  homogThLast: { fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, paddingVertical: 3, textAlign: 'center' },
+  homogTd: { fontSize: 6.5, color: TEXTO, paddingVertical: 2.5, textAlign: 'center', borderRightWidth: 0.5, borderColor: CINZA },
+  homogTdLast: { fontSize: 6.5, color: TEXTO, paddingVertical: 2.5, textAlign: 'center' },
+  homogTdOut: { fontSize: 6.5, color: '#9ca3af', fontFamily: 'Helvetica-Oblique', paddingVertical: 2.5, textAlign: 'center', borderRightWidth: 0.5, borderColor: CINZA },
+
+  // Legenda + memorial
+  legendaWrap: { marginTop: 4, marginBottom: 2, padding: 5, borderWidth: 0.5, borderColor: CINZA, backgroundColor: AZULLT },
+  legendaTxt: { fontSize: 6.5, color: TEXTO, lineHeight: 1.4 },
+
+  // Memorial de cálculos (estilo MK)
+  memorialRow: { flexDirection: 'row', borderBottomWidth: 0.5, borderColor: CINZA },
+  memorialRowL: { flexDirection: 'row' },
+  memorialLbl: { flex: 1.5, paddingVertical: 2.5, paddingHorizontal: 5, fontSize: 7, color: TEXTO, borderRightWidth: 0.5, borderColor: CINZA },
+  memorialVal: { flex: 1, paddingVertical: 2.5, paddingHorizontal: 5, fontSize: 7, fontFamily: 'Helvetica-Bold', color: AZUL, textAlign: 'right' },
+  memorialValMid: { flex: 0.6, paddingVertical: 2.5, paddingHorizontal: 5, fontSize: 7, color: TEXTO, textAlign: 'right', borderRightWidth: 0.5, borderColor: CINZA },
+
+  // Tabela enquadramento (graus)
+  grausTable: { borderWidth: 0.5, borderColor: CINZA, marginTop: 4 },
+  grausHead: { flexDirection: 'row', backgroundColor: AZUL, borderBottomWidth: 0.5, borderColor: CINZA },
+  grausItemRow: { flexDirection: 'row', borderBottomWidth: 0.5, borderColor: CINZA },
+  grausLastRow: { flexDirection: 'row' },
+  grausThIdx: { width: 30, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 3, borderRightWidth: 0.5, borderColor: '#475e9b' },
+  grausThDesc: { flex: 2, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, paddingVertical: 3, paddingHorizontal: 4, borderRightWidth: 0.5, borderColor: '#475e9b' },
+  grausThGrau: { flex: 1.7, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 3, borderRightWidth: 0.5, borderColor: '#475e9b' },
+  grausThGrauLast: { flex: 1.7, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 3 },
+  grausTdIdx: { width: 30, fontSize: 6.5, color: TEXTO, textAlign: 'center', paddingVertical: 3, borderRightWidth: 0.5, borderColor: CINZA },
+  grausTdDesc: { flex: 2, fontSize: 6.5, color: TEXTO, paddingVertical: 3, paddingHorizontal: 4, borderRightWidth: 0.5, borderColor: CINZA },
+  grausTdGrau: { flex: 1.7, fontSize: 6, color: TEXTO, paddingVertical: 3, paddingHorizontal: 3, borderRightWidth: 0.5, borderColor: CINZA, lineHeight: 1.3 },
+  grausTdGrauLast: { flex: 1.7, fontSize: 6, color: TEXTO, paddingVertical: 3, paddingHorizontal: 3, lineHeight: 1.3 },
+  grausTdGrauOk: { flex: 1.7, fontSize: 6, color: AZUL, fontFamily: 'Helvetica-Bold', paddingVertical: 3, paddingHorizontal: 3, borderRightWidth: 0.5, borderColor: CINZA, lineHeight: 1.3, backgroundColor: '#dbeafe' },
+  grausTdGrauOkLast: { flex: 1.7, fontSize: 6, color: AZUL, fontFamily: 'Helvetica-Bold', paddingVertical: 3, paddingHorizontal: 3, lineHeight: 1.3, backgroundColor: '#dbeafe' },
 })
 
 // ─── Componentes auxiliares ───────────────────────────────────────────────────
@@ -247,6 +305,28 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
   const vlFinal = arredondar(base * fatorComercial * produto)
   const vlf     = cn(dados.valorLiquidezForcada)
 
+  // Dados completos do CDDM (persistidos pelo EtapaCalculoCDDM)
+  const cddm = (dados as any).dadosCalculoCDDM as {
+    elementos: any[]
+    avaliando: { area: number; padraoConstrutivo: string; estadoConservacao: string }
+    media: number
+    mediaSaneada: number
+    desvioPadrao: number
+    coefVariacao: number
+    tStudent: number
+    intervaloConfianca: number
+    limiteInferior: number
+    limiteSuperior: number
+    limiteInf30: number
+    limiteSup30: number
+    grauPrecisao: string
+    valorImovel: number
+    outliersDescartados: number
+  } | undefined
+
+  const elementosCddm = cddm?.elementos || []
+  const temCddm = elementosCddm.length > 0
+
   const capaMetodologia = dados.metodoAvaliacao==='evolutivo'?'Evolutivo':dados.metodoAvaliacao==='comparativo'?'Comparativo Direto':dados.metodoAvaliacao||'-'
 
   const capaGrauFund = (()=>{
@@ -277,9 +357,9 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
   const divisoesFilt = (dados.divisoes||[]).filter((d:any)=>d.ambiente?.trim())
   const temBenfeitorias = !!dados.imagemBenfeitorias
 
-  // Número total de páginas: 3 fixas + páginas de fotos
+  // Número total de páginas: 5 fixas + páginas de fotos
   const paginasFotos = chunkArray(fotosAnexo, 6)
-  const totalPaginas = 3 + paginasFotos.length
+  const totalPaginas = 5 + paginasFotos.length
 
   const secValor = temBenfeitorias ? '11' : '10'
   const secGraus = temBenfeitorias ? '12' : '11'
@@ -434,19 +514,26 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
         <DocFooter pagina={2} total={totalPaginas} dataLaudo={dados.dataLaudo} />
       </Page>
 
-      {/* ══ PÁGINA 3 ════════════════════════════════════════════ */}
+      {/* ══ PÁGINA 3 — Localização + Pesquisa Imobiliária (cards) ══ */}
       <Page size="A4" style={s.page}>
         <DocHeader solicitante={dados.solicitante} proprietario={dados.proprietario} />
 
         <View style={s.content}>
           {/* 8 — Localização */}
           <SecHeader num="8" titulo="Localização" />
-          <View style={s.table}>
-            {dados.coordenadasImovel && <Row label="Coordenadas" value={dados.coordenadasImovel} last />}
-          </View>
+          {dados.coordenadasImovel && (
+            <View style={s.table}>
+              <Row label="Coordenadas" value={dados.coordenadasImovel} last />
+            </View>
+          )}
+          {dados.localizacaoComparativos && (
+            <Image src={dados.localizacaoComparativos} style={{ width: '100%', height: 220, objectFit: 'cover', marginTop: 4, borderWidth: 0.5, borderColor: CINZA }} />
+          )}
 
-          {/* 9 — Pesquisa */}
+          {/* 9 — Pesquisa Imobiliária */}
           <SecHeader num="9" titulo="Pesquisa Imobiliária" />
+
+          {/* Resumo */}
           <View style={s.table}>
             <View style={s.row}>
               <View style={[s.cellHead,{flex:2,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Período</Text></View>
@@ -459,21 +546,183 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                 <Text>{dados.periodoPesquisaInicio&&dados.periodoPesquisaFim?`${fd(dados.periodoPesquisaInicio)} a ${fd(dados.periodoPesquisaFim)}`:'-'}</Text>
               </View>
               <View style={[s.cellVal,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{dados.tipoInformacoesObtidas||'-'}</Text></View>
-              <View style={[s.cellVal,{flex:0.8,borderRightWidth:0.5,borderColor:CINZA,textAlign:'center'}]}><Text>{dados.quantidadeElementos||'-'}</Text></View>
+              <View style={[s.cellVal,{flex:0.8,borderRightWidth:0.5,borderColor:CINZA,textAlign:'center'}]}>
+                <Text>{(temCddm ? elementosCddm.length : Number(dados.quantidadeElementos||0)) || '-'}</Text>
+              </View>
               <View style={[s.cellVal,{flex:2}]}><Text>{metLabel(dados.metodoAvaliacao)}</Text></View>
             </View>
           </View>
 
-          {/* 10 — Benfeitorias (opcional) */}
-          {temBenfeitorias && (
+          {/* Cards de cada elemento (estilo MK Rodobens) */}
+          {temCddm && elementosCddm.map((el: any, i: number) => (
+            <View key={`elem-${i}`} wrap={false}>
+              <View style={s.elemHeader}>
+                <Text style={s.elemHeaderTxt}>ELEMENTO COMPARATIVO {String(i+1).padStart(2,'0')}</Text>
+                <Text style={s.elemHeaderSub}>
+                  {el.tipo ? `${el.tipo} • ` : ''}{el.fonte || (el.link ? 'Site de imobiliária' : 'Pesquisa de mercado')}
+                </Text>
+              </View>
+              <View style={s.elemTable}>
+                <View style={s.elemRowB}>
+                  <View style={[s.elemCellLbl,{width:55}]}><Text>Endereço</Text></View>
+                  <View style={[s.elemCellVal,{flex:2.5}]}><Text>{el.endereco || '-'}</Text></View>
+                  <View style={[s.elemCellLbl,{width:40}]}><Text>Data</Text></View>
+                  <View style={[s.elemCellValLast,{flex:1}]}><Text>{el.data ? fd(el.data) : '-'}</Text></View>
+                </View>
+                <View style={s.elemRowB}>
+                  <View style={[s.elemCellLbl,{width:55}]}><Text>Área</Text></View>
+                  <View style={[s.elemCellVal,{flex:1}]}><Text>{el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '-'}</Text></View>
+                  <View style={[s.elemCellLbl,{width:55}]}><Text>V. oferta</Text></View>
+                  <View style={[s.elemCellVal,{flex:1}]}><Text>{el.valorOferta > 0 ? fm(el.valorOferta) : '-'}</Text></View>
+                  <View style={[s.elemCellLbl,{width:55}]}><Text>V.U./m²</Text></View>
+                  <View style={[s.elemCellValLast,{flex:1}]}><Text>{el.valorUnitarioOferta > 0 ? fm(el.valorUnitarioOferta) : '-'}</Text></View>
+                </View>
+                <View style={el.link ? s.elemRowB : s.elemRow}>
+                  <View style={[s.elemCellLbl,{width:55}]}><Text>Padrão</Text></View>
+                  <View style={[s.elemCellVal,{flex:1}]}><Text>{el.padraoConstrutivo || '-'}</Text></View>
+                  <View style={[s.elemCellLbl,{width:55}]}><Text>Conserv.</Text></View>
+                  <View style={[s.elemCellVal,{flex:1}]}><Text>{el.estadoConservacao || '-'}</Text></View>
+                  <View style={[s.elemCellLbl,{width:55}]}><Text>Idade · Vagas</Text></View>
+                  <View style={[s.elemCellValLast,{flex:1}]}><Text>{el.idadeAparente ?? '-'}{el.idadeAparente !== undefined ? ' anos' : ''} · {el.vagas ?? 0}</Text></View>
+                </View>
+                {el.link && (
+                  <View style={s.elemRow}>
+                    <Text style={s.elemLink}>Fonte: {String(el.link).slice(0, 110)}{String(el.link).length > 110 ? '...' : ''}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          ))}
+        </View>
+
+        <DocFooter pagina={3} total={totalPaginas} dataLaudo={dados.dataLaudo} />
+      </Page>
+
+      {/* ══ PÁGINA 4 — Homogeneização + Valor + Graus (resumo) ══ */}
+      <Page size="A4" style={s.page}>
+        <DocHeader solicitante={dados.solicitante} proprietario={dados.proprietario} />
+
+        <View style={s.content}>
+          {/* Homogeneização (estilo MK seção 14) */}
+          {temCddm && (
             <>
-              <SecHeader num="10" titulo="Cálculo das Benfeitorias" />
-              <Image src={dados.imagemBenfeitorias!} style={{ maxHeight: 90, objectFit: 'contain', marginTop: 4 }} />
+              <SecHeader num="9.1" titulo="Homogeneização" />
+              <View style={s.homogTable}>
+                <View style={s.homogRowH}>
+                  <Text style={[s.homogTh,{flex:0.6}]}>Elem.</Text>
+                  <Text style={[s.homogTh,{flex:1.1}]}>VU/m²</Text>
+                  <Text style={[s.homogTh,{flex:0.8}]}>F.Local</Text>
+                  <Text style={[s.homogTh,{flex:0.8}]}>F.Padrão</Text>
+                  <Text style={[s.homogTh,{flex:0.8}]}>F.FOC</Text>
+                  <Text style={[s.homogTh,{flex:0.8}]}>F.Andar</Text>
+                  <Text style={[s.homogTh,{flex:0.8}]}>F.Vaga</Text>
+                  <Text style={[s.homogTh,{flex:0.8}]}>F.Área</Text>
+                  <Text style={[s.homogThLast,{flex:1.2}]}>VU/m² Hom.</Text>
+                </View>
+                {elementosCddm.map((el: any, i: number) => {
+                  const isLast = i === elementosCddm.length - 1
+                  const tdStyle = el.saneado ? s.homogTd : s.homogTdOut
+                  return (
+                    <View key={`h-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
+                      <Text style={[tdStyle,{flex:0.6}]}>{i+1}</Text>
+                      <Text style={[tdStyle,{flex:1.1}]}>{fm(el.valorUnitarioOferta || 0)}</Text>
+                      <Text style={[tdStyle,{flex:0.8}]}>{(el.fatorLocal||1).toFixed(4)}</Text>
+                      <Text style={[tdStyle,{flex:0.8}]}>{(el.fatorPadrao||1).toFixed(4)}</Text>
+                      <Text style={[tdStyle,{flex:0.8}]}>{(el.fatorFOC||1).toFixed(4)}</Text>
+                      <Text style={[tdStyle,{flex:0.8}]}>{(el.fatorAndar||1).toFixed(4)}</Text>
+                      <Text style={[tdStyle,{flex:0.8}]}>{(el.fatorVaga||1).toFixed(4)}</Text>
+                      <Text style={[tdStyle,{flex:0.8}]}>{(el.fatorArea||1).toFixed(4)}</Text>
+                      <Text style={[el.saneado ? s.homogTdLast : {...s.homogTdOut, borderRightWidth: 0},{flex:1.2}]}>{fm(el.vuHomog || 0)}</Text>
+                    </View>
+                  )
+                })}
+              </View>
+
+              {/* Legenda */}
+              <View style={s.legendaWrap}>
+                <Text style={[s.legendaTxt,{fontFamily:'Helvetica-Bold',marginBottom:2}]}>Legenda dos fatores aplicados:</Text>
+                <Text style={s.legendaTxt}>F.Local = Fator de Localização    F.Padrão = Fator de Padrão Construtivo    F.FOC = Fator de Obsolescência e Conservação</Text>
+                <Text style={s.legendaTxt}>F.Andar = Fator de Andar    F.Vaga = Fator de Vaga de Garagem    F.Área = Fator de Adequação por Área</Text>
+                {cddm && cddm.outliersDescartados > 0 && (
+                  <Text style={[s.legendaTxt,{marginTop:3,color:'#94a3b8',fontFamily:'Helvetica-Oblique'}]}>
+                    Elementos em itálico/cinza foram descartados pelo saneamento estatístico (Critério de Chauvenet — fora do intervalo ±30% da média).
+                  </Text>
+                )}
+              </View>
             </>
           )}
 
+          {/* Memorial de Cálculos (estilo MK) */}
+          {temCddm && cddm && (
+            <View style={{ flexDirection: 'row', gap: 5, marginTop: 6 }}>
+              {/* Bloco esquerdo — Enquadramento */}
+              <View style={{ flex: 1.3, borderWidth: 0.5, borderColor: CINZA }}>
+                <View style={{ backgroundColor: AZUL, paddingVertical: 3, paddingHorizontal: 5 }}>
+                  <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center' }}>ENQUADRAMENTO DA AVALIAÇÃO</Text>
+                </View>
+                <View style={s.memorialRow}>
+                  <Text style={[s.memorialLbl,{flex:1.6,fontSize:6.5}]}>Amplitude do intervalo de confiança de 80% em torno da estimativa central</Text>
+                  <View style={{flex:1.5,flexDirection:'column'}}>
+                    <View style={{flexDirection:'row',backgroundColor:AZULLT}}>
+                      <Text style={{flex:1,fontSize:6.5,fontFamily:'Helvetica-Bold',color:AZUL,textAlign:'center',paddingVertical:2,borderRightWidth:0.5,borderColor:CINZA}}>III</Text>
+                      <Text style={{flex:1,fontSize:6.5,fontFamily:'Helvetica-Bold',color:AZUL,textAlign:'center',paddingVertical:2,borderRightWidth:0.5,borderColor:CINZA}}>II</Text>
+                      <Text style={{flex:1,fontSize:6.5,fontFamily:'Helvetica-Bold',color:AZUL,textAlign:'center',paddingVertical:2}}>I</Text>
+                    </View>
+                    <View style={{flexDirection:'row'}}>
+                      <Text style={{flex:1,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:2,borderTopWidth:0.5,borderRightWidth:0.5,borderColor:CINZA}}>≤ 30%</Text>
+                      <Text style={{flex:1,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:2,borderTopWidth:0.5,borderRightWidth:0.5,borderColor:CINZA}}>≤ 40%</Text>
+                      <Text style={{flex:1,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:2,borderTopWidth:0.5,borderColor:CINZA}}>≤ 50%</Text>
+                    </View>
+                  </View>
+                </View>
+                <View style={s.memorialRow}>
+                  <Text style={[s.memorialLbl,{flex:2,fontFamily:'Helvetica-Bold'}]}>Intervalo de confiança</Text>
+                  <Text style={[s.memorialVal,{flex:1.1,textAlign:'center'}]}>{cddm.intervaloConfianca.toFixed(2).replace('.', ',')}%</Text>
+                </View>
+                <View style={s.memorialRowL}>
+                  <Text style={[s.memorialLbl,{flex:2,fontFamily:'Helvetica-Bold',backgroundColor:AZUL,color:BRANCO}]}>GRAU DE PRECISÃO</Text>
+                  <Text style={[s.memorialVal,{flex:1.1,textAlign:'center',backgroundColor:'#dbeafe',fontSize:9}]}>{cddm.grauPrecisao || '-'}</Text>
+                </View>
+              </View>
+
+              {/* Bloco direito — Memorial */}
+              <View style={{ flex: 1, borderWidth: 0.5, borderColor: CINZA }}>
+                <View style={{ backgroundColor: AZUL, paddingVertical: 3, paddingHorizontal: 5 }}>
+                  <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center' }}>MEMORIAL DE CÁLCULOS</Text>
+                </View>
+                <View style={s.memorialRow}><Text style={s.memorialLbl}>Média Saneada</Text><Text style={s.memorialVal}>{fm(cddm.mediaSaneada)}</Text></View>
+                <View style={s.memorialRow}><Text style={s.memorialLbl}>Limite superior (+30%)</Text><Text style={s.memorialVal}>{fm(cddm.limiteSup30)}</Text></View>
+                <View style={s.memorialRow}><Text style={s.memorialLbl}>Limite inferior (-30%)</Text><Text style={s.memorialVal}>{fm(cddm.limiteInf30)}</Text></View>
+                <View style={s.memorialRow}><Text style={s.memorialLbl}>Desvio Padrão</Text><Text style={s.memorialVal}>{cddm.desvioPadrao.toFixed(2).replace('.', ',')}</Text></View>
+                <View style={s.memorialRow}><Text style={s.memorialLbl}>Coeficiente de Variação</Text><Text style={s.memorialVal}>{cddm.coefVariacao.toFixed(2).replace('.', ',')}%</Text></View>
+                <View style={s.memorialRow}><Text style={s.memorialLbl}>Elementos saneados</Text><Text style={s.memorialVal}>{elementosCddm.filter((e: any) => e.saneado).length} de {elementosCddm.length}</Text></View>
+                <View style={s.memorialRow}><Text style={s.memorialLbl}>T de Student</Text><Text style={s.memorialVal}>{cddm.tStudent.toFixed(3).replace('.', ',')}</Text></View>
+                <View style={s.memorialRow}><Text style={s.memorialLbl}>Limite Sup. IC</Text><Text style={s.memorialVal}>{fm(cddm.limiteSuperior)}</Text></View>
+                <View style={s.memorialRowL}><Text style={s.memorialLbl}>Limite Inf. IC</Text><Text style={s.memorialVal}>{fm(cddm.limiteInferior)}</Text></View>
+              </View>
+            </View>
+          )}
+
+          <Text style={[s.legendaTxt,{marginTop:4,marginBottom:2,fontStyle:'italic',color:'#475569'}]}>
+            * Quando a amplitude do intervalo de confiança ultrapassar 50% não há classificação do resultado quanto à precisão e é necessária justificativa com base no diagnóstico do mercado. (ABNT 14653-2 - 2011 - Item 13.4)
+          </Text>
+
           {/* Valor final */}
           <SecHeader num={secValor} titulo="Valor Final da Avaliação" />
+          {temCddm && cddm && (
+            <View style={s.table}>
+              <View style={s.row}>
+                <View style={[s.cellHead,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Área</Text></View>
+                <View style={[s.cellHead,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Valor/m²</Text></View>
+                <View style={[s.cellHead,{flex:1}]}><Text>Valor Total</Text></View>
+              </View>
+              <View style={s.rowLast}>
+                <View style={[s.cellVal,{flex:1,borderRightWidth:0.5,borderColor:CINZA,textAlign:'center'}]}><Text>{cddm.avaliando.area.toLocaleString('pt-BR')} m²</Text></View>
+                <View style={[s.cellVal,{flex:1,borderRightWidth:0.5,borderColor:CINZA,textAlign:'center'}]}><Text>{fm(cddm.mediaSaneada)}</Text></View>
+                <View style={[s.cellVal,{flex:1,textAlign:'center',fontFamily:'Helvetica-Bold',color:AZUL}]}><Text>{fm(cddm.valorImovel)}</Text></View>
+              </View>
+            </View>
+          )}
           <View style={s.valorRow}>
             <View style={s.valorDark}>
               <Text style={s.valorLbl}>VALOR DA AVALIAÇÃO</Text>
@@ -489,7 +738,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
             )}
           </View>
 
-          {/* Graus */}
+          {/* Resumo de Graus */}
           <SecHeader num={secGraus} titulo="Grau de Fundamentação e Precisão" />
           <View style={s.grauRow}>
             {[
@@ -503,6 +752,102 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
               </View>
             ))}
           </View>
+        </View>
+
+        <DocFooter pagina={4} total={totalPaginas} dataLaudo={dados.dataLaudo} />
+      </Page>
+
+      {/* ══ PÁGINA 5 — Tabelas detalhadas de Fundamentação e Precisão + Conclusão ══ */}
+      <Page size="A4" style={s.page}>
+        <DocHeader solicitante={dados.solicitante} proprietario={dados.proprietario} />
+
+        <View style={s.content}>
+          {/* Tabela de Fundamentação detalhada (estilo MK seção 17) */}
+          <SecHeader num={`${secGraus}.1`} titulo="Grau de Fundamentação — Tratamento por Fatores" />
+          {(() => {
+            const fund = (dados.fundamentacao || []) as any[]
+            const itensPadrao = [
+              { id: '01', desc: 'Caracterização do imóvel avaliando', g3: 'Completa quanto a todos os fatores analisados', g2: 'Completa quanto aos fatores utilizados no tratamento', g1: 'Adoção de situação paradigma' },
+              { id: '02', desc: 'Quantidade mínima de dados de mercado, efetivamente utilizados', g3: '12', g2: '5', g1: '3' },
+              { id: '03', desc: 'Identificação dos dados de mercado', g3: 'Apresentação de informações relativas a todas as características dos dados analisados, com foto e características observadas pelo autor do laudo', g2: 'Apresentação de informações relativas a todas as características dos dados analisados', g1: 'Apresentação de informações relativas a todas as características dos dados correspondentes aos fatores utilizados' },
+              { id: '04', desc: 'Intervalo admissível de ajuste para o conjunto de fatores', g3: '0,80 a 1,25', g2: '0,50 a 2,00', g1: '0,40 a 2,50' },
+            ]
+            return (
+              <View style={s.grausTable}>
+                <View style={s.grausHead}>
+                  <Text style={s.grausThIdx}>Item</Text>
+                  <Text style={s.grausThDesc}>Descrição</Text>
+                  <Text style={s.grausThGrau}>Grau III</Text>
+                  <Text style={s.grausThGrau}>Grau II</Text>
+                  <Text style={s.grausThGrauLast}>Grau I</Text>
+                </View>
+                {itensPadrao.map((it, idx) => {
+                  const last = idx === itensPadrao.length - 1
+                  const itemAtual = fund[idx]
+                  const grauAtual = itemAtual?.grau || ''
+                  return (
+                    <View key={it.id} style={last ? s.grausLastRow : s.grausItemRow}>
+                      <Text style={s.grausTdIdx}>{it.id}</Text>
+                      <Text style={s.grausTdDesc}>{it.desc}</Text>
+                      <Text style={grauAtual === 'III' ? s.grausTdGrauOk : s.grausTdGrau}>{it.g3}</Text>
+                      <Text style={grauAtual === 'II' ? s.grausTdGrauOk : s.grausTdGrau}>{it.g2}</Text>
+                      <Text style={grauAtual === 'I' ? s.grausTdGrauOkLast : s.grausTdGrauLast}>{it.g1}</Text>
+                    </View>
+                  )
+                })}
+              </View>
+            )
+          })()}
+          <Text style={[s.legendaTxt,{marginTop:3,fontStyle:'italic',color:'#475569'}]}>
+            No caso de utilização de menos de cinco dados de mercado, o intervalo admissível de ajuste é de 0,80 a 1,25, pois é desejável que, com um número menor de dados de mercado, a amostra seja menos heterogênea.
+          </Text>
+
+          {/* Pontos mínimos */}
+          <View style={[s.grausTable,{marginTop:4}]}>
+            <View style={{flexDirection:'row',backgroundColor:AZULLT,borderBottomWidth:0.5,borderColor:CINZA}}>
+              <Text style={{flex:1,fontSize:6.5,fontFamily:'Helvetica-Bold',color:AZUL,paddingVertical:3,paddingHorizontal:4,borderRightWidth:0.5,borderColor:CINZA}}>Graus</Text>
+              <Text style={{flex:1.7,fontSize:6.5,fontFamily:'Helvetica-Bold',color:AZUL,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA}}>III</Text>
+              <Text style={{flex:1.7,fontSize:6.5,fontFamily:'Helvetica-Bold',color:AZUL,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA}}>II</Text>
+              <Text style={{flex:1.7,fontSize:6.5,fontFamily:'Helvetica-Bold',color:AZUL,textAlign:'center',paddingVertical:3}}>I</Text>
+            </View>
+            <View style={{flexDirection:'row',borderBottomWidth:0.5,borderColor:CINZA}}>
+              <Text style={{flex:1,fontSize:6.5,color:TEXTO,paddingVertical:3,paddingHorizontal:4,borderRightWidth:0.5,borderColor:CINZA}}>Pontos Mínimos</Text>
+              <Text style={{flex:1.7,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA}}>10</Text>
+              <Text style={{flex:1.7,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA}}>6</Text>
+              <Text style={{flex:1.7,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:3}}>4</Text>
+            </View>
+            <View style={{flexDirection:'row'}}>
+              <Text style={{flex:1,fontSize:6.5,color:TEXTO,paddingVertical:3,paddingHorizontal:4,borderRightWidth:0.5,borderColor:CINZA}}>Itens obrigatórios</Text>
+              <Text style={{flex:1.7,fontSize:6,color:TEXTO,paddingVertical:3,paddingHorizontal:3,textAlign:'center',borderRightWidth:0.5,borderColor:CINZA,lineHeight:1.3}}>Itens 2 e 4 no grau III, com os demais, no mín., grau II</Text>
+              <Text style={{flex:1.7,fontSize:6,color:TEXTO,paddingVertical:3,paddingHorizontal:3,textAlign:'center',borderRightWidth:0.5,borderColor:CINZA,lineHeight:1.3}}>Itens 2 e 4, no mín., grau II e demais, no mín., grau I</Text>
+              <Text style={{flex:1.7,fontSize:6,color:TEXTO,paddingVertical:3,paddingHorizontal:3,textAlign:'center',lineHeight:1.3}}>Todos, no mín., no grau I</Text>
+            </View>
+          </View>
+
+          {/* Tabela de Precisão (estilo MK seção 18) */}
+          <SecHeader num={`${secGraus}.2`} titulo="Grau de Precisão — Tratamento por Fatores" />
+          <View style={s.grausTable}>
+            <View style={s.grausHead}>
+              <Text style={[s.grausThDesc,{flex:3}]}>Descrição</Text>
+              <Text style={s.grausThGrau}>Grau III</Text>
+              <Text style={s.grausThGrau}>Grau II</Text>
+              <Text style={s.grausThGrauLast}>Grau I</Text>
+            </View>
+            <View style={s.grausLastRow}>
+              <Text style={[s.grausTdDesc,{flex:3}]}>Amplitude do intervalo de confiança de 80% em torno da estimativa de tendência central</Text>
+              <Text style={capaGrauPrec === 'III' ? s.grausTdGrauOk : s.grausTdGrau}>≤ 30%</Text>
+              <Text style={capaGrauPrec === 'II' ? s.grausTdGrauOk : s.grausTdGrau}>≤ 40%</Text>
+              <Text style={capaGrauPrec === 'I' ? s.grausTdGrauOkLast : s.grausTdGrauLast}>≤ 50%</Text>
+            </View>
+          </View>
+
+          {/* Benfeitorias (opcional) */}
+          {temBenfeitorias && (
+            <>
+              <SecHeader num="10" titulo="Cálculo das Benfeitorias" />
+              <Image src={dados.imagemBenfeitorias!} style={{ maxHeight: 90, objectFit: 'contain', marginTop: 4 }} />
+            </>
+          )}
 
           {/* Conclusão */}
           <SecHeader num={secConcl} titulo="Considerações Finais" />
@@ -518,12 +863,12 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
               <Text style={s.signNome}>{dados.responsavelNome||'Responsável Técnico'}</Text>
               {dados.responsavelRegistro ? <Text style={s.signSub}>CREA/CAU: {dados.responsavelRegistro}</Text> : null}
               <Text style={s.signSub}>Lesath Engenharia – CNPJ: 49.068.717/0001-64</Text>
-              <Text style={[s.signSub, { marginTop: 3 }]}>{dataExtenso}</Text>
+              {dados.dataLaudo && <Text style={[s.signSub,{marginTop:3}]}>{dataExtenso}</Text>}
             </View>
           </View>
         </View>
 
-        <DocFooter pagina={3} total={totalPaginas} dataLaudo={dados.dataLaudo} />
+        <DocFooter pagina={5} total={totalPaginas} dataLaudo={dados.dataLaudo} />
       </Page>
 
       {/* ══ PÁGINAS DE FOTOS ════════════════════════════════════ */}
@@ -545,7 +890,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
             </View>
           </View>
 
-          <DocFooter pagina={4+idx} total={totalPaginas} dataLaudo={dados.dataLaudo} />
+          <DocFooter pagina={6+idx} total={totalPaginas} dataLaudo={dados.dataLaudo} />
         </Page>
       ))}
 

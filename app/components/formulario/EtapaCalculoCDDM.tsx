@@ -628,6 +628,83 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
     }
   }, [resultado.mediaSaneada, avaliando.area, setForm])
 
+  // Persiste os DADOS COMPLETOS do cálculo no form para o PDF e a visualização
+  // do laudo simplificado renderizarem a memória de cálculo (CDDM + Homog +
+  // Saneamento). Snapshot estático: só os números + identificação resumida,
+  // sem objetos profundos (evita ciclo de dependências).
+  useEffect(() => {
+    if (!setForm) return
+    const area = pn(avaliando.area)
+
+    // Para cada elemento parcial calculado, monta um snapshot leve.
+    const snapshotElementos = resultado.elementos.map((re, i) => {
+      const el = elementos[i]
+      if (!el) return null
+      const enderecoCompleto = [el.logradouro, el.bairro, el.cidade, el.uf]
+        .filter(Boolean).join(', ')
+      return {
+        id: el.id,
+        identificacao: el.empreendimento || `Elemento ${i + 1}`,
+        endereco: enderecoCompleto,
+        coordenadas: el.coordenadas || '',
+        area: pn(el.area),
+        valorOferta: pn(el.valorOferta),
+        valorUnitarioOferta: re.vu,
+        padraoConstrutivo: el.padraoConstrutivo || '',
+        estadoConservacao: el.estadoConservacao || '',
+        idadeAparente: pn(el.idade),
+        andar: pn(el.andar),
+        vagas: pn(el.vagas),
+        dormitorios: pn(el.dormitorios),
+        suites: pn(el.suites),
+        fatorLocal: re.fatorLocal,
+        fatorPadrao: re.fatorPadrao,
+        fatorFOC: re.fatorFOC,
+        fatorAndar: re.fatorAndar,
+        fatorVaga: re.fatorVaga,
+        fatorArea: re.fatorArea,
+        coefGeral: re.coefGeral,
+        vuHomog: re.vuHomog,
+        residuo: re.residuo,
+        saneado: re.saneado,
+        fonte: el.fonte || '',
+        link: el.link || '',
+        data: el.data || '',
+      }
+    }).filter(Boolean)
+
+    setForm((prev: any) => ({
+      ...prev,
+      dadosCalculoCDDM: {
+        elementos: snapshotElementos,
+        avaliando: {
+          area,
+          padraoConstrutivo: avaliando.padraoConstrutivo,
+          estadoConservacao: avaliando.estadoConservacao,
+          fatorLocal: pn(avaliando.fatorLocal) / 100,
+          fatorAndar: pn(avaliando.fatorAndar) / 100,
+          vagas: pn(avaliando.vagas),
+          idadeAparente: pn((avaliando as any).idadeAparente || '0'),
+        },
+        media: resultado.media,
+        mediaSaneada: resultado.mediaSaneada,
+        desvioPadrao: resultado.desvioPadrao,
+        coefVariacao: resultado.coefVariacao,
+        tStudent: resultado.tStudent,
+        intervaloConfianca: resultado.intervaloConfianca,
+        limiteInferior: resultado.limiteInferior,
+        limiteSuperior: resultado.limiteSuperior,
+        limiteInf30: resultado.limiteInf30,
+        limiteSup30: resultado.limiteSup30,
+        grauPrecisao: resultado.grauPrecisao,
+        valorImovel: resultado.mediaSaneada * area,
+        amplitudeICPercent: resultado.intervaloConfianca,
+        outliersDescartados: resultado.elementos.filter(e => !e.saneado).length,
+        fatoresAtivos: fatores,
+      },
+    }))
+  }, [resultado, elementos, avaliando, fatores, setForm])
+
   function updateElem(idx: number, campo: keyof ElementoCDDM, val: string) {
     setElementos(prev => prev.map((e, i) => i === idx ? { ...e, [campo]: val } : e))
   }
