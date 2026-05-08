@@ -1133,26 +1133,73 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                       </tbody>
                     </table>
 
-                    {/* Cards detalhados de cada elemento (estilo planilha "Exemplo_impressão") */}
+                    {/* Cards detalhados de cada elemento — uma linha por campo, campos vazios omitidos */}
                     {temCddm && elementosCddm.map((el: any, i: number) => {
-                      const valorOf = el.valorOferta > 0 ? formatarMoeda(el.valorOferta) : '—'
+                      const valorOf  = el.valorOferta > 0 ? formatarMoeda(el.valorOferta) : ''
                       const valorLiq = el.valorOferta > 0 && el.fatorOferta
                         ? formatarMoeda(el.valorOferta * (parseFloat(String(el.fatorOferta).replace(',', '.')) || 1))
-                        : valorOf
-                      // Estilos exatamente iguais ao PDF
+                        : ''
+
                       const L: React.CSSProperties = {
-                        background: '#EAF0FB', padding: '2.5px 5px', fontSize: '7px',
+                        background: '#EAF0FB', padding: '3px 6px', fontSize: '7.5px',
                         fontWeight: 700, color: '#17325C', borderRight: '0.5px solid #C9D3E6',
-                        whiteSpace: 'nowrap', width: '11%',
+                        whiteSpace: 'nowrap', width: '22%', verticalAlign: 'middle',
                       }
                       const V: React.CSSProperties = {
-                        padding: '2.5px 5px', fontSize: '7px', color: '#1e293b',
-                        borderRight: '0.5px solid #C9D3E6',
+                        padding: '3px 6px', fontSize: '7.5px', color: '#1e293b', verticalAlign: 'middle',
                       }
-                      const VL: React.CSSProperties = { padding: '2.5px 5px', fontSize: '7px', color: '#1e293b' }
-                      const brd: React.CSSProperties = { borderTop: '0.5px solid #C9D3E6' }
+
+                      // Retorna linha apenas se valor preenchido
+                      const linha = (rotulo: string, valor: string | number, extra?: React.CSSProperties) => {
+                        const v = String(valor ?? '').trim()
+                        if (!v || v === '0' || v === '-') return null
+                        return (
+                          <tr key={rotulo} style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                            <td style={L}>{rotulo}</td>
+                            <td style={extra ? { ...V, ...extra } : V}>{v}</td>
+                          </tr>
+                        )
+                      }
+
+                      const linhas = [
+                        linha('Tipo', el.tipo),
+                        linha('Empreendimento', el.empreendimento),
+                        linha('Logradouro', el.logradouro || el.endereco),
+                        linha('Bairro', el.bairro),
+                        linha('Cidade · UF', [el.cidade, el.uf].filter(Boolean).join(' · ')),
+                        linha('Distância', el.distanciaAvaliando),
+                        linha('Conservação', el.estadoConservacao),
+                        el.idadeAparente > 0 ? linha('Idade', `${el.idadeAparente} anos`) : null,
+                        el.andar > 0 ? linha('Andar', el.andar) : null,
+                        el.area > 0 ? linha('Área constr./útil', `${el.area.toLocaleString('pt-BR')} m²`) : null,
+                        linha('Padrão constr.', el.padraoConstrutivo),
+                        el.dormitorios > 0 ? linha('Dormitórios', el.dormitorios) : null,
+                        el.suites > 0 ? linha('Suítes', el.suites) : null,
+                        el.vagas > 0 ? linha('Vagas', el.vagas) : null,
+                        valorOf ? linha('Valor oferta', valorOf, { fontWeight: 700, color: '#17325C' }) : null,
+                        valorLiq && valorLiq !== valorOf ? linha('Valor líquido', valorLiq) : null,
+                        el.valorUnitarioOferta > 0 ? linha('V.U./m²', formatarMoeda(el.valorUnitarioOferta), { fontWeight: 700, color: '#2347C6' }) : null,
+                        linha('F. Oferta', (el.fatorOferta || '').toString().replace('.', ',')),
+                        linha('F. Local', el.fatorLocalBruto),
+                        linha('F. Andar', el.fatorAndarBruto),
+                        linha('Tipo oferta', el.tipoOferta),
+                        linha('Status', el.status),
+                        linha('Telefone', el.telefone),
+                        linha('Coordenadas', el.coordenadas),
+                        linha('Fonte', el.fonte),
+                        el.link ? (
+                          <tr key="link" style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                            <td style={L}>Link</td>
+                            <td style={{ ...V, fontSize: '6.5px', color: '#2347C6', wordBreak: 'break-all' }}>{String(el.link)}</td>
+                          </tr>
+                        ) : null,
+                        linha('Obs.', el.observacoes),
+                      ].filter(Boolean)
+
+                      if (linhas.length === 0) return null
+
                       return (
-                        <div key={`elem-${i}`} style={{ marginBottom: '5px', breakInside: 'avoid' }}>
+                        <div key={`elem-${i}`} style={{ marginBottom: '6px', breakInside: 'avoid' }}>
                           <div style={{ background: '#2347C6', padding: '3px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '8px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
                               ELEMENTO COMPARATIVO {String(i + 1).padStart(2, '0')}
@@ -1161,105 +1208,8 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                               {el.data ? formatarDataBR(el.data) : ''}{el.fonte ? ` • ${el.fonte}` : ''}
                             </span>
                           </div>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', borderTop: 'none', tableLayout: 'fixed' }}>
-                            <tbody>
-                              {/* Tipo / Empreendimento */}
-                              <tr>
-                                <td style={{ ...L, width: '11%' }}>Tipo</td>
-                                <td style={{ ...V, width: '39%' }}>{el.tipo || '—'}</td>
-                                <td style={{ ...L, width: '11%' }}>Empreendimento</td>
-                                <td style={VL}>{el.empreendimento || '—'}</td>
-                              </tr>
-                              {/* Logradouro / Cidade·UF */}
-                              <tr style={brd}>
-                                <td style={L}>Logradouro</td>
-                                <td style={{ ...V, width: '39%' }}>{el.logradouro || el.endereco || '—'}</td>
-                                <td style={{ ...L, width: '11%' }}>Cidade · UF</td>
-                                <td style={VL}>{[el.cidade, el.uf].filter(Boolean).join(' · ') || '—'}</td>
-                              </tr>
-                              {/* Bairro / Distância */}
-                              <tr style={brd}>
-                                <td style={L}>Bairro</td>
-                                <td style={V}>{el.bairro || '—'}</td>
-                                <td style={L}>Distância</td>
-                                <td style={VL}>{el.distanciaAvaliando || '—'}</td>
-                              </tr>
-                              {/* Conservação / Idade / Andar */}
-                              <tr style={brd}>
-                                <td style={L}>Conservação</td>
-                                <td style={{ ...V, width: '22%' }}>{el.estadoConservacao || '—'}</td>
-                                <td style={{ ...L, width: '8%' }}>Idade · Andar</td>
-                                <td style={{ ...VL }}>
-                                  {el.idadeAparente > 0 ? `${el.idadeAparente} anos` : '—'} · andar {el.andar > 0 ? el.andar : '—'}
-                                </td>
-                              </tr>
-                              {/* Área / Padrão */}
-                              <tr style={brd}>
-                                <td style={L}>Área constr./útil</td>
-                                <td style={V}>{el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '—'}</td>
-                                <td style={{ ...L, whiteSpace: 'nowrap' }}>Padrão constr.</td>
-                                <td style={VL}>{el.padraoConstrutivo || '—'}</td>
-                              </tr>
-                              {/* Dormitórios / Suítes / Vagas */}
-                              <tr style={brd}>
-                                <td style={L}>Dormitórios</td>
-                                <td style={V}>{el.dormitorios > 0 ? el.dormitorios : '—'}</td>
-                                <td style={L}>Suítes · Vagas</td>
-                                <td style={VL}>{(el.suites > 0 ? el.suites : '—')} · {(el.vagas > 0 ? el.vagas : '—')}</td>
-                              </tr>
-                              {/* Valor oferta / V. líquido / V.U./m² */}
-                              <tr style={brd}>
-                                <td style={L}>Valor oferta</td>
-                                <td style={{ ...V, fontWeight: 700, color: '#17325C' }}>{valorOf}</td>
-                                <td style={L}>V. líquido · V.U./m²</td>
-                                <td style={VL}>
-                                  {valorLiq} · <strong style={{ color: '#2347C6' }}>{el.valorUnitarioOferta > 0 ? formatarMoeda(el.valorUnitarioOferta) : '—'}</strong>
-                                </td>
-                              </tr>
-                              {/* F. Oferta · Local / F. Andar · FOC */}
-                              <tr style={brd}>
-                                <td style={L}>F. Oferta · Local</td>
-                                <td style={V}>
-                                  {(el.fatorOferta || '0,90').toString().replace('.', ',')} · {(el.fatorLocalBruto || '100').toString()}
-                                </td>
-                                <td style={L}>F. Andar · FOC</td>
-                                <td style={VL}>{(el.fatorAndarBruto || '100').toString()} · {el.estadoConservacao || '—'}</td>
-                              </tr>
-                              {/* Tipo oferta / Status / Telefone */}
-                              <tr style={brd}>
-                                <td style={L}>Tipo oferta</td>
-                                <td style={V}>{el.tipoOferta || 'Venda'} · {el.status || 'Em oferta'}</td>
-                                <td style={L}>Telefone</td>
-                                <td style={VL}>{el.telefone || '—'}</td>
-                              </tr>
-                              {/* Coordenadas / Fonte */}
-                              {(el.coordenadas || el.fonte) && (
-                                <tr style={brd}>
-                                  <td style={L}>Coordenadas</td>
-                                  <td style={V}>{el.coordenadas || '—'}</td>
-                                  <td style={L}>Fonte</td>
-                                  <td style={VL}>{el.fonte || '—'}</td>
-                                </tr>
-                              )}
-                              {/* Link */}
-                              {el.link && (
-                                <tr style={brd}>
-                                  <td style={L}>Link</td>
-                                  <td colSpan={3} style={{ padding: '2.5px 5px', fontSize: '6.5px', color: '#2347C6', wordBreak: 'break-all' }}>
-                                    {String(el.link)}
-                                  </td>
-                                </tr>
-                              )}
-                              {/* Observações */}
-                              {el.observacoes && (
-                                <tr style={brd}>
-                                  <td style={L}>Obs.</td>
-                                  <td colSpan={3} style={{ padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', lineHeight: 1.4 }}>
-                                    {el.observacoes}
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', borderTop: 'none' }}>
+                            <tbody>{linhas}</tbody>
                           </table>
                         </div>
                       )

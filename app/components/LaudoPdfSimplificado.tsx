@@ -560,34 +560,68 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
             </View>
           </View>
 
-          {/* Cards detalhados de cada elemento — larguras absolutas em todas as colunas
-               para evitar reflow do react-pdf. Total: 70+199+80+190 = 539pt = largura do conteúdo. */}
+          {/* Cards detalhados de cada elemento — uma linha por campo, campos vazios omitidos */}
           {temCddm && elementosCddm.map((el: any, i: number) => {
-            // Constantes de largura — somam 539pt (largura do conteúdo A4 com margens 28pt)
-            const L1 = 70   // rótulo esquerdo
-            const V1 = 199  // valor esquerdo
-            const L2 = 80   // rótulo direito
-            const V2 = 190  // valor direito
-
-            // Estilos base de célula
-            const lbl  = (w: number, br = true) => [s.elemCellLbl, { width: w, borderRightWidth: br ? 0.5 : 0, borderColor: CINZA }] as any
-            const val  = (w: number, br = true, extra?: object) => [s.elemCellVal, { width: w, borderRightWidth: br ? 0.5 : 0, borderColor: CINZA, ...(extra||{}) }] as any
-            const last = (w: number) => [s.elemCellValLast, { width: w }] as any
-
-            const valorOf  = el.valorOferta > 0 ? fm(el.valorOferta) : '-'
+            const valorOf  = el.valorOferta > 0 ? fm(el.valorOferta) : ''
             const valorLiq = el.valorOferta > 0 && el.fatorOferta
               ? fm(el.valorOferta * (parseFloat(String(el.fatorOferta).replace(',', '.')) || 1))
-              : valorOf
+              : ''
 
-            // Helper: linha padrão 4 colunas (L1 V1 L2 V2)
-            const row4 = (l1: string, v1: string, l2: string, v2: string, isLast = false) => (
-              <View style={isLast ? s.elemRow : s.elemRowB}>
-                <View style={lbl(L1)}><Text>{l1}</Text></View>
-                <View style={val(V1)}><Text>{v1 || '-'}</Text></View>
-                <View style={lbl(L2)}><Text>{l2}</Text></View>
-                <View style={last(V2)}><Text>{v2 || '-'}</Text></View>
-              </View>
-            )
+            // Larguras fixas: L=70 + V=469 = 539pt (largura do conteúdo A4)
+            const L = 70, V = 469
+            const lbl = [s.elemCellLbl, { width: L }] as any
+            const vlr = [s.elemCellValLast, { width: V }] as any
+
+            // Campo só aparece se valor não for vazio/zero
+            const campo = (rotulo: string, valor: string | number, isLast = false, extra?: object) => {
+              const v = String(valor ?? '').trim()
+              if (!v || v === '0' || v === '-') return null
+              return (
+                <View style={isLast ? s.elemRow : s.elemRowB}>
+                  <View style={lbl}><Text>{rotulo}</Text></View>
+                  <View style={extra ? [vlr, extra] : vlr}><Text>{v}</Text></View>
+                </View>
+              )
+            }
+
+            const camposOrdenados = [
+              campo('Tipo', el.tipo),
+              campo('Empreendimento', el.empreendimento),
+              campo('Logradouro', el.logradouro || el.endereco),
+              campo('Bairro', el.bairro),
+              campo('Cidade · UF', [el.cidade, el.uf].filter(Boolean).join(' · ')),
+              campo('Distância', el.distanciaAvaliando),
+              campo('Conservação', el.estadoConservacao),
+              el.idadeAparente > 0 ? campo('Idade', `${el.idadeAparente} anos`) : null,
+              el.andar > 0 ? campo('Andar', el.andar) : null,
+              el.area > 0 ? campo('Área constr./útil', `${el.area.toLocaleString('pt-BR')} m²`) : null,
+              campo('Padrão constr.', el.padraoConstrutivo),
+              el.dormitorios > 0 ? campo('Dormitórios', el.dormitorios) : null,
+              el.suites > 0 ? campo('Suítes', el.suites) : null,
+              el.vagas > 0 ? campo('Vagas', el.vagas) : null,
+              valorOf ? campo('Valor oferta', valorOf, false, { fontFamily:'Helvetica-Bold', color:AZUL }) : null,
+              valorLiq && valorLiq !== valorOf ? campo('Valor líquido', valorLiq) : null,
+              el.valorUnitarioOferta > 0 ? campo('V.U./m²', fm(el.valorUnitarioOferta), false, { fontFamily:'Helvetica-Bold', color:AZUL2 }) : null,
+              campo('F. Oferta', (el.fatorOferta || '').toString().replace('.', ',')),
+              campo('F. Local', el.fatorLocalBruto),
+              campo('F. Andar', el.fatorAndarBruto),
+              campo('Tipo oferta', el.tipoOferta),
+              campo('Status', el.status),
+              campo('Telefone', el.telefone),
+              campo('Coordenadas', el.coordenadas),
+              campo('Fonte', el.fonte),
+              el.link ? campo('Link', String(el.link).slice(0, 165) + (String(el.link).length > 165 ? '...' : '')) : null,
+              campo('Obs.', el.observacoes),
+            ].filter(Boolean)
+
+            if (camposOrdenados.length === 0) return null
+
+            // Marca o último campo como "last" (sem borda inferior)
+            const campos = camposOrdenados.map((c, idx) => {
+              if (idx < camposOrdenados.length - 1) return c
+              // Recriar o último com isLast=true
+              return React.cloneElement(c as React.ReactElement, { style: s.elemRow })
+            })
 
             return (
               <View key={`elem-${i}`} wrap={false} style={{ marginTop: 5 }}>
@@ -597,81 +631,8 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                     {el.data ? fd(el.data) : ''}{el.fonte ? ` • ${el.fonte}` : ''}
                   </Text>
                 </View>
-
                 <View style={s.elemTable}>
-                  {row4('Tipo', el.tipo || '-', 'Empreendimento', el.empreendimento || '-')}
-                  {row4('Logradouro', el.logradouro || el.endereco || '-', 'Cidade · UF', [el.cidade, el.uf].filter(Boolean).join(' · ') || '-')}
-                  {row4('Bairro', el.bairro || '-', 'Distância', el.distanciaAvaliando || '-')}
-
-                  {/* Conservação / Idade / Andar — 6 colunas fixas = 539pt */}
-                  <View style={s.elemRowB}>
-                    <View style={lbl(L1)}><Text>Conservação</Text></View>
-                    <View style={val(120)}><Text>{el.estadoConservacao || '-'}</Text></View>
-                    <View style={lbl(42)}><Text>Idade</Text></View>
-                    <View style={val(79)}><Text>{el.idadeAparente > 0 ? `${el.idadeAparente} anos` : '-'}</Text></View>
-                    <View style={lbl(42)}><Text>Andar</Text></View>
-                    <View style={last(186)}><Text>{el.andar > 0 ? el.andar : '-'}</Text></View>
-                  </View>
-
-                  {row4('Área constr./útil', el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '-', 'Padrão constr.', el.padraoConstrutivo || '-')}
-
-                  {/* Dormitórios / Suítes / Vagas — 6 colunas = 539pt */}
-                  <View style={s.elemRowB}>
-                    <View style={lbl(L1)}><Text>Dormitórios</Text></View>
-                    <View style={val(120)}><Text>{el.dormitorios > 0 ? el.dormitorios : '-'}</Text></View>
-                    <View style={lbl(42)}><Text>Suítes</Text></View>
-                    <View style={val(79)}><Text>{el.suites > 0 ? el.suites : '-'}</Text></View>
-                    <View style={lbl(42)}><Text>Vagas</Text></View>
-                    <View style={last(186)}><Text>{el.vagas > 0 ? el.vagas : '-'}</Text></View>
-                  </View>
-
-                  {/* Valor oferta / V. líquido · V.U./m² */}
-                  <View style={s.elemRowB}>
-                    <View style={lbl(L1)}><Text>Valor oferta</Text></View>
-                    <View style={val(V1, true, { fontFamily:'Helvetica-Bold', color:AZUL })}><Text>{valorOf}</Text></View>
-                    <View style={lbl(L2)}><Text>V. líquido · V.U./m²</Text></View>
-                    <View style={last(V2)}>
-                      <Text>{valorLiq} · <Text style={{fontFamily:'Helvetica-Bold',color:AZUL2}}>{el.valorUnitarioOferta > 0 ? fm(el.valorUnitarioOferta) : '-'}</Text></Text>
-                    </View>
-                  </View>
-
-                  {row4('F. Oferta · Local',
-                    `${(el.fatorOferta||'0,90').toString().replace('.', ',')} · ${(el.fatorLocalBruto||'100').toString()}`,
-                    'F. Andar · FOC',
-                    `${(el.fatorAndarBruto||'100').toString()} · ${el.estadoConservacao||'-'}`
-                  )}
-
-                  {/* Tipo oferta / Status / Telefone — 6 colunas = 539pt */}
-                  <View style={s.elemRowB}>
-                    <View style={lbl(L1)}><Text>Tipo oferta</Text></View>
-                    <View style={val(100)}><Text>{el.tipoOferta || 'Venda'}</Text></View>
-                    <View style={lbl(42)}><Text>Status</Text></View>
-                    <View style={val(99)}><Text>{el.status || 'Em oferta'}</Text></View>
-                    <View style={lbl(58)}><Text>Telefone</Text></View>
-                    <View style={last(170)}><Text>{el.telefone || '-'}</Text></View>
-                  </View>
-
-                  {row4('Coordenadas', el.coordenadas || '-', 'Fonte', el.fonte || '-')}
-
-                  {el.link && (
-                    <View style={el.observacoes ? s.elemRowB : s.elemRow}>
-                      <View style={lbl(L1)}><Text>Link</Text></View>
-                      <View style={{ width: 469, paddingVertical: 2.5, paddingHorizontal: 4 }}>
-                        <Text style={{ fontSize: 6.3, color: AZUL2 }}>
-                          {String(el.link).slice(0, 165)}{String(el.link).length > 165 ? '...' : ''}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-
-                  {el.observacoes && (
-                    <View style={s.elemRow}>
-                      <View style={lbl(L1, false)}><Text>Obs.</Text></View>
-                      <View style={{ width: 469, paddingVertical: 2.5, paddingHorizontal: 4 }}>
-                        <Text style={{ fontSize: 6.8, color: TEXTO }}>{el.observacoes}</Text>
-                      </View>
-                    </View>
-                  )}
+                  {campos}
                 </View>
               </View>
             )

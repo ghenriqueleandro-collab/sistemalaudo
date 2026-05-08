@@ -858,6 +858,15 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
             )}
           </div>
 
+          {/* Aviso informativo */}
+          <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
+            <span className="text-amber-500 mt-0.5 shrink-0">ℹ️</span>
+            <p className="text-xs text-amber-700 leading-relaxed">
+              Campos não preenchidos <strong>não aparecerão</strong> na visualização e no PDF do laudo.
+              Preencha pelo menos: <strong>Tipo, Logradouro, Área, Padrão, Estado de conservação e Valor de oferta</strong>.
+            </p>
+          </div>
+
           {/* Identificação */}
           <div className="grid grid-cols-3 gap-3">
             <div>
