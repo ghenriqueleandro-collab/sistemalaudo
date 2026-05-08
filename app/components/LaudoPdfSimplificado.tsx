@@ -582,6 +582,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
             const sep = { borderRightWidth: 0.5, borderColor: CINZA }
 
             // Helpers de linha — retornam null se todos os valores estiverem vazios
+            // Helpers de linha — colapsam colunas vazias automaticamente
             const ok = (v: any) => {
               const s = String(v ?? '').trim()
               return s && s !== '0' && s !== '-' ? s : ''
@@ -599,31 +600,39 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
               )
             }
 
-            // Linha 2 colunas
+            // Linha 2 colunas — colapsa para 1 se 2ª coluna vazia
             const r2 = (l1: string, v1: any, l2: string, v2: any) => {
               const a = ok(v1), b = ok(v2)
               if (!a && !b) return null
+              if (!b) return r1(l1, a) // colapsa para 1 coluna
+              if (!a) return r1(l2, b)
               return (
                 <View style={s.elemRowB}>
                   <View style={[bl,{width:C2L}]}><Text>{l1}</Text></View>
                   <View style={[bv,{width:C2V,...sep}]}><Text>{a}</Text></View>
-                  <View style={[bl,{width:C2L2,...sep}]}><Text>{b ? l2 : ''}</Text></View>
+                  <View style={[bl,{width:C2L2,...sep}]}><Text>{l2}</Text></View>
                   <View style={[bvL,{width:C2V2}]}><Text>{b}</Text></View>
                 </View>
               )
             }
 
-            // Linha 3 colunas
+            // Linha 3 colunas — colapsa automaticamente conforme valores vazios
             const r3 = (l1: string, v1: any, l2: string, v2: any, l3: string, v3: any) => {
               const a = ok(v1), b = ok(v2), c = ok(v3)
               if (!a && !b && !c) return null
+              // Se apenas 1 ou 2 valores preenchidos, usa layout menor
+              if (!c) return r2(l1, a, l2, b)
+              if (!b && !a) return r1(l3, c)
+              if (!a) return r2(l2, b, l3, c)
+              if (!b) return r2(l1, a, l3, c)
+              // 3 valores preenchidos
               return (
                 <View style={s.elemRowB}>
-                  <View style={[bl,{width:C3L}]}><Text>{a ? l1 : ''}</Text></View>
+                  <View style={[bl,{width:C3L}]}><Text>{l1}</Text></View>
                   <View style={[bv,{width:C3V,...sep}]}><Text>{a}</Text></View>
-                  <View style={[bl,{width:C3L2,...sep}]}><Text>{b ? l2 : ''}</Text></View>
+                  <View style={[bl,{width:C3L2,...sep}]}><Text>{l2}</Text></View>
                   <View style={[bv,{width:C3V2,...sep}]}><Text>{b}</Text></View>
-                  <View style={[bl,{width:C3L3,...sep}]}><Text>{c ? l3 : ''}</Text></View>
+                  <View style={[bl,{width:C3L3,...sep}]}><Text>{l3}</Text></View>
                   <View style={[bvL,{width:C3V3}]}><Text>{c}</Text></View>
                 </View>
               )
@@ -651,7 +660,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
               r2('Coordenadas', el.coordenadas, 'Fonte', el.fonte),
 
               // Bloco 3 — Características físicas
-              r3('Conservação', el.estadoConservacao, 'Idade', el.idadeAparente > 0 ? `${el.idadeAparente} anos` : '', 'Andar', el.andar > 0 ? el.andar : ''),
+              r3('Conserv.', el.estadoConservacao, 'Idade', el.idadeAparente > 0 ? `${el.idadeAparente} anos` : '', 'Andar', el.andar > 0 ? el.andar : ''),
               r2('Área constr./útil', el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '', 'Padrão constr.', el.padraoConstrutivo),
               r3('Dormitórios', el.dormitorios > 0 ? el.dormitorios : '', 'Suítes', el.suites > 0 ? el.suites : '', 'Vagas', el.vagas > 0 ? el.vagas : ''),
 

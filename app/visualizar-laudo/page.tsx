@@ -1153,25 +1153,31 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                         const a = ok(v); if (!a) return null
                         return <tr style={brd}><td style={{ ...LBL, width: '18%' }}>{l}</td><td style={{ ...VAL, ...extra }}>{a}</td></tr>
                       }
-                      // 2 colunas
+                      // 2 colunas — colapsa para 1 se alguma estiver vazia
                       const r2 = (l1: string, v1: any, l2: string, v2: any) => {
                         const a = ok(v1), b = ok(v2); if (!a && !b) return null
+                        if (!b) return r1(l1, a)
+                        if (!a) return r1(l2, b)
                         return <tr style={brd}>
-                          <td style={{ ...LBL, width: '18%' }}>{a ? l1 : ''}</td>
+                          <td style={{ ...LBL, width: '18%' }}>{l1}</td>
                           <td style={{ ...VAL, width: '32%', ...R }}>{a}</td>
-                          <td style={{ ...LBL, width: '18%', ...R }}>{b ? l2 : ''}</td>
+                          <td style={{ ...LBL, width: '18%', ...R }}>{l2}</td>
                           <td style={VAL}>{b}</td>
                         </tr>
                       }
-                      // 3 colunas
+                      // 3 colunas — colapsa automaticamente conforme valores vazios
                       const r3 = (l1: string, v1: any, l2: string, v2: any, l3: string, v3: any) => {
                         const a = ok(v1), b = ok(v2), c = ok(v3); if (!a && !b && !c) return null
+                        if (!c) return r2(l1, a, l2, b)
+                        if (!b && !a) return r1(l3, c)
+                        if (!a) return r2(l2, b, l3, c)
+                        if (!b) return r2(l1, a, l3, c)
                         return <tr style={brd}>
-                          <td style={{ ...LBL, width: '14%' }}>{a ? l1 : ''}</td>
+                          <td style={{ ...LBL, width: '14%' }}>{l1}</td>
                           <td style={{ ...VAL, width: '19%', ...R }}>{a}</td>
-                          <td style={{ ...LBL, width: '14%', ...R }}>{b ? l2 : ''}</td>
+                          <td style={{ ...LBL, width: '14%', ...R }}>{l2}</td>
                           <td style={{ ...VAL, width: '19%', ...R }}>{b}</td>
-                          <td style={{ ...LBL, width: '14%', ...R }}>{c ? l3 : ''}</td>
+                          <td style={{ ...LBL, width: '14%', ...R }}>{l3}</td>
                           <td style={VAL}>{c}</td>
                         </tr>
                       }
