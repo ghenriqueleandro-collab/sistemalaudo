@@ -1124,52 +1124,132 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                       </tbody>
                     </table>
 
-                    {/* Cards de cada elemento (estilo MK Rodobens) */}
-                    {temCddm && elementosCddm.map((el: any, i: number) => (
-                      <div key={`elem-${i}`} style={{ marginBottom: '5px' }}>
-                        <div style={{ background: '#2347C6', padding: '3px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '8px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
-                            ELEMENTO COMPARATIVO {String(i + 1).padStart(2, '0')}
-                          </span>
-                          <span style={{ fontSize: '7.5px', color: '#cfddef' }}>
-                            {el.tipo ? `${el.tipo} • ` : ''}{el.fonte || (el.link ? 'Site de imobiliária' : 'Pesquisa de mercado')}
-                          </span>
-                        </div>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', borderTop: 'none' }}>
-                          <tbody>
-                            <tr>
-                              <td style={{ background: '#EAF0FB', padding: '2.5px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', width: '11%', borderRight: '0.5px solid #C9D3E6' }}>Endereço</td>
-                              <td style={{ padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', width: '50%', borderRight: '0.5px solid #C9D3E6' }}>{el.endereco || '—'}</td>
-                              <td style={{ background: '#EAF0FB', padding: '2.5px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', width: '8%', borderRight: '0.5px solid #C9D3E6' }}>Data</td>
-                              <td style={{ padding: '2.5px 5px', fontSize: '7px', color: '#1e293b' }}>{el.data ? formatarDataBR(el.data) : '—'}</td>
-                            </tr>
-                            <tr>
-                              <td style={{ background: '#EAF0FB', padding: '2.5px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', borderTop: '0.5px solid #C9D3E6', borderRight: '0.5px solid #C9D3E6' }}>Área</td>
-                              <td style={{ padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', borderTop: '0.5px solid #C9D3E6', borderRight: '0.5px solid #C9D3E6' }}>{el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '—'}</td>
-                              <td style={{ background: '#EAF0FB', padding: '2.5px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', borderTop: '0.5px solid #C9D3E6', borderRight: '0.5px solid #C9D3E6' }}>V. oferta</td>
-                              <td style={{ padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', borderTop: '0.5px solid #C9D3E6' }}>
-                                {el.valorOferta > 0 ? formatarMoeda(el.valorOferta) : '—'}
-                                {' · '}
-                                <span style={{ color: '#475569' }}>V.U./m² {el.valorUnitarioOferta > 0 ? formatarMoeda(el.valorUnitarioOferta) : '—'}</span>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style={{ background: '#EAF0FB', padding: '2.5px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', borderTop: '0.5px solid #C9D3E6', borderRight: '0.5px solid #C9D3E6' }}>Padrão</td>
-                              <td style={{ padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', borderTop: '0.5px solid #C9D3E6', borderRight: '0.5px solid #C9D3E6' }}>{el.padraoConstrutivo || '—'}</td>
-                              <td style={{ background: '#EAF0FB', padding: '2.5px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', borderTop: '0.5px solid #C9D3E6', borderRight: '0.5px solid #C9D3E6' }}>Conserv.</td>
-                              <td style={{ padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', borderTop: '0.5px solid #C9D3E6' }}>{el.estadoConservacao || '—'} · Idade {el.idadeAparente ?? '—'} anos · {el.vagas ?? 0} vagas</td>
-                            </tr>
-                            {el.link && (
+                    {/* Cards detalhados de cada elemento (estilo planilha "Exemplo_impressão") */}
+                    {temCddm && elementosCddm.map((el: any, i: number) => {
+                      const valorOf = el.valorOferta > 0 ? formatarMoeda(el.valorOferta) : '—'
+                      const valorLiq = el.valorOferta > 0 && el.fatorOferta
+                        ? formatarMoeda(el.valorOferta * (parseFloat(String(el.fatorOferta).replace(',', '.')) || 1))
+                        : valorOf
+                      const labelStyle: React.CSSProperties = { background: '#EAF0FB', padding: '2.5px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', borderRight: '0.5px solid #C9D3E6', whiteSpace: 'nowrap' }
+                      const valStyle: React.CSSProperties = { padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', borderRight: '0.5px solid #C9D3E6' }
+                      const valLast: React.CSSProperties = { padding: '2.5px 5px', fontSize: '7px', color: '#1e293b' }
+                      return (
+                        <div key={`elem-${i}`} style={{ marginBottom: '5px', breakInside: 'avoid' }}>
+                          {/* Header */}
+                          <div style={{ background: '#2347C6', padding: '3px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '8px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
+                              ELEMENTO COMPARATIVO {String(i + 1).padStart(2, '0')}
+                            </span>
+                            <span style={{ fontSize: '7.5px', color: '#cfddef' }}>
+                              {el.data ? formatarDataBR(el.data) : ''}{el.fonte ? ` • ${el.fonte}` : ''}
+                            </span>
+                          </div>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', borderTop: 'none' }}>
+                            <tbody>
+                              {/* Tipo / Empreendimento */}
                               <tr>
-                                <td colSpan={4} style={{ padding: '2px 5px', fontSize: '6.5px', color: '#2347C6', borderTop: '0.5px solid #C9D3E6' }}>
-                                  Fonte: {String(el.link).slice(0, 130)}{String(el.link).length > 130 ? '…' : ''}
+                                <td style={{ ...labelStyle, width: '12%' }}>Tipo</td>
+                                <td style={{ ...valStyle, width: '38%' }}>{el.tipo || '—'}</td>
+                                <td style={{ ...labelStyle, width: '12%' }}>Empreendimento</td>
+                                <td style={valLast}>{el.empreendimento || '—'}</td>
+                              </tr>
+                              {/* Logradouro / Cidade-UF */}
+                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                <td style={labelStyle}>Logradouro</td>
+                                <td style={valStyle} colSpan={2}>{el.logradouro || '—'}</td>
+                                <td style={valLast}>{[el.cidade, el.uf].filter(Boolean).join(' · ') || '—'}</td>
+                              </tr>
+                              {/* Bairro / Distância */}
+                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                <td style={labelStyle}>Bairro</td>
+                                <td style={valStyle}>{el.bairro || '—'}</td>
+                                <td style={labelStyle}>Distância</td>
+                                <td style={valLast}>{el.distanciaAvaliando || '—'}</td>
+                              </tr>
+                              {/* Conservação / Idade / Andar */}
+                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                <td style={labelStyle}>Conservação</td>
+                                <td style={valStyle}>{el.estadoConservacao || '—'}</td>
+                                <td style={labelStyle}>Idade · Andar</td>
+                                <td style={valLast}>
+                                  {el.idadeAparente > 0 ? `${el.idadeAparente} anos` : '—'} · andar {el.andar > 0 ? el.andar : '—'}
                                 </td>
                               </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    ))}
+                              {/* Área / Padrão */}
+                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                <td style={labelStyle}>Área constr./útil</td>
+                                <td style={valStyle}>{el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '—'}</td>
+                                <td style={labelStyle}>Padrão constr.</td>
+                                <td style={valLast}>{el.padraoConstrutivo || '—'}</td>
+                              </tr>
+                              {/* Dorm. / Suítes / Vagas */}
+                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                <td style={labelStyle}>Dormitórios</td>
+                                <td style={valStyle}>{el.dormitorios > 0 ? el.dormitorios : '—'}</td>
+                                <td style={labelStyle}>Suítes · Vagas</td>
+                                <td style={valLast}>
+                                  {el.suites > 0 ? el.suites : '—'} · {el.vagas > 0 ? el.vagas : '—'}
+                                </td>
+                              </tr>
+                              {/* Valor oferta / V.U. */}
+                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                <td style={labelStyle}>Valor oferta</td>
+                                <td style={{ ...valStyle, fontWeight: 700, color: '#17325C' }}>{valorOf}</td>
+                                <td style={labelStyle}>V. líquido · V.U./m²</td>
+                                <td style={valLast}>
+                                  {valorLiq} · <strong style={{ color: '#2347C6' }}>{el.valorUnitarioOferta > 0 ? formatarMoeda(el.valorUnitarioOferta) : '—'}</strong>
+                                </td>
+                              </tr>
+                              {/* Fatores brutos */}
+                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                <td style={labelStyle}>F. Oferta · Local</td>
+                                <td style={valStyle}>
+                                  {(el.fatorOferta || '0,90').toString().replace('.', ',')} · {(el.fatorLocalBruto || '100').toString()}
+                                </td>
+                                <td style={labelStyle}>F. Andar · FOC</td>
+                                <td style={valLast}>
+                                  {(el.fatorAndarBruto || '100').toString()} · {el.estadoConservacao || '—'}
+                                </td>
+                              </tr>
+                              {/* Tipo oferta / Status / Telefone */}
+                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                <td style={labelStyle}>Tipo oferta</td>
+                                <td style={valStyle}>{el.tipoOferta || 'Venda'} · {el.status || 'Em oferta'}</td>
+                                <td style={labelStyle}>Telefone</td>
+                                <td style={valLast}>{el.telefone || '—'}</td>
+                              </tr>
+                              {/* Coordenadas / Fonte */}
+                              {(el.coordenadas || el.fonte) && (
+                                <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                  <td style={labelStyle}>Coordenadas</td>
+                                  <td style={valStyle}>{el.coordenadas || '—'}</td>
+                                  <td style={labelStyle}>Fonte</td>
+                                  <td style={valLast}>{el.fonte || '—'}</td>
+                                </tr>
+                              )}
+                              {/* Link */}
+                              {el.link && (
+                                <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                  <td style={labelStyle}>Link</td>
+                                  <td colSpan={3} style={{ padding: '2.5px 5px', fontSize: '6.5px', color: '#2347C6', wordBreak: 'break-all' }}>
+                                    {String(el.link)}
+                                  </td>
+                                </tr>
+                              )}
+                              {/* Observações */}
+                              {el.observacoes && (
+                                <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                  <td style={labelStyle}>Obs.</td>
+                                  <td colSpan={3} style={{ padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', lineHeight: 1.4 }}>
+                                    {el.observacoes}
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      )
+                    })}
 
                     {/* 9.1 — Homogeneização */}
                     {temCddm && (

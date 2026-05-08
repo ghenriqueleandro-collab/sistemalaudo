@@ -514,11 +514,14 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
         <DocFooter pagina={2} total={totalPaginas} dataLaudo={dados.dataLaudo} />
       </Page>
 
-      {/* ══ PÁGINA 3 — Localização + Pesquisa Imobiliária (cards) ══ */}
-      <Page size="A4" style={s.page}>
+      {/* ══ PÁGINA 3 — Localização + Pesquisa Imobiliária (cards) ══
+           Esta Page usa wrap automático: cards individuais com wrap={false}
+           garantem que cada elemento não seja cortado no meio. O footer é
+           fixed (aparece em toda página gerada por este Page). */}
+      <Page size="A4" style={{ ...s.page, paddingHorizontal: 28, paddingTop: 0, paddingBottom: 26 }}>
         <DocHeader solicitante={dados.solicitante} proprietario={dados.proprietario} />
 
-        <View style={s.content}>
+        <View style={{ paddingTop: 8 }}>
           {/* 8 — Localização */}
           <SecHeader num="8" titulo="Localização" />
           {dados.coordenadasImovel && (
@@ -527,7 +530,9 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
             </View>
           )}
           {dados.localizacaoComparativos && (
-            <Image src={dados.localizacaoComparativos} style={{ width: '100%', height: 220, objectFit: 'cover', marginTop: 4, borderWidth: 0.5, borderColor: CINZA }} />
+            <View wrap={false}>
+              <Image src={dados.localizacaoComparativos} style={{ width: '100%', height: 220, objectFit: 'cover', marginTop: 4, borderWidth: 0.5, borderColor: CINZA }} />
+            </View>
           )}
 
           {/* 9 — Pesquisa Imobiliária */}
@@ -553,49 +558,145 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
             </View>
           </View>
 
-          {/* Cards de cada elemento (estilo MK Rodobens) */}
-          {temCddm && elementosCddm.map((el: any, i: number) => (
-            <View key={`elem-${i}`} wrap={false}>
-              <View style={s.elemHeader}>
-                <Text style={s.elemHeaderTxt}>ELEMENTO COMPARATIVO {String(i+1).padStart(2,'0')}</Text>
-                <Text style={s.elemHeaderSub}>
-                  {el.tipo ? `${el.tipo} • ` : ''}{el.fonte || (el.link ? 'Site de imobiliária' : 'Pesquisa de mercado')}
-                </Text>
-              </View>
-              <View style={s.elemTable}>
-                <View style={s.elemRowB}>
-                  <View style={[s.elemCellLbl,{width:55}]}><Text>Endereço</Text></View>
-                  <View style={[s.elemCellVal,{flex:2.5}]}><Text>{el.endereco || '-'}</Text></View>
-                  <View style={[s.elemCellLbl,{width:40}]}><Text>Data</Text></View>
-                  <View style={[s.elemCellValLast,{flex:1}]}><Text>{el.data ? fd(el.data) : '-'}</Text></View>
-                </View>
-                <View style={s.elemRowB}>
-                  <View style={[s.elemCellLbl,{width:55}]}><Text>Área</Text></View>
-                  <View style={[s.elemCellVal,{flex:1}]}><Text>{el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '-'}</Text></View>
-                  <View style={[s.elemCellLbl,{width:55}]}><Text>V. oferta</Text></View>
-                  <View style={[s.elemCellVal,{flex:1}]}><Text>{el.valorOferta > 0 ? fm(el.valorOferta) : '-'}</Text></View>
-                  <View style={[s.elemCellLbl,{width:55}]}><Text>V.U./m²</Text></View>
-                  <View style={[s.elemCellValLast,{flex:1}]}><Text>{el.valorUnitarioOferta > 0 ? fm(el.valorUnitarioOferta) : '-'}</Text></View>
-                </View>
-                <View style={el.link ? s.elemRowB : s.elemRow}>
-                  <View style={[s.elemCellLbl,{width:55}]}><Text>Padrão</Text></View>
-                  <View style={[s.elemCellVal,{flex:1}]}><Text>{el.padraoConstrutivo || '-'}</Text></View>
-                  <View style={[s.elemCellLbl,{width:55}]}><Text>Conserv.</Text></View>
-                  <View style={[s.elemCellVal,{flex:1}]}><Text>{el.estadoConservacao || '-'}</Text></View>
-                  <View style={[s.elemCellLbl,{width:55}]}><Text>Idade · Vagas</Text></View>
-                  <View style={[s.elemCellValLast,{flex:1}]}><Text>{el.idadeAparente ?? '-'}{el.idadeAparente !== undefined ? ' anos' : ''} · {el.vagas ?? 0}</Text></View>
-                </View>
-                {el.link && (
-                  <View style={s.elemRow}>
-                    <Text style={s.elemLink}>Fonte: {String(el.link).slice(0, 110)}{String(el.link).length > 110 ? '...' : ''}</Text>
-                  </View>
+          {/* Cards detalhados de cada elemento — estilo planilha "Exemplo_impressão" */}
+          {temCddm && elementosCddm.map((el: any, i: number) => {
+            // Helper interno: linha rótulo+valor (par à esquerda, par à direita)
+            const linhaPar = (l1: string, v1: string, l2?: string, v2?: string, last = false) => (
+              <View style={last ? s.elemRow : s.elemRowB}>
+                <View style={[s.elemCellLbl,{width:60}]}><Text>{l1}</Text></View>
+                <View style={[s.elemCellVal,{flex:1}]}><Text>{v1 || '-'}</Text></View>
+                {l2 !== undefined ? (
+                  <>
+                    <View style={[s.elemCellLbl,{width:60}]}><Text>{l2}</Text></View>
+                    <View style={[s.elemCellValLast,{flex:1}]}><Text>{v2 || '-'}</Text></View>
+                  </>
+                ) : (
+                  <View style={{flex:1.07}} />
                 )}
               </View>
-            </View>
-          ))}
+            )
+            const valorOf = el.valorOferta > 0 ? fm(el.valorOferta) : '-'
+            const valorLiq = el.valorOferta > 0 && el.fatorOferta
+              ? fm(el.valorOferta * (parseFloat(String(el.fatorOferta).replace(',', '.')) || 1))
+              : valorOf
+            const enderecoLin = [el.logradouro, el.cidade, el.uf].filter(Boolean).join(' — ') || '-'
+            return (
+              <View key={`elem-${i}`} wrap={false} style={{ marginTop: 5 }}>
+                {/* Header do card */}
+                <View style={s.elemHeader}>
+                  <Text style={s.elemHeaderTxt}>ELEMENTO COMPARATIVO {String(i+1).padStart(2,'0')}</Text>
+                  <Text style={s.elemHeaderSub}>
+                    {el.data ? fd(el.data) : ''}{el.fonte ? ` • ${el.fonte}` : ''}
+                  </Text>
+                </View>
+
+                <View style={s.elemTable}>
+                  {/* Tipo / Empreendimento */}
+                  {linhaPar('Tipo', el.tipo || '-', 'Empreendimento', el.empreendimento || '-')}
+
+                  {/* Logradouro / Cidade / UF */}
+                  <View style={s.elemRowB}>
+                    <View style={[s.elemCellLbl,{width:60}]}><Text>Logradouro</Text></View>
+                    <View style={[s.elemCellVal,{flex:2.5}]}><Text>{el.logradouro || '-'}</Text></View>
+                    <View style={[s.elemCellLbl,{width:55}]}><Text>Cidade · UF</Text></View>
+                    <View style={[s.elemCellValLast,{flex:1}]}><Text>{[el.cidade, el.uf].filter(Boolean).join(' · ') || '-'}</Text></View>
+                  </View>
+
+                  {/* Bairro / Distância avaliando */}
+                  {linhaPar('Bairro', el.bairro || '-', 'Distância', el.distanciaAvaliando || '-')}
+
+                  {/* Estado de conservação / Idade / Andar — 3 colunas */}
+                  <View style={s.elemRowB}>
+                    <View style={[s.elemCellLbl,{width:60}]}><Text>Conservação</Text></View>
+                    <View style={[s.elemCellVal,{flex:1}]}><Text>{el.estadoConservacao || '-'}</Text></View>
+                    <View style={[s.elemCellLbl,{width:40}]}><Text>Idade</Text></View>
+                    <View style={[s.elemCellVal,{flex:0.7}]}><Text>{el.idadeAparente > 0 ? `${el.idadeAparente} anos` : '-'}</Text></View>
+                    <View style={[s.elemCellLbl,{width:40}]}><Text>Andar</Text></View>
+                    <View style={[s.elemCellValLast,{flex:0.7}]}><Text>{el.andar > 0 ? el.andar : '-'}</Text></View>
+                  </View>
+
+                  {/* Área / Padrão de construção */}
+                  {linhaPar('Área constr./útil', el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '-', 'Padrão de construção', el.padraoConstrutivo || '-')}
+
+                  {/* Dormitórios / Suítes / Vagas */}
+                  <View style={s.elemRowB}>
+                    <View style={[s.elemCellLbl,{width:60}]}><Text>Dormitórios</Text></View>
+                    <View style={[s.elemCellVal,{flex:1}]}><Text>{el.dormitorios > 0 ? el.dormitorios : '-'}</Text></View>
+                    <View style={[s.elemCellLbl,{width:40}]}><Text>Suítes</Text></View>
+                    <View style={[s.elemCellVal,{flex:0.7}]}><Text>{el.suites > 0 ? el.suites : '-'}</Text></View>
+                    <View style={[s.elemCellLbl,{width:40}]}><Text>Vagas</Text></View>
+                    <View style={[s.elemCellValLast,{flex:0.7}]}><Text>{el.vagas > 0 ? el.vagas : '-'}</Text></View>
+                  </View>
+
+                  {/* Valor de oferta / Valor unitário */}
+                  <View style={s.elemRowB}>
+                    <View style={[s.elemCellLbl,{width:60}]}><Text>Valor oferta</Text></View>
+                    <View style={[s.elemCellVal,{flex:1, fontFamily: 'Helvetica-Bold', color: AZUL}]}><Text>{valorOf}</Text></View>
+                    <View style={[s.elemCellLbl,{width:60}]}><Text>Valor líquido</Text></View>
+                    <View style={[s.elemCellVal,{flex:1}]}><Text>{valorLiq}</Text></View>
+                    <View style={[s.elemCellLbl,{width:55}]}><Text>V.U./m²</Text></View>
+                    <View style={[s.elemCellValLast,{flex:1, fontFamily: 'Helvetica-Bold', color: AZUL2}]}>
+                      <Text>{el.valorUnitarioOferta > 0 ? fm(el.valorUnitarioOferta) : '-'}</Text>
+                    </View>
+                  </View>
+
+                  {/* Fatores aplicados (linha de 4 colunas) */}
+                  <View style={s.elemRowB}>
+                    <View style={[s.elemCellLbl,{width:60}]}><Text>F. Oferta</Text></View>
+                    <View style={[s.elemCellVal,{flex:0.8}]}><Text>{(el.fatorOferta || '0,90').toString().replace('.', ',')}</Text></View>
+                    <View style={[s.elemCellLbl,{width:50}]}><Text>F. Local</Text></View>
+                    <View style={[s.elemCellVal,{flex:0.8}]}><Text>{(el.fatorLocalBruto || '100').toString()}</Text></View>
+                    <View style={[s.elemCellLbl,{width:50}]}><Text>F. Andar</Text></View>
+                    <View style={[s.elemCellVal,{flex:0.8}]}><Text>{(el.fatorAndarBruto || '100').toString()}</Text></View>
+                    <View style={[s.elemCellLbl,{width:50}]}><Text>FOC</Text></View>
+                    <View style={[s.elemCellValLast,{flex:0.8}]}><Text>{el.estadoConservacao || '-'}</Text></View>
+                  </View>
+
+                  {/* Tipo oferta / Status / Telefone */}
+                  <View style={s.elemRowB}>
+                    <View style={[s.elemCellLbl,{width:60}]}><Text>Tipo oferta</Text></View>
+                    <View style={[s.elemCellVal,{flex:1}]}><Text>{el.tipoOferta || 'Venda'}</Text></View>
+                    <View style={[s.elemCellLbl,{width:50}]}><Text>Status</Text></View>
+                    <View style={[s.elemCellVal,{flex:1}]}><Text>{el.status || 'Em oferta'}</Text></View>
+                    <View style={[s.elemCellLbl,{width:55}]}><Text>Telefone</Text></View>
+                    <View style={[s.elemCellValLast,{flex:1}]}><Text>{el.telefone || '-'}</Text></View>
+                  </View>
+
+                  {/* Coordenadas */}
+                  {(el.coordenadas || el.fonte) && linhaPar('Coordenadas', el.coordenadas || '-', 'Fonte', el.fonte || '-')}
+
+                  {/* Link */}
+                  {el.link && (
+                    <View style={s.elemRowB}>
+                      <View style={[s.elemCellLbl,{width:60}]}><Text>Link</Text></View>
+                      <View style={{flex:1, paddingVertical:2.5, paddingHorizontal:4}}>
+                        <Text style={{fontSize:6.3, color:AZUL2}}>
+                          {String(el.link).slice(0, 165)}{String(el.link).length > 165 ? '...' : ''}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Observações */}
+                  {el.observacoes && (
+                    <View style={s.elemRow}>
+                      <View style={[s.elemCellLbl,{width:60}]}><Text>Obs.</Text></View>
+                      <View style={{flex:1, paddingVertical:2.5, paddingHorizontal:4}}>
+                        <Text style={{fontSize:6.8, color:TEXTO}}>{el.observacoes}</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </View>
+            )
+          })}
         </View>
 
-        <DocFooter pagina={3} total={totalPaginas} dataLaudo={dados.dataLaudo} />
+        {/* Footer fixed: aparece em toda página gerada por esta <Page>,
+            inclusive nas páginas extras criadas por wrap natural dos cards. */}
+        <View fixed style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
+          <DocFooter pagina={3} total={totalPaginas} dataLaudo={dados.dataLaudo} />
+        </View>
       </Page>
 
       {/* ══ PÁGINA 4 — Homogeneização + Valor + Graus (resumo) ══ */}

@@ -643,10 +643,20 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
       const enderecoCompleto = [el.logradouro, el.bairro, el.cidade, el.uf]
         .filter(Boolean).join(', ')
       return {
+        // Identificação
         id: el.id,
         identificacao: el.empreendimento || `Elemento ${i + 1}`,
+        tipo: el.tipo || '',
+        empreendimento: el.empreendimento || '',
+        // Endereço estruturado
         endereco: enderecoCompleto,
+        logradouro: el.logradouro || '',
+        bairro: el.bairro || '',
+        cidade: el.cidade || '',
+        uf: el.uf || '',
         coordenadas: el.coordenadas || '',
+        distanciaAvaliando: el.distanciaAvaliando || '',
+        // Características
         area: pn(el.area),
         valorOferta: pn(el.valorOferta),
         valorUnitarioOferta: re.vu,
@@ -657,6 +667,7 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
         vagas: pn(el.vagas),
         dormitorios: pn(el.dormitorios),
         suites: pn(el.suites),
+        // Fatores de homogeneização (calculados)
         fatorLocal: re.fatorLocal,
         fatorPadrao: re.fatorPadrao,
         fatorFOC: re.fatorFOC,
@@ -667,8 +678,18 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
         vuHomog: re.vuHomog,
         residuo: re.residuo,
         saneado: re.saneado,
+        // Fatores brutos (oferta, etc — informativos)
+        fatorOferta: el.fatorOferta || '',
+        fatorLocalBruto: el.fatorLocal || '',
+        fatorAndarBruto: el.fatorAndar || '',
+        fatorVagaBruto: el.fatorVaga || '',
+        // Oferta / fonte
+        tipoOferta: el.tipoOferta || '',
+        status: el.status || '',
         fonte: el.fonte || '',
+        telefone: el.telefone || '',
         link: el.link || '',
+        observacoes: el.observacoes || '',
         data: el.data || '',
       }
     }).filter(Boolean)
