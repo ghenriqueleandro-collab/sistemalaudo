@@ -560,73 +560,124 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
             </View>
           </View>
 
-          {/* Cards detalhados de cada elemento — uma linha por campo, campos vazios omitidos */}
+          {/* Cards de elemento — blocos temáticos, até 3 colunas, campos vazios omitidos */}
           {temCddm && elementosCddm.map((el: any, i: number) => {
             const valorOf  = el.valorOferta > 0 ? fm(el.valorOferta) : ''
             const valorLiq = el.valorOferta > 0 && el.fatorOferta
               ? fm(el.valorOferta * (parseFloat(String(el.fatorOferta).replace(',', '.')) || 1))
               : ''
+            const cidadeUF = [el.cidade, el.uf].filter(Boolean).join(' · ')
 
-            // Larguras fixas: L=70 + V=469 = 539pt (largura do conteúdo A4)
-            const L = 70, V = 469
-            const lbl = [s.elemCellLbl, { width: L }] as any
-            const vlr = [s.elemCellValLast, { width: V }] as any
+            // ── Larguras para cada layout de colunas (total = 539pt) ──────────
+            // 1 col:  L1=65  V1=474                               = 539
+            // 2 cols: L1=65  V1=200  L2=65  V2=209               = 539
+            // 3 cols: L1=50  V1=120  L2=50  V2=120  L3=50  V3=149 = 539
+            const C1L=65, C1V=474
+            const C2L=65, C2V=200, C2L2=65, C2V2=209
+            const C3L=50, C3V=120, C3L2=50, C3V2=120, C3L3=50, C3V3=149
 
-            // Campo só aparece se valor não for vazio/zero
-            const campo = (rotulo: string, valor: string | number, isLast = false, extra?: object) => {
-              const v = String(valor ?? '').trim()
-              if (!v || v === '0' || v === '-') return null
+            const bl = s.elemCellLbl
+            const bv = s.elemCellVal
+            const bvL = s.elemCellValLast
+            const sep = { borderRightWidth: 0.5, borderColor: CINZA }
+
+            // Helpers de linha — retornam null se todos os valores estiverem vazios
+            const ok = (v: any) => {
+              const s = String(v ?? '').trim()
+              return s && s !== '0' && s !== '-' ? s : ''
+            }
+
+            // Linha 1 coluna (rótulo + valor cheio)
+            const r1 = (l1: string, v1: any, extra?: object) => {
+              const a = ok(v1)
+              if (!a) return null
               return (
-                <View style={isLast ? s.elemRow : s.elemRowB}>
-                  <View style={lbl}><Text>{rotulo}</Text></View>
-                  <View style={extra ? [vlr, extra] : vlr}><Text>{v}</Text></View>
+                <View style={s.elemRowB}>
+                  <View style={[bl,{width:C1L}]}><Text>{l1}</Text></View>
+                  <View style={extra ? [bvL,{width:C1V,...extra}] : [bvL,{width:C1V}]}><Text>{a}</Text></View>
                 </View>
               )
             }
 
-            const camposOrdenados = [
-              campo('Tipo', el.tipo),
-              campo('Empreendimento', el.empreendimento),
-              campo('Logradouro', el.logradouro || el.endereco),
-              campo('Bairro', el.bairro),
-              campo('Cidade · UF', [el.cidade, el.uf].filter(Boolean).join(' · ')),
-              campo('Distância', el.distanciaAvaliando),
-              campo('Conservação', el.estadoConservacao),
-              el.idadeAparente > 0 ? campo('Idade', `${el.idadeAparente} anos`) : null,
-              el.andar > 0 ? campo('Andar', el.andar) : null,
-              el.area > 0 ? campo('Área constr./útil', `${el.area.toLocaleString('pt-BR')} m²`) : null,
-              campo('Padrão constr.', el.padraoConstrutivo),
-              el.dormitorios > 0 ? campo('Dormitórios', el.dormitorios) : null,
-              el.suites > 0 ? campo('Suítes', el.suites) : null,
-              el.vagas > 0 ? campo('Vagas', el.vagas) : null,
-              valorOf ? campo('Valor oferta', valorOf, false, { fontFamily:'Helvetica-Bold', color:AZUL }) : null,
-              valorLiq && valorLiq !== valorOf ? campo('Valor líquido', valorLiq) : null,
-              el.valorUnitarioOferta > 0 ? campo('V.U./m²', fm(el.valorUnitarioOferta), false, { fontFamily:'Helvetica-Bold', color:AZUL2 }) : null,
-              campo('F. Oferta', (el.fatorOferta || '').toString().replace('.', ',')),
-              campo('F. Local', el.fatorLocalBruto),
-              campo('F. Andar', el.fatorAndarBruto),
-              campo('Tipo oferta', el.tipoOferta),
-              campo('Status', el.status),
-              campo('Telefone', el.telefone),
-              campo('Coordenadas', el.coordenadas),
-              campo('Fonte', el.fonte),
-              el.link ? campo('Link', String(el.link).slice(0, 165) + (String(el.link).length > 165 ? '...' : '')) : null,
-              campo('Obs.', el.observacoes),
+            // Linha 2 colunas
+            const r2 = (l1: string, v1: any, l2: string, v2: any) => {
+              const a = ok(v1), b = ok(v2)
+              if (!a && !b) return null
+              return (
+                <View style={s.elemRowB}>
+                  <View style={[bl,{width:C2L}]}><Text>{l1}</Text></View>
+                  <View style={[bv,{width:C2V,...sep}]}><Text>{a}</Text></View>
+                  <View style={[bl,{width:C2L2,...sep}]}><Text>{b ? l2 : ''}</Text></View>
+                  <View style={[bvL,{width:C2V2}]}><Text>{b}</Text></View>
+                </View>
+              )
+            }
+
+            // Linha 3 colunas
+            const r3 = (l1: string, v1: any, l2: string, v2: any, l3: string, v3: any) => {
+              const a = ok(v1), b = ok(v2), c = ok(v3)
+              if (!a && !b && !c) return null
+              return (
+                <View style={s.elemRowB}>
+                  <View style={[bl,{width:C3L}]}><Text>{a ? l1 : ''}</Text></View>
+                  <View style={[bv,{width:C3V,...sep}]}><Text>{a}</Text></View>
+                  <View style={[bl,{width:C3L2,...sep}]}><Text>{b ? l2 : ''}</Text></View>
+                  <View style={[bv,{width:C3V2,...sep}]}><Text>{b}</Text></View>
+                  <View style={[bl,{width:C3L3,...sep}]}><Text>{c ? l3 : ''}</Text></View>
+                  <View style={[bvL,{width:C3V3}]}><Text>{c}</Text></View>
+                </View>
+              )
+            }
+
+            // Linha de link (fonte menor)
+            const rLink = () => {
+              if (!el.link) return null
+              const txt = String(el.link).slice(0, 165) + (String(el.link).length > 165 ? '...' : '')
+              return (
+                <View style={s.elemRowB}>
+                  <View style={[bl,{width:C1L}]}><Text>Link</Text></View>
+                  <View style={[bvL,{width:C1V}]}><Text style={{fontSize:6.3,color:AZUL2}}>{txt}</Text></View>
+                </View>
+              )
+            }
+
+            const linhas = [
+              // Bloco 1 — Identificação
+              r3('Tipo', el.tipo, 'Data', el.data ? fd(el.data) : '', 'Empreendimento', el.empreendimento),
+
+              // Bloco 2 — Endereço
+              r1('Logradouro', el.logradouro || el.endereco),
+              r3('Bairro', el.bairro, 'Cidade · UF', cidadeUF, 'Distância', el.distanciaAvaliando),
+              r2('Coordenadas', el.coordenadas, 'Fonte', el.fonte),
+
+              // Bloco 3 — Características físicas
+              r3('Conservação', el.estadoConservacao, 'Idade', el.idadeAparente > 0 ? `${el.idadeAparente} anos` : '', 'Andar', el.andar > 0 ? el.andar : ''),
+              r2('Área constr./útil', el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '', 'Padrão constr.', el.padraoConstrutivo),
+              r3('Dormitórios', el.dormitorios > 0 ? el.dormitorios : '', 'Suítes', el.suites > 0 ? el.suites : '', 'Vagas', el.vagas > 0 ? el.vagas : ''),
+
+              // Bloco 4 — Financeiro
+              r3('Valor oferta', valorOf, 'Valor líquido', valorLiq !== valorOf ? valorLiq : '', 'V.U./m²', el.valorUnitarioOferta > 0 ? fm(el.valorUnitarioOferta) : ''),
+              r3('F. Oferta', (el.fatorOferta||'').toString().replace('.', ','), 'F. Local', el.fatorLocalBruto, 'F. Andar', el.fatorAndarBruto),
+
+              // Bloco 5 — Contato / tipo
+              r3('Tipo oferta', el.tipoOferta, 'Status', el.status, 'Telefone', el.telefone),
+
+              // Link e observações — linha inteira
+              rLink(),
+              r1('Obs.', el.observacoes),
             ].filter(Boolean)
 
-            if (camposOrdenados.length === 0) return null
+            if (linhas.length === 0) return null
 
             return (
               <View key={`elem-${i}`} wrap={false} style={{ marginTop: 5 }}>
                 <View style={s.elemHeader}>
                   <Text style={s.elemHeaderTxt}>ELEMENTO COMPARATIVO {String(i+1).padStart(2,'0')}</Text>
                   <Text style={s.elemHeaderSub}>
-                    {el.data ? fd(el.data) : ''}{el.fonte ? ` • ${el.fonte}` : ''}
+                    {el.fonte ? el.fonte : ''}{el.data ? ` • ${fd(el.data)}` : ''}
                   </Text>
                 </View>
-                <View style={s.elemTable}>
-                  {camposOrdenados}
-                </View>
+                <View style={s.elemTable}>{linhas}</View>
               </View>
             )
           })}
