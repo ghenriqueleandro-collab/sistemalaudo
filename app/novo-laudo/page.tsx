@@ -128,6 +128,7 @@ export default function NovoLaudoPage() {
   const [acabamentos, setAcabamentos] = useState([{ ambiente: '', acabamento: '' }])
   const [resumoMercado, setResumoMercado] = useState([{ campo: '', descricao: '' }])
   const [outrosFatoresImovel, setOutrosFatoresImovel] = useState([{ descricao: '', valor: '' }])
+  const [valoresAdicionais, setValoresAdicionais] = useState<{ descricao: string; valor: string }[]>([])
   const [etapaAtual, setEtapaAtual] = useState<EtapaId>('1-6')
   const [laudoId, setLaudoId] = useState('')
   const [editandoLaudoExistente, setEditandoLaudoExistente] = useState(false)
@@ -199,6 +200,7 @@ export default function NovoLaudoPage() {
         setAcabamentos(laudoSalvo.acabamentos || [{ ambiente: '', acabamento: '' }])
         setResumoMercado(laudoSalvo.resumoMercado || [{ campo: '', descricao: '' }])
         setOutrosFatoresImovel(laudoSalvo.outrosFatoresImovel || [{ descricao: '', valor: '' }])
+        setValoresAdicionais(laudoSalvo.valoresAdicionais || [])
         // Não chama setFotos aqui — será chamado após resolver refs abaixo
 
         // Resolve referências de binários armazenados separadamente
@@ -453,6 +455,16 @@ export default function NovoLaudoPage() {
     setOutrosFatoresImovel(outrosFatoresImovel.filter((_, i) => i !== index))
   }
 
+  function handleValorAdicionalChange(index: number, campo: 'descricao' | 'valor', valor: string) {
+    setValoresAdicionais(valoresAdicionais.map((v, i) => i === index ? { ...v, [campo]: valor } : v))
+  }
+  function adicionarValorAdicional() {
+    setValoresAdicionais([...valoresAdicionais, { descricao: '', valor: '' }])
+  }
+  function removerValorAdicional(index: number) {
+    setValoresAdicionais(valoresAdicionais.filter((_, i) => i !== index))
+  }
+
   function selecionarGrauFundamentacao(index: number, grau: 'III' | 'II' | 'I') {
     setFundamentacao((prev) => prev.map((f, i) => i === index ? { ...f, grau } : f))
   }
@@ -504,8 +516,12 @@ export default function NovoLaudoPage() {
     ? _parseBR(form.valorTotal || '0') * produtoOutrosFatores
     : (_parseBR(form.valorTerreno) + _parseBR(form.valorBenfeitorias)) * produtoOutrosFatores
 
+  const somaValoresAdicionais = valoresAdicionais.reduce(
+    (acc, item) => acc + _parseBR(item.valor), 0
+  )
+
   const valorFinalImovel =
-    subtotalImovel * (_parseBR(form.fatorComercializacao || '1') || 1)
+    subtotalImovel * (_parseBR(form.fatorComercializacao || '1') || 1) + somaValoresAdicionais
 
   function formatarMoeda(valor: number) {
     return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -723,6 +739,7 @@ export default function NovoLaudoPage() {
         acabamentos,
         resumoMercado,
         outrosFatoresImovel,
+        valoresAdicionais,
         fotos: fotosComRef,
         valorFinalImovel,
         status,
@@ -883,6 +900,11 @@ export default function NovoLaudoPage() {
               formatarMoeda={formatarMoeda}
               modoValorImovel={form.modoValorImovel as 'separado' | 'total'}
               onModoChange={(modo: 'separado' | 'total') => setForm((prev) => ({ ...prev, modoValorImovel: modo }))}
+              valoresAdicionais={valoresAdicionais}
+              handleValorAdicionalChange={handleValorAdicionalChange}
+              adicionarValorAdicional={adicionarValorAdicional}
+              removerValorAdicional={removerValorAdicional}
+              somaValoresAdicionais={somaValoresAdicionais}
             />
           )}
 
