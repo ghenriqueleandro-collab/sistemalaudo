@@ -112,7 +112,6 @@ function fm(valor: number) {
 
 function cn(valor: string) {
   if (!valor) return 0
-  return Number(valor.replace(/\s/g, '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0
   // Remove R$, espaços, depois remove pontos de milhar (ponto seguido de 3 dígitos)
   // e converte vírgula decimal em ponto
   const limpo = valor
@@ -127,7 +126,6 @@ function cn(valor: string) {
 function formatarArea(valor?: string): string {
   if (!valor) return ''
   const numStr = valor.replace(/m²/g, '').replace(/ /g, '').trim()
-  const num = parseFloat(numStr.replace(',', '.'))
   const limpo = numStr
     .replace(/\.(?=\d{3}[,.])/g, '')
     .replace(/\.(?=\d{3}$)/g, '')
@@ -138,7 +136,6 @@ function formatarArea(valor?: string): string {
 }
 
 function arredondar(valor: number) {
-  return Math.round(valor / 100) * 100
   // Arredonda para 2 casas decimais, sem perder centavos
   return Math.round(valor * 100) / 100
 }
@@ -495,11 +492,14 @@ export function LaudoPdf({
   const prodOutros = (dados.outrosFatoresImovel || []).reduce(
     (t, i) => t * (cn(i.valor) || 1), 1
   )
+  const somaAdicionais = ((dados as any).valoresAdicionais || []).reduce(
+    (acc: number, v: { descricao: string; valor: string }) => acc + cn(v.valor), 0
+  )
   const valorTotalN = cn(dados.valorTotal || '')
   const modoTotal = dados.modoValorImovel === 'total'
   const baseCalculo = modoTotal && valorTotalN > 0 ? valorTotalN : (valorTerrenoN + valorBenfeitoriasN)
   const subtotal = baseCalculo * fatorComerc
-  const valorFinal = subtotal * prodOutros
+  const valorFinal = subtotal * prodOutros + somaAdicionais
   const valorArredondado = arredondar(valorFinal)
   const valorExtenso = numeroPorExtenso(valorArredondado)
   const vlf = cn(dados.valorLiquidezForcada || '')
@@ -1140,6 +1140,22 @@ export function LaudoPdf({
               {fatoresValidos.map((f, idx) => (
                 <P key={idx}>• <Text style={s.bold}>{f.descricao}:</Text> {f.valor}</P>
               ))}
+            </View>
+          ) : null
+        })()}
+        {(() => {
+          const adicionaisValidos = ((dados as any).valoresAdicionais || []).filter(
+            (v: any) => v.descricao?.trim() || v.valor?.trim()
+          )
+          return adicionaisValidos.length > 0 ? (
+            <View>
+              <H3>Valores adicionais</H3>
+              {adicionaisValidos.map((v: any, idx: number) => (
+                <P key={idx}>• <Text style={s.bold}>{v.descricao}:</Text> {fm(cn(v.valor))}</P>
+              ))}
+              {adicionaisValidos.length > 1 && (
+                <P><Text style={s.bold}>Total adicionais:</Text> {fm(somaAdicionais)}</P>
+              )}
             </View>
           ) : null
         })()}
