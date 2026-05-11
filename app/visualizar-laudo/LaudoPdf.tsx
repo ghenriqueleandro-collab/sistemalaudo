@@ -492,11 +492,14 @@ export function LaudoPdf({
   const prodOutros = (dados.outrosFatoresImovel || []).reduce(
     (t, i) => t * (cn(i.valor) || 1), 1
   )
+  const somaAdicionais = ((dados as any).valoresAdicionais || []).reduce(
+    (acc: number, v: { descricao: string; valor: string }) => acc + cn(v.valor), 0
+  )
   const valorTotalN = cn(dados.valorTotal || '')
   const modoTotal = dados.modoValorImovel === 'total'
   const baseCalculo = modoTotal && valorTotalN > 0 ? valorTotalN : (valorTerrenoN + valorBenfeitoriasN)
   const subtotal = baseCalculo * fatorComerc
-  const valorFinal = subtotal * prodOutros
+  const valorFinal = subtotal * prodOutros + somaAdicionais
   const valorArredondado = arredondar(valorFinal)
   const valorExtenso = numeroPorExtenso(valorArredondado)
   const vlf = cn(dados.valorLiquidezForcada || '')
@@ -1137,6 +1140,22 @@ export function LaudoPdf({
               {fatoresValidos.map((f, idx) => (
                 <P key={idx}>• <Text style={s.bold}>{f.descricao}:</Text> {f.valor}</P>
               ))}
+            </View>
+          ) : null
+        })()}
+        {(() => {
+          const adicionaisValidos = ((dados as any).valoresAdicionais || []).filter(
+            (v: any) => v.descricao?.trim() || v.valor?.trim()
+          )
+          return adicionaisValidos.length > 0 ? (
+            <View>
+              <H3>Valores adicionais</H3>
+              {adicionaisValidos.map((v: any, idx: number) => (
+                <P key={idx}>• <Text style={s.bold}>{v.descricao}:</Text> {fm(cn(v.valor))}</P>
+              ))}
+              {adicionaisValidos.length > 1 && (
+                <P><Text style={s.bold}>Total adicionais:</Text> {fm(somaAdicionais)}</P>
+              )}
             </View>
           ) : null
         })()}
