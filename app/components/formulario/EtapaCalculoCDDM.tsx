@@ -573,11 +573,12 @@ function GraficoScatter({ resultado }: { resultado: Resultado }) {
 
 type Props = {
   form: any
+  setForm?: React.Dispatch<React.SetStateAction<any>>
   fatoresCDDMAtivos?: { local: boolean; padrao: boolean; foc: boolean; andar: boolean; vaga: boolean }
   onSave?: (elementos: ElementoCDDM[], resultado: Resultado) => void
 }
 
-export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Props) {
+export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onSave }: Props) {
   const fatores = fatoresCDDMAtivos ?? { local: true, padrao: true, foc: true, andar: true, vaga: true }
   const [elementos, setElementos] = useState<ElementoCDDM[]>([
     elemInicial(1), elemInicial(2), elemInicial(3),
