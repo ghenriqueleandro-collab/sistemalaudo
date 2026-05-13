@@ -258,17 +258,23 @@ function getPadraoData(padrao: string): { Pc: number; Ir: number; R: number } {
   return PADRAO_TABLE[padrao] ?? { Pc: 1, Ir: 60, R: 0.2 }
 }
 
-// Ross-Heidecke: Ka = (1-R)*(1 - Ie/Ir)^2 + R
-// K = Ka * (1 - Ec)
-// FOC = K_avaliando / K_elemento
-function calcularKa(Ie: number, Ir: number, R: number): number {
+// VEIU (Tabela 1 do VEIU / ABNT): Ka = 1 - ½×(Ie/Ir + Ie²/Ir²)
+// Conforme fórmula da planilha: Ka = [1 - 1/2 × (Ie/I + Ie²/I²)]
+function calcularKa(Ie: number, Ir: number): number {
   if (Ir <= 0) return 1
-  const pv = Math.min(Ie / Ir, 1)  // % de vida, máx 1
-  return (1 - R) * Math.pow(1 - pv, 2) + R
+  const v = Math.min(Ie / Ir, 1)
+  return Math.max(0, 1 - 0.5 * (v + v * v))
 }
 
-function calcularK(Ie: number, Ir: number, R: number, Ec: number): number {
-  return calcularKa(Ie, Ir, R) * (1 - Ec)
+// K = Ka × (1 - Ec)
+function calcularK(Ie: number, Ir: number, Ec: number): number {
+  return calcularKa(Ie, Ir) * (1 - Ec)
+}
+
+// Foc = R + K × (1 - R)  ← fórmula da planilha: =(H5+O5*(1-H5))
+function calcularFoc(Ie: number, Ir: number, R: number, Ec: number): number {
+  const K = calcularK(Ie, Ir, Ec)
+  return R + K * (1 - R)
 }
 
 function getFOCDepr(foc: string): number {
@@ -314,10 +320,10 @@ function calcularResultado(
     // Fator Padrão: Pc_av / Pc_elem
     const fatorPadrao = fatores.padrao && dadosElem.Pc > 0 ? dadosAv.Pc / dadosElem.Pc : 1
 
-    // Fator FOC (Ross-Heidecke)
-    const Kav   = calcularK(idadeAv,   dadosAv.Ir,   dadosAv.R,   deprAv)
-    const Kelem = calcularK(idadeElem, dadosElem.Ir, dadosElem.R, deprElem)
-    const fatorFOC = fatores.foc && Kelem > 0 ? Kav / Kelem : 1
+    // Fator FOC (VEIU + Foc = R + K*(1-R))
+    const Foc_av   = calcularFoc(idadeAv,   dadosAv.Ir,   dadosAv.R,   deprAv)
+    const Foc_elem = calcularFoc(idadeElem, dadosElem.Ir, dadosElem.R, deprElem)
+    const fatorFOC = fatores.foc && Foc_elem > 0 ? Foc_av / Foc_elem : 1
 
     // Fator Andar
     const fatorAndar = fatores.andar && fAndarElem > 0 ? fAndarAv / fAndarElem : 1
@@ -1276,8 +1282,9 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
                         const dados = getPadraoData(e.padraoConstrutivo)
                         const Ec = getFOCDepr(e.estadoConservacao)
                         const Ie = pn(e.idade || '0')
-                        const Ka = calcularKa(Ie, dados.Ir, dados.R)
-                        const K  = Ka * (1 - Ec)
+                        const Ka = calcularKa(Ie, dados.Ir)
+                        const K  = calcularK(Ie, dados.Ir, Ec)
+                        const Foc = calcularFoc(Ie, dados.Ir, dados.R, Ec)
                         return (
                           <tr key={i} className="hover:bg-slate-50">
                             <td className="border border-slate-200 px-3 py-2 font-medium">{i + 1}</td>
@@ -1286,7 +1293,7 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
                             <td className="border border-slate-200 px-3 py-2 text-center">{dados.Ir}</td>
                             <td className="border border-slate-200 px-3 py-2 text-center">{Ec.toFixed(4)}</td>
                             <td className="border border-slate-200 px-3 py-2 text-center">{Ka.toFixed(4)}</td>
-                            <td className="border border-slate-200 px-3 py-2 text-center">{K.toFixed(4)}</td>
+                            <td className="border border-slate-200 px-3 py-2 text-center">{Foc.toFixed(4)}</td>
                             <td className="border border-slate-200 px-3 py-2 text-center">{fmtFator(r.fatorFOC)}</td>
                             <td className="border border-slate-200 px-3 py-2 text-center font-medium">
                               {fmtMoeda(r.vu * r.fatorArea * r.fatorLocal * r.fatorPadrao * r.fatorFOC)}/m²
@@ -1299,8 +1306,9 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
                           const dav = getPadraoData(avaliando.padraoConstrutivo)
                           const Ec  = getFOCDepr(avaliando.estadoConservacao)
                           const Ie  = pn((avaliando as any).idadeAparente || '0')
-                          const Ka  = calcularKa(Ie, dav.Ir, dav.R)
-                          const K   = Ka * (1 - Ec)
+                          const Ka  = calcularKa(Ie, dav.Ir)
+                          const K   = calcularK(Ie, dav.Ir, Ec)
+                          const Foc = calcularFoc(Ie, dav.Ir, dav.R, Ec)
                           return (
                             <>
                               <td colSpan={2} className="border border-slate-200 px-3 py-2 font-semibold text-blue-800">Avaliando</td>
@@ -1308,7 +1316,7 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
                               <td className="border border-slate-200 px-3 py-2 text-center text-blue-800">{dav.Ir}</td>
                               <td className="border border-slate-200 px-3 py-2 text-center text-blue-800">{Ec.toFixed(4)}</td>
                               <td className="border border-slate-200 px-3 py-2 text-center text-blue-800">{Ka.toFixed(4)}</td>
-                              <td className="border border-slate-200 px-3 py-2 text-center text-blue-800">{K.toFixed(4)}</td>
+                              <td className="border border-slate-200 px-3 py-2 text-center text-blue-800">{Foc.toFixed(4)}</td>
                               <td colSpan={2} className="border border-slate-200 px-3 py-2 text-center text-blue-800">
                                 {avaliando.estadoConservacao ? FOC_LABEL[avaliando.estadoConservacao] : '—'}
                               </td>
