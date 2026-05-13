@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -258,23 +258,20 @@ function getPadraoData(padrao: string): { Pc: number; Ir: number; R: number } {
   return PADRAO_TABLE[padrao] ?? { Pc: 1, Ir: 60, R: 0.2 }
 }
 
-// VEIU (Tabela 1 do VEIU / ABNT): Ka = 1 - ½×(Ie/Ir + Ie²/Ir²)
-// Conforme fórmula da planilha: Ka = [1 - 1/2 × (Ie/I + Ie²/I²)]
+// VEIU (Tabela 1 do VEIU): Ka = 1 - ½×(Ie/Ir + Ie²/Ir²)
 function calcularKa(Ie: number, Ir: number): number {
   if (Ir <= 0) return 1
   const v = Math.min(Ie / Ir, 1)
   return Math.max(0, 1 - 0.5 * (v + v * v))
 }
 
-// K = Ka × (1 - Ec)
 function calcularK(Ie: number, Ir: number, Ec: number): number {
   return calcularKa(Ie, Ir) * (1 - Ec)
 }
 
-// Foc = R + K × (1 - R)  ← fórmula da planilha: =(H5+O5*(1-H5))
+// Foc = R + K × (1-R) — fórmula da planilha: =(H5+O5*(1-H5))
 function calcularFoc(Ie: number, Ir: number, R: number, Ec: number): number {
-  const K = calcularK(Ie, Ir, Ec)
-  return R + K * (1 - R)
+  return R + calcularK(Ie, Ir, Ec) * (1 - R)
 }
 
 function getFOCDepr(foc: string): number {
@@ -312,15 +309,14 @@ function calcularResultado(
     const vu = area > 0 ? (valOfer * fOfer) / area : 0
 
     // Fator Área — fórmula da planilha (VEIU):
-    // ratio = areaElem / areaAv
-    // Se ratio < 0.7 ou > 1.3: fatorArea = ratio^0.125
-    // Caso contrário:           fatorArea = ratio^0.25
+    // ratio = areaElem / areaAv (elemento sobre avaliando)
+    // Se ratio < 0.7 ou > 1.3 → expoente 0.125; senão → 0.25
+    // Arredondado a 3 casas decimais como no Excel
+    const round3 = (v: number) => Math.round(v / 0.001) * 0.001
     const fatorArea = (() => {
       if (area <= 0 || areaAv <= 0) return 1
       const ratio = area / areaAv
-      return (ratio < 0.7 || ratio > 1.3)
-        ? Math.pow(ratio, 0.125)
-        : Math.pow(ratio, 0.25)
+      return round3(Math.pow(ratio, (ratio < 0.7 || ratio > 1.3) ? 0.125 : 0.25))
     })()
 
     // Fator Local
@@ -329,7 +325,7 @@ function calcularResultado(
     // Fator Padrão: Pc_av / Pc_elem
     const fatorPadrao = fatores.padrao && dadosElem.Pc > 0 ? dadosAv.Pc / dadosElem.Pc : 1
 
-    // Fator FOC (VEIU + Foc = R + K*(1-R))
+    // Fator FOC (VEIU): Foc_av / Foc_elem
     const Foc_av   = calcularFoc(idadeAv,   dadosAv.Ir,   dadosAv.R,   deprAv)
     const Foc_elem = calcularFoc(idadeElem, dadosElem.Ir, dadosElem.R, deprElem)
     const fatorFOC = fatores.foc && Foc_elem > 0 ? Foc_av / Foc_elem : 1
@@ -341,16 +337,15 @@ function calcularResultado(
     const fVagaAv  = 100
     const fatorVaga = fatores.vaga && fVagaElem > 0 ? fVagaAv / fVagaElem : 1
 
-    // Coeficiente geral — fórmula da planilha: SOMA das diferenças
-    // Coef = 1 + (fArea-1) + (fLocal-1) + (fPadrao-1) + (fFOC-1) + (fAndar-1) + (fVaga-1)
-    // Equivalente a: Somatória/VU onde Somatória = VU + Σ(fi-1)*VU
+    // Coef. Geral — fórmula ADITIVA da planilha: 1 + Σ(fi - 1)
+    // Equivale a: soma de todos os fatores menos (n_fatores - 1)
     const coefGeral = 1
-      + (fatorArea  - 1)
-      + (fatorLocal - 1)
+      + (fatorArea   - 1)
+      + (fatorLocal  - 1)
       + (fatorPadrao - 1)
-      + (fatorFOC   - 1)
-      + (fatorAndar - 1)
-      + (fatorVaga  - 1)
+      + (fatorFOC    - 1)
+      + (fatorAndar  - 1)
+      + (fatorVaga   - 1)
 
     // V.U. Homogeneizado
     const vuHomog = vu * coefGeral
@@ -580,36 +575,21 @@ type Props = {
   form: any
   fatoresCDDMAtivos?: { local: boolean; padrao: boolean; foc: boolean; andar: boolean; vaga: boolean }
   onSave?: (elementos: ElementoCDDM[], resultado: Resultado) => void
-  /**
-   * Opcional. Quando passado, sincroniza automaticamente:
-   *  - elementos comparativos -> form.elementosComparativos (para a etapa 14
-   *    gerar o mapa com pins)
-   *  - valor médio do CDDM -> form.valorTotal + modoValorImovel='total'
-   *    (substitui a antiga etapa "Valor do Imóvel")
-   *  - campo manual de liquidez forçada -> form.valorLiquidezForcada
-   */
-  setForm?: React.Dispatch<React.SetStateAction<any>>
 }
 
-export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setForm }: Props) {
+export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave }: Props) {
   const fatores = fatoresCDDMAtivos ?? { local: true, padrao: true, foc: true, andar: true, vaga: true }
-  // Inicialização lazy: retoma elementos do form se já existirem (laudo recarregado).
-  const [elementos, setElementos] = useState<ElementoCDDM[]>(() => {
-    const salvos = form?.elementosComparativos
-    if (Array.isArray(salvos) && salvos.length >= 3) {
-      return salvos as ElementoCDDM[]
-    }
-    return [
-      elemInicial(1), elemInicial(2), elemInicial(3),
-      elemInicial(4), elemInicial(5),
-    ]
-  })
+  const [elementos, setElementos] = useState<ElementoCDDM[]>([
+    elemInicial(1), elemInicial(2), elemInicial(3),
+    elemInicial(4), elemInicial(5),
+  ])
   const [abaAtiva, setAbaAtiva] = useState(0)
   const [mostrarCalculo, setMostrarCalculo] = useState<'cddm' | 'homog' | 'fund'>('cddm')
 
   // Avaliando vem do form principal
-  // area: usa areaTerrenoTotal (igual à planilha que usa ÁREA=terreno para o fatorArea)
   const avaliando = useMemo<AvalianoCDDM>(() => ({
+    // area do avaliando: usa areaTerrenoTotal quando disponível
+    // (planilha usa a área de terreno para o cálculo do fatorArea)
     area: form.areaTerrenoTotal || form.areaConstruidaTotal || '',
     padraoConstrutivo: form.padraoCDDM || form.padrao || '',
     estadoConservacao: (CONSERVACAO_PARA_FOC[form.estadoConservacao] ?? '') as FOCLetra,
@@ -617,138 +597,13 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
     fatorAndar: form.fatorAndarAvaliando || '100',
     vagas: form.vagasAvaliando || '0',
     idadeAparente: form.idadeAparente || '0',
-  }), [form.areaTerrenoTotal, form.areaConstruidaTotal, form.padraoCDDM, form.padrao, form.estadoConservacao,
+  }), [form.areaConstruidaTotal, form.padraoCDDM, form.padrao, form.estadoConservacao,
        form.idadeAparente, form.fatorLocalAvaliando, form.fatorAndarAvaliando, form.vagasAvaliando])
 
   const resultado = useMemo(
     () => calcularResultado(elementos, avaliando, fatores),
     [elementos, avaliando, fatores]
   )
-
-  // Sincroniza elementos -> form.elementosComparativos (para a seção 15 ler depois)
-  useEffect(() => {
-    if (!setForm) return
-    setForm((prev: any) => ({ ...prev, elementosComparativos: elementos }))
-  }, [elementos, setForm])
-
-  // Sincroniza valor médio do CDDM -> form.valorTotal (substitui a antiga
-  // etapa "Valor do Imóvel"). Só sincroniza se houver resultado válido,
-  // preservando dados de laudos antigos onde o usuário pode ter digitado
-  // valores manualmente.
-  useEffect(() => {
-    if (!setForm) return
-    const vu = resultado.mediaSaneada
-    const area = pn(avaliando.area)
-    if (vu > 0 && area > 0) {
-      const valorMedio = vu * area
-      setForm((prev: any) => ({
-        ...prev,
-        valorTotal: valorMedio.toLocaleString('pt-BR', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }),
-        modoValorImovel: 'total',
-      }))
-    }
-  }, [resultado.mediaSaneada, avaliando.area, setForm])
-
-  // Persiste os DADOS COMPLETOS do cálculo no form para o PDF e a visualização
-  // do laudo simplificado renderizarem a memória de cálculo (CDDM + Homog +
-  // Saneamento). Snapshot estático: só os números + identificação resumida,
-  // sem objetos profundos (evita ciclo de dependências).
-  useEffect(() => {
-    if (!setForm) return
-    const area = pn(avaliando.area)
-
-    // Para cada elemento parcial calculado, monta um snapshot leve.
-    const snapshotElementos = resultado.elementos.map((re, i) => {
-      const el = elementos[i]
-      if (!el) return null
-      const enderecoCompleto = [el.logradouro, el.bairro, el.cidade, el.uf]
-        .filter(Boolean).join(', ')
-      return {
-        // Identificação
-        id: el.id,
-        identificacao: el.empreendimento || `Elemento ${i + 1}`,
-        tipo: el.tipo || '',
-        empreendimento: el.empreendimento || '',
-        // Endereço estruturado
-        endereco: enderecoCompleto,
-        logradouro: el.logradouro || '',
-        bairro: el.bairro || '',
-        cidade: el.cidade || '',
-        uf: el.uf || '',
-        coordenadas: el.coordenadas || '',
-        distanciaAvaliando: el.distanciaAvaliando || '',
-        // Características
-        area: pn(el.area),
-        valorOferta: pn(el.valorOferta),
-        valorUnitarioOferta: re.vu,
-        padraoConstrutivo: el.padraoConstrutivo || '',
-        estadoConservacao: el.estadoConservacao || '',
-        idadeAparente: pn(el.idade),
-        andar: pn(el.andar),
-        vagas: pn(el.vagas),
-        dormitorios: pn(el.dormitorios),
-        suites: pn(el.suites),
-        // Fatores de homogeneização (calculados)
-        fatorLocal: re.fatorLocal,
-        fatorPadrao: re.fatorPadrao,
-        fatorFOC: re.fatorFOC,
-        fatorAndar: re.fatorAndar,
-        fatorVaga: re.fatorVaga,
-        fatorArea: re.fatorArea,
-        coefGeral: re.coefGeral,
-        vuHomog: re.vuHomog,
-        residuo: re.residuo,
-        saneado: re.saneado,
-        // Fatores brutos (oferta, etc — informativos)
-        fatorOferta: el.fatorOferta || '',
-        fatorLocalBruto: el.fatorLocal || '',
-        fatorAndarBruto: el.fatorAndar || '',
-        fatorVagaBruto: el.fatorVaga || '',
-        // Oferta / fonte
-        tipoOferta: el.tipoOferta || '',
-        status: el.status || '',
-        fonte: el.fonte || '',
-        telefone: el.telefone || '',
-        link: el.link || '',
-        observacoes: el.observacoes || '',
-        data: el.data || '',
-      }
-    }).filter(Boolean)
-
-    setForm((prev: any) => ({
-      ...prev,
-      dadosCalculoCDDM: {
-        elementos: snapshotElementos,
-        avaliando: {
-          area,
-          padraoConstrutivo: avaliando.padraoConstrutivo,
-          estadoConservacao: avaliando.estadoConservacao,
-          fatorLocal: pn(avaliando.fatorLocal) / 100,
-          fatorAndar: pn(avaliando.fatorAndar) / 100,
-          vagas: pn(avaliando.vagas),
-          idadeAparente: pn((avaliando as any).idadeAparente || '0'),
-        },
-        media: resultado.media,
-        mediaSaneada: resultado.mediaSaneada,
-        desvioPadrao: resultado.desvioPadrao,
-        coefVariacao: resultado.coefVariacao,
-        tStudent: resultado.tStudent,
-        intervaloConfianca: resultado.intervaloConfianca,
-        limiteInferior: resultado.limiteInferior,
-        limiteSuperior: resultado.limiteSuperior,
-        limiteInf30: resultado.limiteInf30,
-        limiteSup30: resultado.limiteSup30,
-        grauPrecisao: resultado.grauPrecisao,
-        valorImovel: resultado.mediaSaneada * area,
-        amplitudeICPercent: resultado.intervaloConfianca,
-        outliersDescartados: resultado.elementos.filter(e => !e.saneado).length,
-        fatoresAtivos: fatores,
-      },
-    }))
-  }, [resultado, elementos, avaliando, fatores, setForm])
 
   function updateElem(idx: number, campo: keyof ElementoCDDM, val: string) {
     setElementos(prev => prev.map((e, i) => i === idx ? { ...e, [campo]: val } : e))
@@ -880,15 +735,6 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
                 Remover elemento
               </button>
             )}
-          </div>
-
-          {/* Aviso informativo */}
-          <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
-            <span className="text-amber-500 mt-0.5 shrink-0">ℹ️</span>
-            <p className="text-xs text-amber-700 leading-relaxed">
-              Campos não preenchidos <strong>não aparecerão</strong> na visualização e no PDF do laudo.
-              Preencha pelo menos: <strong>Tipo, Logradouro, Área, Padrão, Estado de conservação e Valor de oferta</strong>.
-            </p>
           </div>
 
           {/* Identificação */}
@@ -1276,7 +1122,7 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
               {fatores.foc && (
               <div className="px-5 py-4 border-b border-slate-100">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-                  Fator FOC (Ross-Heidecke) — Ka = (1-R)×(1-Ie/Ir)² + R | K = Ka×(1-Ec) | F = K<sub>av</sub> / K<sub>elem</sub>
+                  Fator FOC (VEIU) — Ka = 1 - ½×(Ie/Ir + Ie²/Ir²) | K = Ka×(1-Ec) | Foc = R + K×(1-R) | F = Foc<sub>av</sub> / Foc<sub>elem</sub>
                 </p>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs border-collapse">
@@ -1288,7 +1134,7 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Ir</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Ec</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Ka</th>
-                        <th className="border border-slate-200 px-3 py-2 text-blue-800">K</th>
+                        <th className="border border-slate-200 px-3 py-2 text-blue-800">Foc</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">F.FOC</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">V.U. Calc.</th>
                       </tr>
@@ -1298,10 +1144,9 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
                         if (!r.vu) return null
                         const e = elementos[i]
                         const dados = getPadraoData(e.padraoConstrutivo)
-                        const Ec = getFOCDepr(e.estadoConservacao)
-                        const Ie = pn(e.idade || '0')
-                        const Ka = calcularKa(Ie, dados.Ir)
-                        const K  = calcularK(Ie, dados.Ir, Ec)
+                        const Ec  = getFOCDepr(e.estadoConservacao)
+                        const Ie  = pn(e.idade || '0')
+                        const Ka  = calcularKa(Ie, dados.Ir)
                         const Foc = calcularFoc(Ie, dados.Ir, dados.R, Ec)
                         return (
                           <tr key={i} className="hover:bg-slate-50">
@@ -1325,7 +1170,6 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
                           const Ec  = getFOCDepr(avaliando.estadoConservacao)
                           const Ie  = pn((avaliando as any).idadeAparente || '0')
                           const Ka  = calcularKa(Ie, dav.Ir)
-                          const K   = calcularK(Ie, dav.Ir, Ec)
                           const Foc = calcularFoc(Ie, dav.Ir, dav.R, Ec)
                           return (
                             <>
@@ -1492,49 +1336,6 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
                       <p className="text-lg font-semibold text-white">{fmtMoeda(resultado.mediaSaneada)}/m²</p>
                     </div>
                   </div>
-                </div>
-
-                {/* Liquidez forçada — entrada manual com sugestão de 75% */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <div>
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Valor de liquidez forçada</p>
-                      <p className="text-xs text-slate-500">
-                        Valor estimado de venda em condições de pressa (geralmente 60% a 75% do valor de mercado).
-                      </p>
-                    </div>
-                    {(() => {
-                      const valorMedio = resultado.mediaSaneada * pn(avaliando.area)
-                      const sugestao = valorMedio * 0.75
-                      if (sugestao <= 0) return null
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!setForm) return
-                            setForm((prev: any) => ({
-                              ...prev,
-                              valorLiquidezForcada: sugestao.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-                            }))
-                          }}
-                          className="shrink-0 px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition whitespace-nowrap"
-                          title={`Aplica 75% de ${fmtMoeda(valorMedio)}`}
-                        >
-                          Sugerir 75%: {fmtMoeda(sugestao)}
-                        </button>
-                      )
-                    })()}
-                  </div>
-                  <input
-                    type="text"
-                    value={form?.valorLiquidezForcada || ''}
-                    onChange={(e) => {
-                      if (!setForm) return
-                      setForm((prev: any) => ({ ...prev, valorLiquidezForcada: e.target.value }))
-                    }}
-                    placeholder="Ex: 750.000,00"
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition"
-                  />
                 </div>
 
                 {/* Gráfico Resíduos Relativos */}
