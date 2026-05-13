@@ -311,8 +311,17 @@ function calcularResultado(
     // VU = Valor Líquido / Área
     const vu = area > 0 ? (valOfer * fOfer) / area : 0
 
-    // Fator Área (sempre ativo — NBR 14653-2)
-    const fatorArea = area > 0 && areaAv > 0 ? Math.sqrt(areaAv / area) : 1
+    // Fator Área — fórmula da planilha (VEIU):
+    // ratio = areaElem / areaAv
+    // Se ratio < 0.7 ou > 1.3: fatorArea = ratio^0.125
+    // Caso contrário:           fatorArea = ratio^0.25
+    const fatorArea = (() => {
+      if (area <= 0 || areaAv <= 0) return 1
+      const ratio = area / areaAv
+      return (ratio < 0.7 || ratio > 1.3)
+        ? Math.pow(ratio, 0.125)
+        : Math.pow(ratio, 0.25)
+    })()
 
     // Fator Local
     const fatorLocal = fatores.local && fLocalElem > 0 ? fLocalAv / fLocalElem : 1
@@ -332,8 +341,16 @@ function calcularResultado(
     const fVagaAv  = 100
     const fatorVaga = fatores.vaga && fVagaElem > 0 ? fVagaAv / fVagaElem : 1
 
-    // Coeficiente geral de homogeneização (produto de todos os fatores)
-    const coefGeral = fatorArea * fatorLocal * fatorPadrao * fatorFOC * fatorAndar * fatorVaga
+    // Coeficiente geral — fórmula da planilha: SOMA das diferenças
+    // Coef = 1 + (fArea-1) + (fLocal-1) + (fPadrao-1) + (fFOC-1) + (fAndar-1) + (fVaga-1)
+    // Equivalente a: Somatória/VU onde Somatória = VU + Σ(fi-1)*VU
+    const coefGeral = 1
+      + (fatorArea  - 1)
+      + (fatorLocal - 1)
+      + (fatorPadrao - 1)
+      + (fatorFOC   - 1)
+      + (fatorAndar - 1)
+      + (fatorVaga  - 1)
 
     // V.U. Homogeneizado
     const vuHomog = vu * coefGeral
@@ -591,15 +608,16 @@ export default function EtapaCalculoCDDM({ form, fatoresCDDMAtivos, onSave, setF
   const [mostrarCalculo, setMostrarCalculo] = useState<'cddm' | 'homog' | 'fund'>('cddm')
 
   // Avaliando vem do form principal
+  // area: usa areaTerrenoTotal (igual à planilha que usa ÁREA=terreno para o fatorArea)
   const avaliando = useMemo<AvalianoCDDM>(() => ({
-    area: form.areaConstruidaTotal || '',
+    area: form.areaTerrenoTotal || form.areaConstruidaTotal || '',
     padraoConstrutivo: form.padraoCDDM || form.padrao || '',
     estadoConservacao: (CONSERVACAO_PARA_FOC[form.estadoConservacao] ?? '') as FOCLetra,
     fatorLocal: form.fatorLocalAvaliando || '100',
     fatorAndar: form.fatorAndarAvaliando || '100',
     vagas: form.vagasAvaliando || '0',
     idadeAparente: form.idadeAparente || '0',
-  }), [form.areaConstruidaTotal, form.padraoCDDM, form.padrao, form.estadoConservacao,
+  }), [form.areaTerrenoTotal, form.areaConstruidaTotal, form.padraoCDDM, form.padrao, form.estadoConservacao,
        form.idadeAparente, form.fatorLocalAvaliando, form.fatorAndarAvaliando, form.vagasAvaliando])
 
   const resultado = useMemo(
