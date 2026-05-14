@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -598,14 +598,8 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
     fatorAndar: form.fatorAndarAvaliando || '100',
     vagas: form.vagasAvaliando || '0',
     idadeAparente: form.idadeAparente || '0',
-  }), [form.areaTerrenoTotal, form.areaConstruidaTotal, form.padraoCDDM, form.padrao,
-       form.estadoConservacao, form.idadeAparente, form.fatorLocalAvaliando,
-       form.fatorAndarAvaliando, form.vagasAvaliando])
-
-  // Helper para atualizar campos do avaliando no form pai
-  function setAv(campo: string, valor: string) {
-    if (setForm) setForm((prev: any) => ({ ...prev, [campo]: valor }))
-  }
+  }), [form.areaConstruidaTotal, form.padraoCDDM, form.padrao, form.estadoConservacao,
+       form.idadeAparente, form.fatorLocalAvaliando, form.fatorAndarAvaliando, form.vagasAvaliando])
 
   const resultado = useMemo(
     () => calcularResultado(elementos, avaliando, fatores),
@@ -629,88 +623,6 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
     setAbaAtiva(Math.min(abaAtiva, novos.length - 1))
   }
 
-  // ─── Salva snapshot no form pai sempre que o resultado mudar ─────────────────
-  // Isso permite que o PDF e a visualização leiam dadosCalculoCDDM do Redis.
-  useEffect(() => {
-    if (!setForm) return
-    if (resultado.elementos.length === 0) return
-    const snapshotElementos = resultado.elementos.map((re, i) => {
-      const el = elementos[i]
-      if (!el) return null
-      return {
-        tipo: el.tipo || '',
-        empreendimento: el.empreendimento || '',
-        logradouro: el.logradouro || '',
-        bairro: el.bairro || '',
-        cidade: el.cidade || '',
-        uf: el.uf || '',
-        coordenadas: el.coordenadas || '',
-        distanciaAvaliando: el.distanciaAvaliando || '',
-        area: pn(el.area),
-        valorOferta: pn(el.valorOferta),
-        valorUnitarioOferta: re.vu,
-        padraoConstrutivo: el.padraoConstrutivo || '',
-        estadoConservacao: el.estadoConservacao || '',
-        idadeAparente: pn(el.idade || '0'),
-        andar: pn(el.andar || '0'),
-        vagas: pn(el.vagas || '0'),
-        dormitorios: pn(el.dormitorios || '0'),
-        suites: pn(el.suites || '0'),
-        fatorOferta: el.fatorOferta || '',
-        fatorLocalBruto: el.fatorLocal || '100',
-        fatorAndarBruto: el.fatorAndar || '100',
-        tipoOferta: el.tipoOferta || '',
-        status: el.status || '',
-        fonte: el.fonte || '',
-        telefone: el.telefone || '',
-        link: el.link || '',
-        observacoes: el.observacoes || '',
-        data: el.data || '',
-        // Fatores calculados
-        fatorArea: re.fatorArea,
-        fatorLocal: re.fatorLocal,
-        fatorPadrao: re.fatorPadrao,
-        fatorFOC: re.fatorFOC,
-        fatorAndar: re.fatorAndar,
-        fatorVaga: re.fatorVaga,
-        coefGeral: re.coefGeral,
-        vuHomog: re.vuHomog,
-        residuo: re.residuo,
-        saneado: re.saneado,
-      }
-    }).filter(Boolean)
-
-    const snapshot = {
-      elementos: snapshotElementos,
-      avaliando: {
-        area: pn(avaliando.area),
-        padraoConstrutivo: avaliando.padraoConstrutivo,
-        estadoConservacao: avaliando.estadoConservacao,
-      },
-      media: resultado.media,
-      mediaSaneada: resultado.mediaSaneada,
-      desvioPadrao: resultado.desvioPadrao,
-      coefVariacao: resultado.coefVariacao,
-      tStudent: resultado.tStudent,
-      intervaloConfianca: resultado.intervaloConfianca,
-      limiteInferior: resultado.limiteInferior,
-      limiteSuperior: resultado.limiteSuperior,
-      limiteInf30: resultado.limiteInf30,
-      limiteSup30: resultado.limiteSup30,
-      grauPrecisao: resultado.grauPrecisao,
-      valorImovel: resultado.mediaSaneada * pn(avaliando.area),
-      outliersDescartados: resultado.elementos.filter(e => !e.saneado).length,
-    }
-
-    setForm((prev: any) => ({
-      ...prev,
-      dadosCalculoCDDM: snapshot,
-      valorTotal: resultado.mediaSaneada > 0
-        ? String(Math.round(resultado.mediaSaneada * pn(avaliando.area)))
-        : prev.valorTotal,
-    }))
-  }, [resultado])
-
   const cls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition'
   const clsSelect = cls + ' appearance-none'
 
@@ -731,36 +643,21 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
         </p>
       </div>
 
-      {/* Dados do avaliando (editáveis — usados nos cálculos de fatores) */}
+      {/* Dados do avaliando (referência) */}
       <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
         <p className="text-xs font-semibold text-blue-800 mb-3 uppercase tracking-wide">Dados do avaliando — referência para o cálculo</p>
         <div className="grid grid-cols-3 gap-3 text-sm">
           <div>
-            <span className="text-xs text-blue-600 font-medium block mb-1">Área (m²) <span className="text-blue-400 font-normal">(terreno ou útil)</span></span>
-            <input
-              type="number"
-              value={form.areaTerrenoTotal || form.areaConstruidaTotal || ''}
-              onChange={e => setAv('areaTerrenoTotal', e.target.value)}
-              placeholder="272"
-              className="w-full bg-white border border-blue-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
+            <span className="text-xs text-blue-600 font-medium block mb-1">Área construída (m²)</span>
+            <div className="bg-white border border-blue-200 rounded-xl px-3 py-2 font-medium text-slate-800">
+              {form.areaConstruidaTotal || '—'}
+            </div>
           </div>
           <div>
             <span className="text-xs text-blue-600 font-medium block mb-1">Padrão construtivo (CDDM)</span>
-            <select
-              value={form.padraoCDDM || form.padrao || ''}
-              onChange={e => setAv('padraoCDDM', e.target.value)}
-              className="w-full bg-white border border-blue-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            >
-              <option value="">Selecione…</option>
-              {PADRAO_GRUPOS.map(g => (
-                <optgroup key={g.grupo} label={g.grupo}>
-                  {Object.keys(PADRAO_TABLE).filter(k => g.prefixos.some(p => k.startsWith(p))).map(k => (
-                    <option key={k} value={k}>{k}</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+            <div className="bg-white border border-blue-200 rounded-xl px-3 py-2 font-medium text-slate-800 truncate text-xs">
+              {form.padraoCDDM || form.padrao || <span className="text-red-400">Não preenchido</span>}
+            </div>
           </div>
           <div>
             <span className="text-xs text-blue-600 font-medium block mb-1">Estado de conservação</span>
@@ -775,42 +672,21 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
             </div>
           </div>
           <div>
-            <span className="text-xs text-blue-600 font-medium block mb-1">
-              Fator local <span className="text-blue-400 font-normal">(avaliando)</span>
-            </span>
-            <input
-              type="number"
-              value={form.fatorLocalAvaliando || '100'}
-              onChange={e => setAv('fatorLocalAvaliando', e.target.value)}
-              placeholder="100"
-              className="w-full bg-white border border-blue-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
+            <span className="text-xs text-blue-600 font-medium block mb-1">Fator local</span>
+            <div className="bg-white border border-blue-200 rounded-xl px-3 py-2 font-medium text-slate-800">
+              {form.fatorLocalAvaliando || '100'}
+            </div>
           </div>
           <div>
-            <span className="text-xs text-blue-600 font-medium block mb-1">
-              Fator andar / Vagas <span className="text-blue-400 font-normal">(avaliando)</span>
-            </span>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                value={form.fatorAndarAvaliando || '100'}
-                onChange={e => setAv('fatorAndarAvaliando', e.target.value)}
-                placeholder="100"
-                className="w-full bg-white border border-blue-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
-              />
-              <input
-                type="number"
-                value={form.vagasAvaliando || '0'}
-                onChange={e => setAv('vagasAvaliando', e.target.value)}
-                placeholder="0"
-                className="w-20 bg-white border border-blue-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
-              />
+            <span className="text-xs text-blue-600 font-medium block mb-1">Fator andar / Vagas</span>
+            <div className="bg-white border border-blue-200 rounded-xl px-3 py-2 font-medium text-slate-800">
+              {form.fatorAndarAvaliando || '100'} / {form.vagasAvaliando || '0'}
             </div>
           </div>
         </div>
         {(!form.padraoCDDM && !form.padrao) && (
           <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3">
-            ⚠ Selecione o <strong>Padrão construtivo (CDDM)</strong> acima para que o Fator Padrão seja calculado corretamente.
+            ⚠ Preencha o <strong>Padrão construtivo (CDDM)</strong> na seção 1–6 para que o Fator Padrão seja calculado corretamente.
           </p>
         )}
       </div>
@@ -1142,7 +1018,9 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
 
               {/* Fator Área */}
               <div className="px-5 py-4 border-b border-slate-100">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Fator Área — F = √(Área<sub>av</sub> / Área<sub>elem</sub>)</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                  Fator Área — F = (Área<sub>elem</sub>/Área<sub>av</sub>)<sup>exp</sup> · exp=0,125 se ratio&lt;0,7 ou &gt;1,3; senão 0,25
+                </p>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs border-collapse">
                     <thead>
@@ -1150,7 +1028,7 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
                         <th className="border border-slate-200 px-3 py-2 text-left text-blue-800">Elemento</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Área (m²)</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Coeficiente</th>
-                        <th className="border border-slate-200 px-3 py-2 text-blue-800">Diferença</th>
+                        <th className="border border-slate-200 px-3 py-2 text-blue-800">Diferença (R$/m²)</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">V.U. Calculado</th>
                       </tr>
                     </thead>
@@ -1160,7 +1038,7 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
                           <td className="border border-slate-200 px-3 py-2 font-medium text-slate-700">{i + 1}</td>
                           <td className="border border-slate-200 px-3 py-2 text-center">{fmt(pn(elementos[i].area))}</td>
                           <td className="border border-slate-200 px-3 py-2 text-center">{fmtFator(r.fatorArea)}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-center">{fmtFator(r.fatorArea - 1)}</td>
+                          <td className="border border-slate-200 px-3 py-2 text-center">{fmtMoeda((r.fatorArea - 1) * r.vu)}</td>
                           <td className="border border-slate-200 px-3 py-2 text-center font-medium">{fmtMoeda(r.vu * r.fatorArea)}/m²</td>
                         </tr>
                       ))}
@@ -1196,8 +1074,8 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
                           <td className="border border-slate-200 px-3 py-2 font-medium">{i + 1}</td>
                           <td className="border border-slate-200 px-3 py-2 text-center">{pn(elementos[i].fatorLocal) || 100}</td>
                           <td className="border border-slate-200 px-3 py-2 text-center">{fmtFator(r.fatorLocal)}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-center">{fmtFator(r.fatorLocal - 1)}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-center font-medium">{fmtMoeda(r.vu * r.fatorArea * r.fatorLocal)}/m²</td>
+                          <td className="border border-slate-200 px-3 py-2 text-center">{fmtMoeda((r.fatorLocal - 1) * r.vu)}</td>
+                          <td className="border border-slate-200 px-3 py-2 text-center font-medium">{fmtMoeda(r.vu * r.fatorLocal)}/m²</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1217,6 +1095,7 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Padrão</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Pc (elem)</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Coeficiente</th>
+                        <th className="border border-slate-200 px-3 py-2 text-blue-800">Diferença (R$/m²)</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">V.U. Calculado</th>
                       </tr>
                     </thead>
@@ -1227,15 +1106,16 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
                           <td className="border border-slate-200 px-3 py-2">{elementos[i].padraoConstrutivo || '—'}</td>
                           <td className="border border-slate-200 px-3 py-2 text-center">{getPadraoData(elementos[i].padraoConstrutivo).Pc || '—'}</td>
                           <td className="border border-slate-200 px-3 py-2 text-center">{fmtFator(r.fatorPadrao)}</td>
+                          <td className="border border-slate-200 px-3 py-2 text-center">{fmtMoeda((r.fatorPadrao - 1) * r.vu)}</td>
                           <td className="border border-slate-200 px-3 py-2 text-center font-medium">
-                            {fmtMoeda(r.vu * r.fatorArea * r.fatorLocal * r.fatorPadrao)}/m²
+                            {fmtMoeda(r.vu * r.fatorPadrao)}/m²
                           </td>
                         </tr>
                       ))}
                       <tr className="bg-blue-50">
                         <td colSpan={2} className="border border-slate-200 px-3 py-2 font-semibold text-blue-800">Avaliando</td>
                         <td className="border border-slate-200 px-3 py-2 text-center text-blue-800">{getPadraoData(avaliando.padraoConstrutivo).Pc}</td>
-                        <td colSpan={2} className="border border-slate-200 px-3 py-2 text-blue-800 text-center">{avaliando.padraoConstrutivo || '—'}</td>
+                        <td colSpan={3} className="border border-slate-200 px-3 py-2 text-blue-800 text-center">{avaliando.padraoConstrutivo || '—'}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -1261,6 +1141,7 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Ka</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">Foc</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">F.FOC</th>
+                        <th className="border border-slate-200 px-3 py-2 text-blue-800">Diferença (R$/m²)</th>
                         <th className="border border-slate-200 px-3 py-2 text-blue-800">V.U. Calc.</th>
                       </tr>
                     </thead>
@@ -1284,7 +1165,10 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
                             <td className="border border-slate-200 px-3 py-2 text-center">{Foc.toFixed(4)}</td>
                             <td className="border border-slate-200 px-3 py-2 text-center">{fmtFator(r.fatorFOC)}</td>
                             <td className="border border-slate-200 px-3 py-2 text-center font-medium">
-                              {fmtMoeda(r.vu * r.fatorArea * r.fatorLocal * r.fatorPadrao * r.fatorFOC)}/m²
+                              {fmtMoeda((r.fatorFOC - 1) * r.vu)}/m²
+                            </td>
+                            <td className="border border-slate-200 px-3 py-2 text-center font-medium">
+                              {fmtMoeda(r.vu * r.fatorFOC)}/m²
                             </td>
                           </tr>
                         )
@@ -1338,9 +1222,9 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
                           <td className="border border-slate-200 px-3 py-2 font-medium">{i + 1}</td>
                           <td className="border border-slate-200 px-3 py-2 text-center">{pn(elementos[i].fatorAndar) || 100}</td>
                           <td className="border border-slate-200 px-3 py-2 text-center">{fmtFator(r.fatorAndar)}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-center">{fmtFator(r.fatorAndar - 1)}</td>
+                          <td className="border border-slate-200 px-3 py-2 text-center">{fmtMoeda((r.fatorAndar - 1) * r.vu)}</td>
                           <td className="border border-slate-200 px-3 py-2 text-center font-medium">
-                            {fmtMoeda(r.vu * r.fatorArea * r.fatorLocal * r.fatorPadrao * r.fatorFOC * r.fatorAndar)}/m²
+                            {fmtMoeda(r.vu * r.fatorAndar)}/m²
                           </td>
                         </tr>
                       ))}
