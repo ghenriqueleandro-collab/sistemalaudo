@@ -233,7 +233,7 @@ export default function EtapaFundamentacaoPrecisao({
 
       {!exibirTabelaFatoresTerreno && !exibirTabelaMetodoEvolutivo && !exibirTabelaInferencia && (
         <div className="border border-amber-300 bg-amber-50 rounded p-4 text-sm text-amber-800">
-          ⚠ Nenhum método de avaliação foi selecionado. Volte à etapa <strong>1–6 (Identificação)</strong> e selecione o <strong>Método de avaliação</strong> e o <strong>Tratamento dos dados</strong> para que as tabelas de fundamentação sejam exibidas aqui.
+          ⚠ Nenhum método de avaliação foi selecionado. Volte à etapa <strong>1–6 (Identificação)</strong> e selecione o <strong>Método de avaliação</strong> para que as tabelas de fundamentação sejam exibidas aqui.
         </div>
       )}
       {exibirTabelaFatoresTerreno && (
