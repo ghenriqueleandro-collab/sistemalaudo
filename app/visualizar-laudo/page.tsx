@@ -307,7 +307,6 @@ type DadosLaudo = {
   localizacaoComparativos?: string
   calculoPdf?: string
   outrosFatoresImovel: { descricao: string; valor: string }[]
-  valoresAdicionais?: { descricao: string; valor: string }[]
   valorFinalImovel: number
   fundamentacao?: { item: number; grau: string; pontos: number }[]
   fundamentacaoInferencia?: { item: number; grau: string; pontos: number }[]
@@ -592,7 +591,6 @@ function VisualizarLaudoContent() {
             fatorComercializacao: parsed.fatorComercializacao || '1,00',
             valorLiquidezForcada: parsed.valorLiquidezForcada || '',
             outrosFatoresImovel: parsed.outrosFatoresImovel || [],
-            valoresAdicionais: parsed.valoresAdicionais || [],
             valorFinalImovel: parsed.valorFinalImovel || 0,
             garantiaClassificacao: parsed.garantiaClassificacao || '',
             garantiaObservacoes: parsed.garantiaObservacoes || '',
@@ -671,13 +669,9 @@ function VisualizarLaudoContent() {
   const modoTotal = dados.modoValorImovel === 'total'
   const fatorComercializacaoNumero = converterNumero(dados.fatorComercializacao)
   const produtoOutrosFatores = (dados.outrosFatoresImovel || []).reduce((total, item) => total * (converterNumero(item.valor) || 1), 1)
-  const somaValoresAdicionais = ((dados as any).valoresAdicionais || []).reduce(
-    (total: number, item: { descricao: string; valor: string }) => total + converterNumero(item.valor),
-    0
-  )
   const baseCalculo = modoTotal ? valorTotalNumero : (valorTerrenoNumero + valorBenfeitoriasNumero)
   const subtotalImovel = baseCalculo * fatorComercializacaoNumero
-  const valorFinalCalculado = subtotalImovel * produtoOutrosFatores + somaValoresAdicionais
+  const valorFinalCalculado = subtotalImovel * produtoOutrosFatores
   const valorArredondadoLaudo = arredondarValorLaudo(valorFinalCalculado)
   const valorArredondadoExtenso = numeroPorExtenso(valorArredondadoLaudo)
   const valorLiquidezForcadaNumero = converterNumero(dados.valorLiquidezForcada || '')
@@ -744,9 +738,10 @@ function VisualizarLaudoContent() {
   )
   const temConsideracoesSection = paginasSecao8.some((chunk) => chunk.length > 0) || !!dados.liquidez || !!dados.desempenhoMercado
   const temFundamentacaoSection =
-    (dados.fundamentacao?.length ?? 0) > 0 ||
-    (dados.fundamentacaoEvolutivo?.length ?? 0) > 0 ||
-    (dados.fundamentacaoInferencia?.length ?? 0) > 0
+    (dados.fundamentacao?.some((i: any) => i?.grau) ?? false) ||
+    (dados.fundamentacaoEvolutivo?.some((i: any) => i?.grau) ?? false) ||
+    (dados.fundamentacaoInferencia?.some((i: any) => i?.grau) ?? false) ||
+    (dados.precisao?.some((i: any) => i?.grau) ?? false)
   const temGarantiaSection = !!garantiaTexto.titulo
 
   let _sn = 6
@@ -2079,12 +2074,6 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                   )}
                   <p>{modoTotal ? 'b.' : 'c.'} <strong>Fator de Comercialização:</strong> {dados.fatorComercializacao || '1,00'}</p>
                   {produtoOutrosFatores !== 1 && <p><strong>Produto dos outros fatores:</strong> {produtoOutrosFatores.toLocaleString('pt-BR')}</p>}
-                  {((dados as any).valoresAdicionais || []).filter((v: any) => v.descricao?.trim() || v.valor?.trim()).map((v: any, idx: number) => (
-                    <p key={idx}>{String.fromCharCode(100 + idx)}. <strong>{v.descricao}:</strong> {formatarMoeda(converterNumero(v.valor))}</p>
-                  ))}
-                  {somaValoresAdicionais > 0 && (
-                    <p><strong>Total valores adicionais:</strong> {formatarMoeda(somaValoresAdicionais)}</p>
-                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-4 evitar-quebra">
                   <div className="value-box-dark">
