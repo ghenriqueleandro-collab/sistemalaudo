@@ -466,19 +466,23 @@ export default function NovoLaudoPage() {
   }
 
   function selecionarGrauFundamentacao(index: number, grau: 'III' | 'II' | 'I') {
-    setFundamentacao((prev) => prev.map((f, i) => i === index ? { ...f, grau } : f))
+    const pontos = grau === 'III' ? 3 : grau === 'II' ? 2 : 1
+    setFundamentacao((prev) => prev.map((f, i) => i === index ? { ...f, grau, pontos } : f))
   }
 
   function selecionarGrauFundamentacaoInferencia(index: number, grau: 'III' | 'II' | 'I') {
-    setFundamentacaoInferencia((prev) => prev.map((f, i) => i === index ? { ...f, grau } : f))
+    const pontos = grau === 'III' ? 3 : grau === 'II' ? 2 : 1
+    setFundamentacaoInferencia((prev) => prev.map((f, i) => i === index ? { ...f, grau, pontos } : f))
   }
 
   function selecionarGrauFundamentacaoEvolutivo(index: number, grau: 'III' | 'II' | 'I') {
-    setFundamentacaoEvolutivo((prev) => prev.map((f, i) => i === index ? { ...f, grau } : f))
+    const pontos = grau === 'III' ? 3 : grau === 'II' ? 2 : 1
+    setFundamentacaoEvolutivo((prev) => prev.map((f, i) => i === index ? { ...f, grau, pontos } : f))
   }
 
   function selecionarGrauPrecisao(index: number, grau: 'III' | 'II' | 'I') {
-    setPrecisao((prev) => prev.map((p, i) => i === index ? { ...p, grau } : p))
+    const pontos = grau === 'III' ? 3 : grau === 'II' ? 2 : 1
+    setPrecisao((prev) => prev.map((p, i) => i === index ? { ...p, grau, pontos } : p))
   }
 
   function formatarDataBR(data: string) {
@@ -532,17 +536,17 @@ export default function NovoLaudoPage() {
   const exibirTabelaMetodoEvolutivo = form.metodoAvaliacao === 'evolutivo'
 
   const somaFundamentacao = fundamentacao.reduce((acc, f) => {
-    const map: Record<string, number> = { III: 1, II: 2, I: 3 }
+    const map: Record<string, number> = { III: 3, II: 2, I: 1 }
     return acc + (map[f.grau] || 0)
   }, 0)
 
   const somaFundamentacaoInferencia = fundamentacaoInferencia.reduce((acc, f) => {
-    const map: Record<string, number> = { III: 1, II: 2, I: 3 }
+    const map: Record<string, number> = { III: 3, II: 2, I: 1 }
     return acc + (map[f.grau] || 0)
   }, 0)
 
   const somaFundamentacaoEvolutivo = fundamentacaoEvolutivo.reduce((acc, f) => {
-    const map: Record<string, number> = { III: 1, II: 2, I: 3 }
+    const map: Record<string, number> = { III: 3, II: 2, I: 1 }
     return acc + (map[f.grau] || 0)
   }, 0)
 
