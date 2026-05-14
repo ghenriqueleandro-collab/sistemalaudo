@@ -738,10 +738,10 @@ function VisualizarLaudoContent() {
   )
   const temConsideracoesSection = paginasSecao8.some((chunk) => chunk.length > 0) || !!dados.liquidez || !!dados.desempenhoMercado
   const temFundamentacaoSection =
-    (dados.fundamentacao?.some((i: any) => i?.grau) ?? false) ||
-    (dados.fundamentacaoEvolutivo?.some((i: any) => i?.grau) ?? false) ||
-    (dados.fundamentacaoInferencia?.some((i: any) => i?.grau) ?? false) ||
-    (dados.precisao?.some((i: any) => i?.grau) ?? false)
+    (dados.fundamentacao?.length ?? 0) > 0 ||
+    (dados.fundamentacaoEvolutivo?.length ?? 0) > 0 ||
+    (dados.fundamentacaoInferencia?.length ?? 0) > 0 ||
+    (dados.precisao?.length ?? 0) > 0
   const temGarantiaSection = !!garantiaTexto.titulo
 
   let _sn = 6

@@ -579,10 +579,10 @@ export function LaudoPdf({
     !!dados.desempenhoMercado ||
     !!(dados.consideracoesMercado || '').trim()
   const temFundamentacao =
-    (dados.fundamentacao?.some((i: any) => i?.grau) ?? false) ||
-    (dados.fundamentacaoEvolutivo?.some((i: any) => i?.grau) ?? false) ||
-    (dados.fundamentacaoInferencia?.some((i: any) => i?.grau) ?? false)
-  const temPrecisao = dados.precisao?.some((i: any) => i?.grau) ?? false
+    (dados.fundamentacao && dados.fundamentacao.length > 0) ||
+    (dados.fundamentacaoEvolutivo && dados.fundamentacaoEvolutivo.length > 0) ||
+    (dados.fundamentacaoInferencia && dados.fundamentacaoInferencia.length > 0)
+  const temPrecisao = dados.precisao && dados.precisao.length > 0
 
   // Dynamic sub-section numbering for section 6
   let _sec6 = 0

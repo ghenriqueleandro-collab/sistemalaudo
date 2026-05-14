@@ -141,25 +141,101 @@ export default function EtapaFundamentacaoPrecisao({
   fundamentacaoEvolutivo,
   precisao,
   selecionarGrauFundamentacao,
-   selecionarGrauFundamentacaoInferencia,
+  selecionarGrauFundamentacaoInferencia,
   selecionarGrauFundamentacaoEvolutivo,
   selecionarGrauPrecisao,
   somaFundamentacao,
   somaFundamentacaoInferencia,
   somaFundamentacaoEvolutivo,
   exibirTabelaFatoresTerreno,
-exibirTabelaInferencia,
-exibirTabelaMetodoEvolutivo,
+  exibirTabelaInferencia,
+  exibirTabelaMetodoEvolutivo,
 }: Props) {
+
+  // Valor numérico do grau
+  const gv = (g?: string) => g === 'III' ? 3 : g === 'II' ? 2 : g === 'I' ? 1 : 0
+
+  // Enquadramento — Fatores
+  const encFatores = (() => {
+    const g2 = gv(fundamentacao[1]?.grau), g4 = gv(fundamentacao[3]?.grau)
+    const outros = [fundamentacao[0], fundamentacao[2]]
+    if (somaFundamentacao >= 10 && g2 >= 3 && g4 >= 3 && outros.every(i => gv(i?.grau) >= 2)) return 'III'
+    if (somaFundamentacao >= 6  && g2 >= 2 && g4 >= 2 && outros.every(i => gv(i?.grau) >= 1)) return 'II'
+    if (somaFundamentacao >= 4  && fundamentacao.every(i => gv(i?.grau) >= 1)) return 'I'
+    return ''
+  })()
+
+  // Enquadramento — Evolutivo
+  const encEvolutivo = (() => {
+    if (somaFundamentacaoEvolutivo >= 8 && fundamentacaoEvolutivo.every(i => gv(i?.grau) >= 2)) return 'III'
+    if (somaFundamentacaoEvolutivo >= 5 && gv(fundamentacaoEvolutivo[0]?.grau) >= 2 && gv(fundamentacaoEvolutivo[1]?.grau) >= 2) return 'II'
+    if (somaFundamentacaoEvolutivo >= 3 && fundamentacaoEvolutivo.every(i => gv(i?.grau) >= 1)) return 'I'
+    return ''
+  })()
+
+  // Enquadramento — Inferência
+  const encInferencia = (() => {
+    const man = [fundamentacaoInferencia[1], fundamentacaoInferencia[3], fundamentacaoInferencia[4], fundamentacaoInferencia[5]]
+    const oth = [fundamentacaoInferencia[0], fundamentacaoInferencia[2]]
+    if (somaFundamentacaoInferencia >= 16 && man.every(i => gv(i?.grau) >= 3) && oth.every(i => gv(i?.grau) >= 2)) return 'III'
+    if (somaFundamentacaoInferencia >= 10 && man.every(i => gv(i?.grau) >= 2) && oth.every(i => gv(i?.grau) >= 1)) return 'II'
+    if (somaFundamentacaoInferencia >= 6  && fundamentacaoInferencia.every(i => gv(i?.grau) >= 1)) return 'I'
+    return ''
+  })()
+
+  // Estilo célula de enquadramento ativa
+  const ceEnc = (ativo: boolean) =>
+    `border p-2 text-center font-bold ${ativo ? 'bg-blue-600 text-white' : ''}`
+
+  // Tabela de enquadramento (Tabela 4)
+  function TabelaEnquadramento({ enc }: { enc: string }) {
+    if (!enc) return null
+    return (
+      <div className="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
+        <p className="text-sm font-semibold text-blue-800 mb-2">
+          Resultado: Grau de Fundamentação <span className="text-lg font-bold">{enc}</span>
+        </p>
+        <table className="w-full border text-sm border-collapse">
+          <tbody>
+            <tr className="bg-gray-100">
+              <td className="border p-2 text-center font-bold w-1/4">Graus</td>
+              <td className={ceEnc(enc === 'III')}>III</td>
+              <td className={ceEnc(enc === 'II')}>II</td>
+              <td className={ceEnc(enc === 'I')}>I</td>
+            </tr>
+            <tr>
+              <td className="border p-2 text-center bg-gray-50">Pontos mínimos</td>
+              <td className="border p-2 text-center">10</td>
+              <td className="border p-2 text-center">6</td>
+              <td className="border p-2 text-center">4</td>
+            </tr>
+            <tr>
+              <td className="border p-2 text-center bg-gray-50 align-middle">Itens obrigatórios</td>
+              <td className={`border p-2 text-center text-xs ${enc === 'III' ? 'bg-blue-50' : ''}`}>Itens 2 e 4 no grau III, com os demais no mínimo no grau II</td>
+              <td className={`border p-2 text-center text-xs ${enc === 'II' ? 'bg-blue-50' : ''}`}>Itens 2 e 4, no mínimo no grau II e demais, no mínimo no grau I</td>
+              <td className={`border p-2 text-center text-xs ${enc === 'I' ? 'bg-blue-50' : ''}`}>Todos, no mínimo no grau I</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    )
+  }
 
 
   return (
     <div className="space-y-8">
       <div>
         <h2 className="text-2xl font-bold">12. Grau de fundamentação e precisão</h2>
+        <p className="text-sm text-slate-500 mt-1">
+          O tipo de tabela exibida é determinado pelo <strong>Método de avaliação</strong> e <strong>Tratamento dos dados</strong> selecionados na etapa 1–6.
+        </p>
       </div>
 
-
+      {!exibirTabelaFatoresTerreno && !exibirTabelaMetodoEvolutivo && !exibirTabelaInferencia && (
+        <div className="border border-amber-300 bg-amber-50 rounded p-4 text-sm text-amber-800">
+          ⚠ Nenhum método de avaliação foi selecionado. Volte à etapa <strong>1–6 (Identificação)</strong> e selecione o <strong>Método de avaliação</strong> e o <strong>Tratamento dos dados</strong> para que as tabelas de fundamentação sejam exibidas aqui.
+        </div>
+      )}
       {exibirTabelaFatoresTerreno && (
   <div className="border rounded p-4 bg-white">
     <p className="mb-4 font-semibold">
@@ -263,6 +339,7 @@ exibirTabelaMetodoEvolutivo,
         <p className="mt-4 text-sm">
       <strong>Obs:</strong> Para menos de 5 dados de mercado, o intervalo deverá ser 0,8 a 1,25.
     </p>
+        <TabelaEnquadramento enc={encFatores} />
   </div>
 )}
 
@@ -365,11 +442,11 @@ exibirTabelaMetodoEvolutivo,
             </tbody>
           </table>
         </div>
+        <TabelaEnquadramento enc={encEvolutivo} />
       </div>
-)}
+      )}
 
-
-{exibirTabelaInferencia && (
+      {exibirTabelaInferencia && (
   <div className="border rounded p-4 bg-white">
     <p className="mb-4 font-semibold">
       Grau de fundamentação no caso de utilização de modelos de regressão linear
@@ -470,8 +547,9 @@ exibirTabelaMetodoEvolutivo,
             </tbody>
           </table>
         </div>
-
-      </div>)}
+        <TabelaEnquadramento enc={encInferencia} />
+      </div>
+      )}
 
       <div className="border rounded p-4 bg-white">
         <p className="mb-4 font-semibold">
