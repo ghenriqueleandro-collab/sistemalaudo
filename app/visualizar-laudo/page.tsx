@@ -1587,62 +1587,6 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               </div>
             </Pagina>
 
-            {(() => {
-              const ITENS_PRIMEIRA_PAGINA = 35
-              const ITENS_DEMAIS_PAGINAS = 42
-              const chunks: ItemSumario[][] = []
-              if (sumario.length <= ITENS_PRIMEIRA_PAGINA) {
-                chunks.push(sumario)
-              } else {
-                chunks.push(sumario.slice(0, ITENS_PRIMEIRA_PAGINA))
-                let i = ITENS_PRIMEIRA_PAGINA
-                while (i < sumario.length) {
-                  chunks.push(sumario.slice(i, i + ITENS_DEMAIS_PAGINAS))
-                  i += ITENS_DEMAIS_PAGINAS
-                }
-              }
-              return chunks.map((chunk, chunkIndex) => (
-                <Pagina key={`sumario-${chunkIndex}`} pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                  <CabecalhoLaudo />
-                  <div className="space-y-3">
-                    {chunkIndex === 0 ? (
-                      <div>
-                        <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 titulo-laudo">SUMÁRIO</h2>
-                      </div>
-                    ) : (
-                      <div>
-                        <h2 className="text-base font-bold text-slate-400">SUMÁRIO (continuação)</h2>
-                      </div>
-                    )}
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                      <div className="space-y-0 text-[12px] text-slate-700">
-                        {chunk.map((item) => (
-                          <a
-                            key={item.id}
-                            href={`#${item.id}`}
-                            onClick={(e) => {
-                              e.preventDefault()
-                              const el = document.getElementById(item.id)
-                              if (!el) return
-                              // Compensa a altura do header sticky (~72px)
-                              const headerOffset = 80
-                              const top = el.getBoundingClientRect().top + window.scrollY - headerOffset
-                              window.scrollTo({ top, behavior: 'smooth' })
-                            }}
-                            className="group flex items-end gap-3 rounded-md px-2 py-[3px] transition hover:bg-slate-100 cursor-pointer"
-                          >
-                            <span className={`shrink-0 ${item.nivel === 2 ? 'pl-5 text-slate-600' : 'font-medium text-slate-800'}`}>{item.titulo}</span>
-                            <span className="mb-[3px] h-px flex-1 border-b border-dotted border-slate-300 group-hover:border-slate-500"></span>
-                            <span className="shrink-0 font-semibold text-slate-900">{item.pagina}</span>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </Pagina>
-              ))
-            })()}
-
             {/* ══ CAPA RESUMO ══════════════════════════════════════ */}
             <div className="mt-10 mb-2 h-[1px] bg-[#C9D3E6]" />
             <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
@@ -1790,6 +1734,61 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               </div>
             </Pagina>
             {/* ══ FIM CAPA RESUMO ═══════════════════════════════════ */}
+
+            {(() => {
+              const ITENS_PRIMEIRA_PAGINA = 35
+              const ITENS_DEMAIS_PAGINAS = 42
+              const chunks: ItemSumario[][] = []
+              if (sumario.length <= ITENS_PRIMEIRA_PAGINA) {
+                chunks.push(sumario)
+              } else {
+                chunks.push(sumario.slice(0, ITENS_PRIMEIRA_PAGINA))
+                let i = ITENS_PRIMEIRA_PAGINA
+                while (i < sumario.length) {
+                  chunks.push(sumario.slice(i, i + ITENS_DEMAIS_PAGINAS))
+                  i += ITENS_DEMAIS_PAGINAS
+                }
+              }
+              return chunks.map((chunk, chunkIndex) => (
+                <Pagina key={`sumario-${chunkIndex}`} pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
+                  <CabecalhoLaudo />
+                  <div className="space-y-3">
+                    {chunkIndex === 0 ? (
+                      <div>
+                        <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 titulo-laudo">SUMÁRIO</h2>
+                      </div>
+                    ) : (
+                      <div>
+                        <h2 className="text-base font-bold text-slate-400">SUMÁRIO (continuação)</h2>
+                      </div>
+                    )}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="space-y-0 text-[12px] text-slate-700">
+                        {chunk.map((item) => (
+                          <a
+                            key={item.id}
+                            href={`#${item.id}`}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              const el = document.getElementById(item.id)
+                              if (!el) return
+                              const headerOffset = 80
+                              const top = el.getBoundingClientRect().top + window.scrollY - headerOffset
+                              window.scrollTo({ top, behavior: 'smooth' })
+                            }}
+                            className="group flex items-end gap-3 rounded-md px-2 py-[3px] transition hover:bg-slate-100 cursor-pointer"
+                          >
+                            <span className={`shrink-0 ${item.nivel === 2 ? 'pl-5 text-slate-600' : 'font-medium text-slate-800'}`}>{item.titulo}</span>
+                            <span className="mb-[3px] h-px flex-1 border-b border-dotted border-slate-300 group-hover:border-slate-500"></span>
+                            <span className="shrink-0 font-semibold text-slate-900">{item.pagina}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </Pagina>
+              ))
+            })()}
 
             <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
               <CabecalhoLaudo />
