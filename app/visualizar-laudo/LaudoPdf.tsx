@@ -517,19 +517,21 @@ export function LaudoPdf({
     : dados.metodoAvaliacao                 || '-'
 
   const capaGrauFund = (() => {
+    const gv2 = (g: string) => g === 'III' ? 3 : g === 'II' ? 2 : g === 'I' ? 1 : 0
     if (dados.metodoAvaliacao === 'evolutivo') {
-      const soma = (dados.fundamentacaoEvolutivo || []).reduce((s, i) => s + (i.pontos || 0), 0)
+      const soma = (dados.fundamentacaoEvolutivo || []).reduce((s: number, i: any) => s + gv2(i.grau || ''), 0)
       if (soma >= 8) return 'III'; if (soma >= 5) return 'II'; if (soma >= 3) return 'I'; return '-'
     }
-    const soma = (dados.fundamentacao || []).reduce((s, i) => s + (i.pontos || 0), 0)
+    const soma = (dados.fundamentacao || []).reduce((s: number, i: any) => s + gv2(i.grau || ''), 0)
     if (soma >= 10) return 'III'; if (soma >= 6) return 'II'; if (soma >= 4) return 'I'; return '-'
   })()
 
   const capaGrauPrec = (() => {
+    const gv2 = (g: string) => g === 'III' ? 3 : g === 'II' ? 2 : g === 'I' ? 1 : 0
     const prec = dados.precisao || []
     if (prec.length === 0) return '-'
-    if (prec.length === 1) return prec[0].grau || '-'
-    const soma = prec.reduce((s, i) => s + (i.pontos || 0), 0)
+    if (prec.length === 1) return (prec[0] as any).grau || '-'
+    const soma = prec.reduce((s: number, i: any) => s + gv2(i.grau || ''), 0)
     if (soma >= 8) return 'III'; if (soma >= 5) return 'II'; if (soma >= 3) return 'I'; return '-'
   })()
 
@@ -1190,9 +1192,9 @@ export function LaudoPdf({
 
           const gv = (g?: string) => g === 'III' ? 3 : g === 'II' ? 2 : g === 'I' ? 1 : 0
 
-          const somaFund = fund.reduce((s, i) => s + (i.pontos || 0), 0)
-          const somaEvo  = fundEvo.reduce((s, i) => s + (i.pontos || 0), 0)
-          const somaInf  = fundInf.reduce((s, i) => s + (i.pontos || 0), 0)
+          const somaFund = fund.reduce((s: number, i: any) => s + gv(i?.grau), 0)
+          const somaEvo  = fundEvo.reduce((s: number, i: any) => s + gv(i?.grau), 0)
+          const somaInf  = fundInf.reduce((s: number, i: any) => s + gv(i?.grau), 0)
 
           // Enquadramento — Fatores
           const encFatores = (() => {

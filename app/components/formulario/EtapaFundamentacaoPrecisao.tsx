@@ -318,7 +318,7 @@ export default function EtapaFundamentacaoPrecisao({
                     </td>
 
                     <td className="border p-2 text-center font-bold align-middle">
-                      {fundamentacao[index]?.grau ? fundamentacao[index]?.pontos : ''}
+                      {fundamentacao[index]?.grau ? gv(fundamentacao[index]?.grau) : ''}
                     </td>
                   </tr>
                 )
@@ -425,7 +425,7 @@ export default function EtapaFundamentacaoPrecisao({
                     </td>
 
                     <td className="border p-2 text-center font-bold align-middle">
-                      {fundamentacaoEvolutivo[index]?.grau ? fundamentacaoEvolutivo[index]?.pontos : ''}
+                      {fundamentacaoEvolutivo[index]?.grau ? gv(fundamentacaoEvolutivo[index]?.grau) : ''}
                     </td>
                   </tr>
                 )
@@ -530,7 +530,7 @@ export default function EtapaFundamentacaoPrecisao({
                     </td>
 
                     <td className="border p-2 text-center font-bold align-middle">
-                      {fundamentacaoInferencia[index]?.grau ? fundamentacaoInferencia[index]?.pontos : ''}
+                      {fundamentacaoInferencia[index]?.grau ? gv(fundamentacaoInferencia[index]?.grau) : ''}
                     </td>
                   </tr>
                 )
