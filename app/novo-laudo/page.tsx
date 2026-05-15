@@ -784,6 +784,7 @@ export default function NovoLaudoPage() {
         setEtapaAtual={setEtapaAtual}
         etapaConcluida={etapaConcluida}
         tipoLaudo={form.tipoLaudo as 'detalhado' | 'simplificado' | undefined}
+        metodoAvaliacao={form.metodoAvaliacao}
       />
 
       {/* ── CONTEÚDO FULL-WIDTH ── */}
