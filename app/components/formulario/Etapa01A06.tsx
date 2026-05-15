@@ -336,28 +336,25 @@ export default function Etapa01A06({
     </select>
   </div>
 
-  {/* Tratamento dos dados — oculto para evolutivo */}
-  {form.metodoAvaliacao !== 'evolutivo' && (
-    <div>
-      <label className="block font-medium mb-1">Tratamento dos dados</label>
-      <select
-        name="tratamentoDados"
-        value={form.tratamentoDados}
-        onChange={handleChange}
-        className="w-full border p-2 rounded bg-white"
-      >
-        <option value="">Selecione</option>
-        <option value="inferencia_estatistica">Inferência estatística</option>
-        <option value="tratamento_por_fatores">Tratamento de dados por fatores</option>
-      </select>
-    </div>
-  )}
+  <div>
+    <label className="block font-medium mb-1">Tratamento dos dados</label>
+    <select
+      name="tratamentoDados"
+      value={form.tratamentoDados}
+      onChange={handleChange}
+      className="w-full border p-2 rounded bg-white"
+    >
+      <option value="">Selecione</option>
+      <option value="inferencia_estatistica">Inferência estatística</option>
+      <option value="tratamento_por_fatores">Tratamento de dados por fatores</option>
+    </select>
+  </div>
 
-  {/* Banner Evolutivo */}
-  {form.metodoAvaliacao === 'evolutivo' && (
+  {/* Banner Evolutivo — aparece apenas quando evolutivo + fatores estão selecionados */}
+  {form.metodoAvaliacao === 'evolutivo' && form.tratamentoDados === 'tratamento_por_fatores' && (
     <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-2">
       <p className="text-sm font-semibold text-blue-800">
-        ✦ Método Evolutivo selecionado
+        ✦ Método Evolutivo + Tratamento por Fatores selecionado
       </p>
       <p className="text-xs text-blue-700">
         A <strong>seção 10 — Metodologia, pesquisas e cálculos</strong> apresentará o fluxo completo:

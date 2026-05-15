@@ -785,6 +785,7 @@ export default function NovoLaudoPage() {
         etapaConcluida={etapaConcluida}
         tipoLaudo={form.tipoLaudo as 'detalhado' | 'simplificado' | undefined}
         metodoAvaliacao={form.metodoAvaliacao}
+        tratamentoDados={form.tratamentoDados}
       />
 
       {/* ── CONTEÚDO FULL-WIDTH ── */}
@@ -878,7 +879,7 @@ export default function NovoLaudoPage() {
           {etapaAtual === '9.1' && (
             form.tipoLaudo === 'simplificado'
               ? <EtapaCalculoCDDM form={form} setForm={setForm} fatoresCDDMAtivos={(form as any).fatoresCDDMAtivos} />
-              : form.metodoAvaliacao === 'evolutivo'
+              : (form.metodoAvaliacao === 'evolutivo' && form.tratamentoDados === 'tratamento_por_fatores')
                 ? <EtapaCalculoEvolutivo form={form} setForm={setForm} />
                 : (
                   <EtapaMetodologiaCalculos
@@ -891,7 +892,7 @@ export default function NovoLaudoPage() {
                 )
           )}
 
-          {etapaAtual === '9.2' && (
+          {etapaAtual === '9.2' && form.metodoAvaliacao !== 'evolutivo' && (
             <EtapaCalculoBenfeitorias
               form={form}
               handleImagemBenfeitorias={handleImagemBenfeitorias}

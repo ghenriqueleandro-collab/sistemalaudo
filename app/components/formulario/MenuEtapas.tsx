@@ -7,6 +7,7 @@ type MenuEtapasProps = {
   setEtapaAtual: (etapa: EtapaId) => void
   etapaConcluida: (etapa: EtapaId) => boolean
   metodoAvaliacao?: string
+  tratamentoDados?: string
   tipoLaudo?: 'detalhado' | 'simplificado'
 }
 
@@ -18,9 +19,10 @@ export default function MenuEtapas({
   setEtapaAtual,
   etapaConcluida,
   metodoAvaliacao = '',
+  tratamentoDados = '',
   tipoLaudo,
 }: MenuEtapasProps) {
-  const isEvolutivo = metodoAvaliacao === 'evolutivo'
+  const isEvolutivo = metodoAvaliacao === 'evolutivo' && tratamentoDados === 'tratamento_por_fatores'
 
   // Para evolutivo: filtra as etapas exclusivas do comparativo (9.2 e 10)
   // e renomeia a 9.1 para refletir o fluxo correto
