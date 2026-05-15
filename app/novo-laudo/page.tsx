@@ -11,6 +11,7 @@ import EtapaConsideracoesMercado from '../components/formulario/EtapaConsideraco
 import EtapaGlossario from '../components/formulario/EtapaGlossario'
 import EtapaMetodologiaCalculos from '../components/formulario/EtapaMetodologiaCalculos'
 import EtapaCalculoCDDM from '../components/formulario/EtapaCalculoCDDM'
+import EtapaCalculoEvolutivo from '../components/formulario/EtapaCalculoEvolutivo'
 import EtapaCalculoBenfeitorias from '../components/formulario/EtapaCalculoBenfeitorias'
 import EtapaValorImovel from '../components/formulario/EtapaValorImovel'
 import EtapaFundamentacaoPrecisao from '../components/formulario/EtapaFundamentacaoPrecisao'
@@ -875,16 +876,18 @@ export default function NovoLaudoPage() {
 
           {etapaAtual === '9.1' && (
             form.tipoLaudo === 'simplificado'
-              ? <EtapaCalculoCDDM form={form} />
-              : (
-                <EtapaMetodologiaCalculos
-                  form={form}
-                  handleChange={handleChange}
-                  fatoresDisponiveis={fatoresDisponiveis}
-                  fatoresSelecionados={fatoresSelecionados}
-                  toggleFator={toggleFator}
-                />
-              )
+              ? <EtapaCalculoCDDM form={form} setForm={setForm} fatoresCDDMAtivos={(form as any).fatoresCDDMAtivos} />
+              : form.metodoAvaliacao === 'evolutivo'
+                ? <EtapaCalculoEvolutivo form={form} setForm={setForm} />
+                : (
+                  <EtapaMetodologiaCalculos
+                    form={form}
+                    handleChange={handleChange}
+                    fatoresDisponiveis={fatoresDisponiveis}
+                    fatoresSelecionados={fatoresSelecionados}
+                    toggleFator={toggleFator}
+                  />
+                )
           )}
 
           {etapaAtual === '9.2' && (
