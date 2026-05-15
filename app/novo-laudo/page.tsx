@@ -129,7 +129,6 @@ export default function NovoLaudoPage() {
   const [acabamentos, setAcabamentos] = useState([{ ambiente: '', acabamento: '' }])
   const [resumoMercado, setResumoMercado] = useState([{ campo: '', descricao: '' }])
   const [outrosFatoresImovel, setOutrosFatoresImovel] = useState([{ descricao: '', valor: '' }])
-  const [valoresAdicionais, setValoresAdicionais] = useState<{ descricao: string; valor: string }[]>([])
   const [etapaAtual, setEtapaAtual] = useState<EtapaId>('1-6')
   const [laudoId, setLaudoId] = useState('')
   const [editandoLaudoExistente, setEditandoLaudoExistente] = useState(false)
@@ -201,7 +200,6 @@ export default function NovoLaudoPage() {
         setAcabamentos(laudoSalvo.acabamentos || [{ ambiente: '', acabamento: '' }])
         setResumoMercado(laudoSalvo.resumoMercado || [{ campo: '', descricao: '' }])
         setOutrosFatoresImovel(laudoSalvo.outrosFatoresImovel || [{ descricao: '', valor: '' }])
-        setValoresAdicionais(laudoSalvo.valoresAdicionais || [])
         // Não chama setFotos aqui — será chamado após resolver refs abaixo
 
         // Resolve referências de binários armazenados separadamente
@@ -456,34 +454,20 @@ export default function NovoLaudoPage() {
     setOutrosFatoresImovel(outrosFatoresImovel.filter((_, i) => i !== index))
   }
 
-  function handleValorAdicionalChange(index: number, campo: 'descricao' | 'valor', valor: string) {
-    setValoresAdicionais(valoresAdicionais.map((v, i) => i === index ? { ...v, [campo]: valor } : v))
-  }
-  function adicionarValorAdicional() {
-    setValoresAdicionais([...valoresAdicionais, { descricao: '', valor: '' }])
-  }
-  function removerValorAdicional(index: number) {
-    setValoresAdicionais(valoresAdicionais.filter((_, i) => i !== index))
-  }
-
   function selecionarGrauFundamentacao(index: number, grau: 'III' | 'II' | 'I') {
-    const pontos = grau === 'III' ? 3 : grau === 'II' ? 2 : 1
-    setFundamentacao((prev) => prev.map((f, i) => i === index ? { ...f, grau, pontos } : f))
+    setFundamentacao((prev) => prev.map((f, i) => i === index ? { ...f, grau } : f))
   }
 
   function selecionarGrauFundamentacaoInferencia(index: number, grau: 'III' | 'II' | 'I') {
-    const pontos = grau === 'III' ? 3 : grau === 'II' ? 2 : 1
-    setFundamentacaoInferencia((prev) => prev.map((f, i) => i === index ? { ...f, grau, pontos } : f))
+    setFundamentacaoInferencia((prev) => prev.map((f, i) => i === index ? { ...f, grau } : f))
   }
 
   function selecionarGrauFundamentacaoEvolutivo(index: number, grau: 'III' | 'II' | 'I') {
-    const pontos = grau === 'III' ? 3 : grau === 'II' ? 2 : 1
-    setFundamentacaoEvolutivo((prev) => prev.map((f, i) => i === index ? { ...f, grau, pontos } : f))
+    setFundamentacaoEvolutivo((prev) => prev.map((f, i) => i === index ? { ...f, grau } : f))
   }
 
   function selecionarGrauPrecisao(index: number, grau: 'III' | 'II' | 'I') {
-    const pontos = grau === 'III' ? 3 : grau === 'II' ? 2 : 1
-    setPrecisao((prev) => prev.map((p, i) => i === index ? { ...p, grau, pontos } : p))
+    setPrecisao((prev) => prev.map((p, i) => i === index ? { ...p, grau } : p))
   }
 
   function formatarDataBR(data: string) {
@@ -521,37 +505,29 @@ export default function NovoLaudoPage() {
     ? _parseBR(form.valorTotal || '0') * produtoOutrosFatores
     : (_parseBR(form.valorTerreno) + _parseBR(form.valorBenfeitorias)) * produtoOutrosFatores
 
-  const somaValoresAdicionais = valoresAdicionais.reduce(
-    (acc, item) => acc + _parseBR(item.valor), 0
-  )
-
   const valorFinalImovel =
-    subtotalImovel * (_parseBR(form.fatorComercializacao || '1') || 1) + somaValoresAdicionais
+    subtotalImovel * (_parseBR(form.fatorComercializacao || '1') || 1)
 
   function formatarMoeda(valor: number) {
     return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
   }
 
-  // Lógica idêntica à visualização e ao PDF:
-  // Fatores aparece sempre, exceto quando evolutivo + inferência
-  // Evolutivo aparece quando método = evolutivo
-  // Inferência aparece quando tratamento = inferencia_estatistica
-  const exibirTabelaFatoresTerreno = !(form.metodoAvaliacao === 'evolutivo' && form.tratamentoDados === 'inferencia_estatistica') && (form.metodoAvaliacao !== '')
-  const exibirTabelaInferencia = form.tratamentoDados === 'inferencia_estatistica'
+  const exibirTabelaFatoresTerreno = form.metodoAvaliacao === 'comparativo' && form.tratamentoDados === 'tratamento_por_fatores'
+  const exibirTabelaInferencia = form.metodoAvaliacao === 'comparativo' && form.tratamentoDados === 'inferencia_estatistica'
   const exibirTabelaMetodoEvolutivo = form.metodoAvaliacao === 'evolutivo'
 
   const somaFundamentacao = fundamentacao.reduce((acc, f) => {
-    const map: Record<string, number> = { III: 3, II: 2, I: 1 }
+    const map: Record<string, number> = { III: 1, II: 2, I: 3 }
     return acc + (map[f.grau] || 0)
   }, 0)
 
   const somaFundamentacaoInferencia = fundamentacaoInferencia.reduce((acc, f) => {
-    const map: Record<string, number> = { III: 3, II: 2, I: 1 }
+    const map: Record<string, number> = { III: 1, II: 2, I: 3 }
     return acc + (map[f.grau] || 0)
   }, 0)
 
   const somaFundamentacaoEvolutivo = fundamentacaoEvolutivo.reduce((acc, f) => {
-    const map: Record<string, number> = { III: 3, II: 2, I: 1 }
+    const map: Record<string, number> = { III: 1, II: 2, I: 3 }
     return acc + (map[f.grau] || 0)
   }, 0)
 
@@ -748,7 +724,6 @@ export default function NovoLaudoPage() {
         acabamentos,
         resumoMercado,
         outrosFatoresImovel,
-        valoresAdicionais,
         fotos: fotosComRef,
         valorFinalImovel,
         status,
@@ -913,11 +888,6 @@ export default function NovoLaudoPage() {
               formatarMoeda={formatarMoeda}
               modoValorImovel={form.modoValorImovel as 'separado' | 'total'}
               onModoChange={(modo: 'separado' | 'total') => setForm((prev) => ({ ...prev, modoValorImovel: modo }))}
-              valoresAdicionais={valoresAdicionais}
-              handleValorAdicionalChange={handleValorAdicionalChange}
-              adicionarValorAdicional={adicionarValorAdicional}
-              removerValorAdicional={removerValorAdicional}
-              somaValoresAdicionais={somaValoresAdicionais}
             />
           )}
 
