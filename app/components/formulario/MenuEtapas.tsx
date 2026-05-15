@@ -22,7 +22,7 @@ export default function MenuEtapas({
   tratamentoDados = '',
   tipoLaudo,
 }: MenuEtapasProps) {
-  const isEvolutivo = metodoAvaliacao === 'evolutivo' && tratamentoDados === 'tratamento_por_fatores'
+  const isEvolutivo = tipoLaudo === 'simplificado' && metodoAvaliacao === 'evolutivo' && tratamentoDados === 'tratamento_por_fatores'
 
   // Para evolutivo: filtra as etapas exclusivas do comparativo (9.2 e 10)
   // e renomeia a 9.1 para refletir o fluxo correto

@@ -350,8 +350,8 @@ export default function Etapa01A06({
     </select>
   </div>
 
-  {/* Banner Evolutivo — aparece apenas quando evolutivo + fatores estão selecionados */}
-  {form.metodoAvaliacao === 'evolutivo' && form.tratamentoDados === 'tratamento_por_fatores' && (
+  {/* Banner Evolutivo — apenas para laudo simplificado */}
+  {form.tipoLaudo === 'simplificado' && form.metodoAvaliacao === 'evolutivo' && form.tratamentoDados === 'tratamento_por_fatores' && (
     <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-2">
       <p className="text-sm font-semibold text-blue-800">
         ✦ Método Evolutivo + Tratamento por Fatores selecionado
