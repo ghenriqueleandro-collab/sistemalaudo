@@ -10,6 +10,7 @@ import NavegacaoEtapasSimpl from '../../components/formulario/simplificado/Naveg
 import Etapa01A06Simpl from '../../components/formulario/simplificado/Etapa01A06Simpl'
 import EtapaConsideracoesMercadoSimpl from '../../components/formulario/simplificado/EtapaConsideracoesMercadoSimpl'
 import EtapaCalculoCDDM from '../../components/formulario/EtapaCalculoCDDM'
+import EtapaCalculoEvolutivo from '../../components/formulario/EtapaCalculoEvolutivo'
 import EtapaFundamentacaoPrecisaoSimpl from '../../components/formulario/simplificado/EtapaFundamentacaoPrecisaoSimpl'
 import EtapaConclusaoSimpl from '../../components/formulario/simplificado/EtapaConclusaoSimpl'
 import EtapaGarantiaSimpl from '../../components/formulario/simplificado/EtapaGarantiaSimpl'
@@ -31,7 +32,7 @@ export default function LaudoSimplificadoPage() {
   ]
 
   const [form, setForm] = useState({
-    tipoLaudo: 'simplificado' as 'detalhado' | 'simplificado',
+    tipoLaudo: 'detalhado' as 'detalhado' | 'simplificado',
     modoValorImovel: 'separado' as 'separado' | 'total',
     valorTotal: '',
     _refDocPdf:  undefined as string | undefined,
@@ -42,17 +43,6 @@ export default function LaudoSimplificadoPage() {
     fatorLocalAvaliando: '',
     fatorAndarAvaliando: '',
     vagasAvaliando: '',
-    tipoImovelCDDM: '' as '' | 'isolado' | 'fracao',
-    areaComum: '',
-    areaTotal: '',
-    fracaoIdeal: '',
-    fatoresCDDMAtivos: {
-      local: true,
-      padrao: true,
-      foc: true,
-      andar: true,
-      vaga: true,
-    } as { local: boolean; padrao: boolean; foc: boolean; andar: boolean; vaga: boolean },
     coordenadasImovel: '',
     endereco: '',
     proprietario: '',
@@ -144,12 +134,10 @@ export default function LaudoSimplificadoPage() {
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [laudoUuid, setLaudoUuid] = useState('')
 
-  // Sincroniza as divisões internas com a lista de acabamentos
-  // preservando os valores já preenchidos pelo usuário
+  // Sincroniza divisões com acabamentos
   useEffect(() => {
     const divisoesFiltradas = divisoes.filter(d => d.ambiente?.trim())
     if (divisoesFiltradas.length === 0) return
-
     setAcabamentos(prev => {
       const mapa = new Map(prev.map(a => [a.ambiente, a.acabamento]))
       return divisoesFiltradas.map(d => ({
@@ -174,13 +162,13 @@ export default function LaudoSimplificadoPage() {
         if (!laudoSalvo) {
           setEditandoLaudoExistente(false)
           setLaudoId('')
+          setLaudoUuid(crypto.randomUUID())
           setFormPronto(true)
           return
         }
 
         setEditandoLaudoExistente(true)
-        setLaudoId(String(laudoSalvo.matricula || laudoSalvo.id || '').trim()
-        )
+        setLaudoId(String(laudoSalvo.matricula || laudoSalvo.id || '').trim())
         if (laudoSalvo.id) setLaudoUuid(laudoSalvo.id)
 
         setFatoresSelecionados(laudoSalvo.fatoresSelecionados || [])
@@ -208,13 +196,11 @@ export default function LaudoSimplificadoPage() {
         setAcabamentos(laudoSalvo.acabamentos || [{ ambiente: '', acabamento: '' }])
         setResumoMercado(laudoSalvo.resumoMercado || [{ campo: '', descricao: '' }])
         setOutrosFatoresImovel(laudoSalvo.outrosFatoresImovel || [{ descricao: '', valor: '' }])
-        // Não chama setFotos aqui — será chamado após resolver refs abaixo
 
-        // Resolve referências de binários armazenados separadamente
+        // Resolve referências de binários
         async function resolverRef(val: string): Promise<string> {
           if (!val) return val
           if (val.startsWith('__chunks__:')) {
-            // Reassembla chunks: __chunks__:chave:numChunks
             const sem = val.replace('__chunks__:', '')
             const lastColon = sem.lastIndexOf(':')
             const chave = sem.slice(0, lastColon)
@@ -237,7 +223,6 @@ export default function LaudoSimplificadoPage() {
           return dado || ''
         }
 
-        // Resolve fotos — marca _refKey para não re-salvar no próximo save
         const fotosResolvidas = await Promise.all(
           (laudoSalvo.fotos || []).map(async (f: any) => {
             const isRef = f.preview?.startsWith('__ref__:')
@@ -250,7 +235,6 @@ export default function LaudoSimplificadoPage() {
         )
         setFotos(fotosResolvidas)
 
-        // Resolve croquis, PDFs e imagens no form
         const croquisResolvidos = await Promise.all(
           (laudoSalvo.croquis || []).map(async (c: any) => {
             const isRef = c.preview?.startsWith('__ref__:')
@@ -276,7 +260,6 @@ export default function LaudoSimplificadoPage() {
           calculoPdf: calcPdf,
           localizacaoComparativos: locComp,
           imagemBenfeitorias: imgBenf,
-          // Guarda as refs originais para não re-salvar no próximo save
           _refDocPdf:  laudoSalvo.documentacaoPdf?.startsWith('__ref__:') ? laudoSalvo.documentacaoPdf : undefined,
           _refCalcPdf: laudoSalvo.calculoPdf?.startsWith('__ref__:')      ? laudoSalvo.calculoPdf      : undefined,
           _refLocComp: laudoSalvo.localizacaoComparativos?.startsWith('__ref__:') ? laudoSalvo.localizacaoComparativos : undefined,
@@ -292,7 +275,6 @@ export default function LaudoSimplificadoPage() {
         setFormPronto(true)
       }
     }
-
     carregarLaudoParaEdicao()
   }, [])
 
@@ -311,16 +293,12 @@ export default function LaudoSimplificadoPage() {
   function handleMelhoramentosPublicosChange(campo: string, valor: string) {
     setForm((prev) => ({
       ...prev,
-      melhoramentosPublicos: {
-        ...prev.melhoramentosPublicos,
-        [campo]: valor,
-      },
+      melhoramentosPublicos: { ...prev.melhoramentosPublicos, [campo]: valor },
     }))
   }
 
   function handleDivisaoChange(index: number, campo: 'quantidade' | 'ambiente', valor: string) {
-    const novasDivisoes = divisoes.map((d, i) => i === index ? { ...d, [campo]: valor } : d)
-    setDivisoes(novasDivisoes)
+    setDivisoes(divisoes.map((d, i) => i === index ? { ...d, [campo]: valor } : d))
   }
 
   function adicionarLinhaDivisao() {
@@ -332,11 +310,9 @@ export default function LaudoSimplificadoPage() {
   }
 
   function handleAcabamentoChange(index: number, valor: string) {
-    const novos = acabamentos.map((a, i) => i === index ? { ...a, acabamento: valor } : a)
-    setAcabamentos(novos)
+    setAcabamentos(acabamentos.map((a, i) => i === index ? { ...a, acabamento: valor } : a))
   }
 
-  // ─── Comprime imagem para base64 (max 1200px, qualidade 0.75) ─────────────
   function comprimirImagem(file: File, maxLado = 1200, qualidade = 0.75): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
@@ -396,7 +372,6 @@ export default function LaudoSimplificadoPage() {
         reader.onerror = reject
         reader.readAsDataURL(file)
       })
-      // Limpa a ref anterior para forçar novo upload no save
       const refField = campo === 'documentacaoPdf' ? '_refDocPdf' : '_refCalcPdf'
       setForm((prev) => ({ ...prev, [campo]: base64, [refField]: undefined }))
     } catch (error) {
@@ -470,8 +445,7 @@ export default function LaudoSimplificadoPage() {
   }
 
   function handleOutroFatorImovelChange(index: number, campo: string, valor: string) {
-    const novos = outrosFatoresImovel.map((o, i) => i === index ? { ...o, [campo]: valor } : o)
-    setOutrosFatoresImovel(novos)
+    setOutrosFatoresImovel(outrosFatoresImovel.map((o, i) => i === index ? { ...o, [campo]: valor } : o))
   }
 
   function adicionarLinhaOutroFatorImovel() {
@@ -603,33 +577,18 @@ export default function LaudoSimplificadoPage() {
   }
 
   function obterStatusLaudo(): 'em_preenchimento' | 'finalizado' {
-    const etapasObrigatorias: EtapaIdSimpl[] = [
-      '1-6', '8', '9.1', '11', '12', '13', '14',
-    ]
-    const todasConcluidas = etapasObrigatorias.every((etapa) => etapaConcluida(etapa))
-    return todasConcluidas ? 'finalizado' : 'em_preenchimento'
-  }
-
-  async function uploadArquivo(file: File): Promise<string> {
-    const formData = new FormData()
-    formData.append('file', file)
-    const res = await fetch('/api/upload', { method: 'POST', body: formData })
-    if (!res.ok) throw new Error('Falha no upload')
-    const { url } = await res.json()
-    return url
+    const etapasObrigatorias: EtapaIdSimpl[] = ['1-6', '8', '9.1', '11', '12', '13', '14']
+    return etapasObrigatorias.every((e) => etapaConcluida(e)) ? 'finalizado' : 'em_preenchimento'
   }
 
   async function executarSave(silencioso = false) {
-    if (!laudoUuid || salvando) return
-
-    if (!silencioso) setSalvando(true)
+    if (!laudoUuid) return
+    setSalvando(true)
     setAutoSaveStatus('saving')
     try {
       const status = obterStatusLaudo()
 
-      // ── Helper: salva binário em chave Redis separada usando chunks ──────────
-      const CHUNK_KB = 900  // cada chunk < 1MB (limite Upstash free)
-
+      const CHUNK_KB = 900
       async function salvarChunk(chave: string, dado: string): Promise<boolean> {
         try {
           const res = await fetch('/api/laudo-midias', {
@@ -643,53 +602,33 @@ export default function LaudoSimplificadoPage() {
 
       async function salvarBinario(chave: string, dado: string): Promise<string> {
         if (!dado || !dado.startsWith('data:')) return dado
-
         const tamanho = dado.length
-        const chunkSize = CHUNK_KB * 1024 * (4 / 3)  // base64 chars por chunk
-
+        const chunkSize = CHUNK_KB * 1024 * (4 / 3)
         if (tamanho <= chunkSize) {
-          // Pequeno o suficiente para um único chunk
           const ok = await salvarChunk(chave, dado)
           return ok ? `__ref__:${chave}` : dado
         }
-
-        // Grande: divide em chunks
         const chunks: string[] = []
         for (let i = 0; i < tamanho; i += chunkSize) {
           chunks.push(dado.slice(i, i + chunkSize))
         }
-
-        const resultados = await Promise.all(
+        const results = await Promise.all(
           chunks.map((chunk, i) => salvarChunk(`${chave}__c${i}`, chunk))
         )
-
-        if (!resultados.every(Boolean)) {
-          // Algum chunk falhou — não inclui no payload para não causar 413
-          console.warn(`Falha em chunks de ${chave}, arquivo será excluído do save`)
-          return ''
-        }
-
-        // Salva manifesto com número de chunks
-        await salvarChunk(`${chave}__manifest`, String(chunks.length))
-        return `__chunks__:${chave}:${chunks.length}`
+        if (results.every(Boolean)) return `__chunks__:${chave}:${chunks.length}`
+        return dado
       }
 
-      // Salva cada foto individualmente — pula as que já têm ref salva
       const fotosComRef = await Promise.all(
-        fotos.map(async (foto, i) => {
-          // Já estava salva como ref — apenas restaura a referência sem re-upload
-          if ((foto as any)._refKey) {
-            return { legenda: foto.legenda, preview: (foto as any)._refKey }
-          }
-          // Nova foto (base64 local) — salva no Redis
-          if (!foto.preview?.startsWith('data:')) return foto
+        fotos.map(async (foto: any, i: number) => {
+          if (foto._refKey) return { legenda: foto.legenda, preview: foto._refKey }
+          if (!foto.preview?.startsWith('data:')) return { legenda: foto.legenda, preview: foto.preview }
           const chave = `foto:${laudoUuid}:${i}`
           const ref = await salvarBinario(chave, foto.preview)
           return { legenda: foto.legenda, preview: ref }
         })
       )
 
-      // Salva croquis individualmente — pula os que já têm ref
       const croquisComRef = await Promise.all(
         (form.croquis || []).map(async (c: any, i: number) => {
           if (c._refKey) return { preview: c._refKey }
@@ -700,15 +639,8 @@ export default function LaudoSimplificadoPage() {
         })
       )
 
-      // Salva PDFs e demais imagens — pula se não foram alterados (usa ref existente)
       async function salvarCampo(refKey: string | undefined, chave: string, dado: string): Promise<string> {
-        // Se o usuário não alterou (campo ainda tem o mesmo base64 da ref carregada),
-        // e temos a ref original, restaura direto sem re-upload
-        if (refKey && dado && !dado.startsWith('__ref__:')) {
-          // Campo foi carregado de ref mas usuário não substituiu — re-usa ref
-          // Detecta: o dado veio da resolverRef (é base64) mas refKey existe = não foi alterado
-          return refKey
-        }
+        if (refKey && dado && !dado.startsWith('__ref__:')) return refKey
         return await salvarBinario(chave, dado)
       }
 
@@ -749,7 +681,6 @@ export default function LaudoSimplificadoPage() {
 
       await definirLaudoAtual(idSalvo)
       setAutoSaveStatus('saved')
-      // Volta para idle após 3 segundos
       setTimeout(() => setAutoSaveStatus('idle'), 3000)
     } catch (error) {
       console.error('Erro ao salvar laudo:', error)
@@ -763,7 +694,7 @@ export default function LaudoSimplificadoPage() {
     }
   }
 
-  // ─── Auto-save com debounce de 2s ────────────────────────────────────────────
+  // Auto-save com debounce de 2s
   useEffect(() => {
     if (!formPronto || !laudoUuid) return
     const timer = setTimeout(() => { executarSave(true) }, 2000)
@@ -771,7 +702,6 @@ export default function LaudoSimplificadoPage() {
   }, [form, fotos, divisoes, acabamentos, fundamentacao, fundamentacaoInferencia,
       fundamentacaoEvolutivo, precisao, resumoMercado, outrosFatoresImovel])
 
-  // Salva ao sair da página (beforeunload)
   useEffect(() => {
     const handler = () => { executarSave(true) }
     window.addEventListener('beforeunload', handler)
@@ -793,7 +723,7 @@ export default function LaudoSimplificadoPage() {
       {/* ── CONTEÚDO FULL-WIDTH ── */}
       <section className="mx-auto max-w-4xl px-4 sm:px-6 py-8 pb-28">
 
-        {/* Cabeçalho compacto com ações */}
+        {/* Cabeçalho */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
@@ -803,59 +733,41 @@ export default function LaudoSimplificadoPage() {
               Novo laudo
             </h1>
           </div>
-
           <div className="flex flex-wrap gap-2">
-            <Link
-              href="/"
-              className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 transition"
-            >
+            <Link href="/" className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 transition">
               Início
             </Link>
-
-            <Link
-              href="/meus-laudos"
-              className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 transition"
-            >
+            <Link href="/meus-laudos" className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 transition">
               Meus laudos
             </Link>
-
             <button
               type="button"
-              onClick={async () => {
-                await limparLaudoAtual()
-                window.location.href = '/novo-laudo?modo=novo'
-              }}
+              onClick={async () => { await limparLaudoAtual(); window.location.href = '/laudo/simplificado' }}
               className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 transition"
             >
               Novo laudo em branco
             </button>
-
             <Link
-              href={laudoUuid ? `/visualizar-laudo?id=${laudoUuid}` : '/visualizar-laudo'}
+              href={laudoUuid ? `/visualizar-laudo?id=${encodeURIComponent(laudoUuid)}` : '/visualizar-laudo'}
               className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 transition"
             >
               Visualizar laudo
             </Link>
-
-            {/* Indicador de auto-save */}
-            <div className="flex items-center gap-1.5 text-xs">
-              {autoSaveStatus === 'saving' && (
-                <><span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                <span className="text-slate-400">Salvando…</span></>
-              )}
-              {autoSaveStatus === 'saved' && (
-                <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span className="text-emerald-600">Salvo</span></>
-              )}
-              {autoSaveStatus === 'error' && (
-                <><span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                <span className="text-red-600">Erro ao salvar</span></>
-              )}
-            </div>
           </div>
         </div>
 
-        {/* ── FORMULÁRIO FULL-WIDTH ── */}
+        {/* Status do auto-save */}
+        {autoSaveStatus !== 'idle' && (
+          <div className={`mb-4 text-xs px-3 py-1.5 rounded-lg w-fit ${
+            autoSaveStatus === 'saving' ? 'bg-amber-50 text-amber-700' :
+            autoSaveStatus === 'saved'  ? 'bg-green-50 text-green-700' :
+            'bg-red-50 text-red-700'
+          }`}>
+            {autoSaveStatus === 'saving' ? '⏳ Salvando…' : autoSaveStatus === 'saved' ? '✓ Salvo' : '✗ Erro ao salvar'}
+          </div>
+        )}
+
+        {/* ── FORMULÁRIO ── */}
         <div className="space-y-6">
 
           {etapaAtual === '1-6' && (
@@ -875,9 +787,9 @@ export default function LaudoSimplificadoPage() {
               removerCroqui={removerCroqui}
               setForm={setForm}
               tipoLaudo="simplificado"
-              fatoresCDDMAtivos={form.fatoresCDDMAtivos}
+              fatoresCDDMAtivos={(form as any).fatoresCDDMAtivos}
               toggleFatorCDDM={toggleFatorCDDM}
-              tipoImovelCDDM={form.tipoImovelCDDM}
+              tipoImovelCDDM={(form as any).tipoImovelCDDM}
               setTipoImovelCDDM={setTipoImovelCDDM}
             />
           )}
@@ -889,8 +801,11 @@ export default function LaudoSimplificadoPage() {
             />
           )}
 
+          {/* ── SEÇÃO 10: METODOLOGIA — evolutivo ou CDDM conforme método selecionado ── */}
           {etapaAtual === '9.1' && (
-            <EtapaCalculoCDDM form={form} setForm={setForm} fatoresCDDMAtivos={form.fatoresCDDMAtivos} />
+            (form.metodoAvaliacao === 'evolutivo' && form.tratamentoDados === 'tratamento_por_fatores')
+              ? <EtapaCalculoEvolutivo form={form} setForm={setForm} />
+              : <EtapaCalculoCDDM form={form} setForm={setForm} fatoresCDDMAtivos={(form as any).fatoresCDDMAtivos} />
           )}
 
           {etapaAtual === '11' && (
