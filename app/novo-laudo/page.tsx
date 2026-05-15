@@ -977,6 +977,8 @@ export default function NovoLaudoPage() {
         etapaAtual={etapaAtual}
         setEtapaAtual={setEtapaAtual}
         tipoLaudo={form.tipoLaudo as 'detalhado' | 'simplificado' | undefined}
+        metodoAvaliacao={form.metodoAvaliacao}
+        tratamentoDados={form.tratamentoDados}
       />
 
     </AppShell>
