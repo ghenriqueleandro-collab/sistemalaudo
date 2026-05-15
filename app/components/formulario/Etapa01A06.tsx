@@ -43,6 +43,7 @@ type Props = {
   removerLinhaDivisao: (index: number) => void
   handleCroqui: (e: React.ChangeEvent<HTMLInputElement>) => void
   removerCroqui: (index: number) => void
+  tipoLaudo?: 'detalhado' | 'simplificado'
 }
 
 export default function Etapa01A06({
