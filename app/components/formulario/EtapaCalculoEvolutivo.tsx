@@ -384,18 +384,8 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                   <div className="grid grid-cols-3 gap-3">
                     <div><label className={lbl}>Tipo</label>
                       <select className={inp} value={e.tipo} onChange={up('tipo')}>
-                        <option value="">Selecione…</option>
                         <option value="Terreno">Terreno (sem benfeitoria)</option>
                         <option value="Terreno c/ benfeitoria">Terreno c/ benfeitoria</option>
-                        <option value="Apartamento">Apartamento</option>
-                        <option value="Casa">Casa</option>
-                        <option value="Casa justaposta">Casa justaposta</option>
-                        <option value="Chácara">Chácara</option>
-                        <option value="Galpão">Galpão</option>
-                        <option value="Prédio">Prédio</option>
-                        <option value="Prédio Misto">Prédio Misto</option>
-                        <option value="Sala">Sala</option>
-                        <option value="Outro">Outro</option>
                       </select>
                     </div>
                     <div><label className={lbl}>Data</label><input className={inp} type="date" value={e.data} onChange={up('data')}/></div>
