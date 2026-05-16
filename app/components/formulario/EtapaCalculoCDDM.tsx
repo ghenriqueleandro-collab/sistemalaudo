@@ -36,6 +36,7 @@ export type ElementoCDDM = {
   coordenadas: string
   distanciaAvaliando: string
   observacoes: string
+  foto: string  // base64 da foto
 }
 
 export type AvalianoCDDM = {
@@ -278,6 +279,73 @@ function getFOCDepr(foc: string): number {
   return FOC_DEPR[foc] ?? 0
 }
 
+
+// ─── Painel lateral de foto para elementos ─────────────────────────────────────
+function PainelFotoElem({ foto, onCarregar, onRemover }: {
+  foto: string
+  onCarregar: (base64: string) => void
+  onRemover: () => void
+}) {
+  function handleFile(file: File | null | undefined) {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (e) => onCarregar(e.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+  return (
+    <div className="w-48 flex-shrink-0 border-r border-slate-200 flex flex-col items-center justify-start gap-2 p-4">
+      {foto ? (
+        <div className="relative w-full">
+          <img src={foto} alt="Foto do imóvel" className="w-full h-36 object-cover rounded-xl border border-slate-200"/>
+          <button type="button" onClick={onRemover}
+            className="absolute top-1 right-1 bg-white/80 hover:bg-white rounded-full w-5 h-5 text-slate-500 text-xs flex items-center justify-center border border-slate-200">
+            ✕
+          </button>
+        </div>
+      ) : (
+        <label className="w-full h-36 flex flex-col items-center justify-center gap-2 border border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition text-slate-400 hover:text-blue-500">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          <span className="text-[11px] text-center">Foto do imóvel</span>
+          <input type="file" accept="image/*" className="hidden"
+            onChange={e => handleFile(e.target.files?.[0])}/>
+        </label>
+      )}
+      <p className="text-[10px] text-slate-400 text-center leading-relaxed">
+        Clique para carregar ou cole (Ctrl+V)
+      </p>
+    </div>
+  )
+}
+
+
+// ─── Painel de foto do elemento ──────────────────────────────────────────────
+function FotoElem({ foto, onChange, onRemover }: {
+  foto: string; onChange: (b64: string) => void; onRemover: () => void
+}) {
+  return (
+    <div className="w-40 flex-shrink-0 flex flex-col items-center gap-2">
+      {foto
+        ? <div className="relative w-full">
+            <img src={foto} alt="Foto" className="w-full h-32 object-cover rounded-xl border border-slate-200"/>
+            <button type="button" onClick={onRemover}
+              className="absolute top-1 right-1 bg-white/80 rounded-full w-5 h-5 text-slate-500 text-xs border border-slate-200 flex items-center justify-center">✕</button>
+          </div>
+        : <label className="w-full h-32 flex flex-col items-center justify-center gap-2 border border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition text-slate-400">
+            <span style={{fontSize:28,opacity:.4}}>🖼</span>
+            <span className="text-[11px]">Foto do imóvel</span>
+            <input type="file" accept="image/*" className="hidden"
+              onChange={ev=>{ const f=ev.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=e2=>onChange(e2.target?.result as string); r.readAsDataURL(f); ev.target.value='' }}/>
+          </label>
+      }
+      <p className="text-[10px] text-slate-400 text-center">Clique ou cole (Ctrl+V)</p>
+    </div>
+  )
+}
+
 // ─── Motor de cálculo (replica exatamente as fórmulas da planilha) ───────────
 
 function calcularResultado(
@@ -436,7 +504,7 @@ function elemInicial(id: number): ElementoCDDM {
     suites: '', vagas: '', valorOferta: '', fatorOferta: '0,90',
     fatorLocal: '100', fatorAndar: '100', fatorVaga: '100',
     tipoOferta: 'Venda', status: 'Em oferta', fonte: '', telefone: '',
-    link: '', coordenadas: '', distanciaAvaliando: '', observacoes: '',
+    link: '', coordenadas: '', distanciaAvaliando: '', observacoes: '', foto: ''
   }
 }
 
@@ -639,6 +707,21 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
     setElementos(prev => prev.map((e, i) => i === idx ? { ...e, [campo]: val } : e))
   }
 
+  // Paste de imagem (Ctrl+V) para o elemento ativo
+  useEffect(() => {
+    function handlePaste(ev: ClipboardEvent) {
+      const item = Array.from(ev.clipboardData?.items || []).find(i => i.type.startsWith('image/'))
+      if (!item) return
+      const file = item.getAsFile()
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = e2 => updateElem(abaAtiva, 'foto', e2.target?.result as string)
+      reader.readAsDataURL(file)
+    }
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [abaAtiva])
+
   function adicionarElemento() {
     if (elementos.length >= 12) return
     setElementos(prev => [...prev, elemInicial(prev.length + 1)])
@@ -792,7 +875,10 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
             )}
           </div>
 
-          {/* Identificação */}
+          {/* Foto + Identificação */}
+          <div className="flex gap-4 items-start">
+            <FotoElem foto={elem.foto} onChange={b64=>updateElem(abaAtiva,'foto',b64)} onRemover={()=>updateElem(abaAtiva,'foto','')} />
+            <div className="flex-1">
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1.5">Tipo</label>
@@ -1038,6 +1124,10 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
               </div>
             </div>
           )}
+          </div>
+        </div>
+
+
         </div>
       </div>
 
@@ -1062,6 +1152,7 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
               </button>
             ))}
           </div>
+
 
           {/* Tabela de cálculo de homogeneização detalhada */}
           {mostrarCalculo === 'cddm' && (

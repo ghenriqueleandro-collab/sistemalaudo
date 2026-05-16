@@ -113,6 +113,7 @@ type ElementoEv = {
   valorOferta: string; benfElem: string; fatorOferta: string
   fatorLocal: string; fatorTopografia: string; fatorVisibilidade: string
   fonte: string; telefone: string; link: string; data: string; tipoOferta: string; observacoes: string
+  foto: string  // base64 da foto do imóvel
 }
 type BenfeitoriaCUB = {
   id: number; descricao: string; padrao: string
@@ -200,11 +201,207 @@ function elemInicial(id: number): ElementoEv {
   return { id, tipo:'Terreno', logradouro:'', bairro:'', cidade:'', uf:'', coordenadas:'',
     distancia:'', areaTerreno:'', areaConstruida:'', valorOferta:'', benfElem:'',
     fatorOferta:'0,9000', fatorLocal:'100,00', fatorTopografia:'100,00', fatorVisibilidade:'100,00',
-    fonte:'', telefone:'', link:'', data:'', tipoOferta:'Venda', observacoes:'' }
+    fonte:'', telefone:'', link:'', data:'', tipoOferta:'Venda', observacoes:'', foto:'' }
 }
 
 function benfInicial(id: number): BenfeitoriaCUB {
   return { id, descricao:'', padrao:'', cub:'', pc:'', ir:'', r:'', area:'', idadeReal:'', estadoConservacao:'C' }
+}
+
+
+// ─── Card do elemento ativo (Evolutivo) ────────────────────────────────────────
+function CardElemEv({
+  e, r, abaAtiva, updateElem, removeElem, inp, lbl, fmt, fmtM, totalElems
+}: {
+  e: ElementoEv
+  r: any
+  abaAtiva: number
+  updateElem: (idx: number, campo: keyof ElementoEv, val: string) => void
+  removeElem: (idx: number) => void
+  inp: string
+  lbl: string
+  fmt: (v: number, dec?: number) => string
+  fmtM: (v: number) => string
+  totalElems: number
+}) {
+  const up = (c: keyof ElementoEv) => (ev: React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>) => updateElem(abaAtiva, c, ev.target.value)
+  const vu = r?.vu ?? 0
+  return (
+
+                <div className="flex">
+                  {/* Painel foto */}
+                  <PainelFotoElem
+                    foto={e.foto}
+                    onCarregar={base64 => updateElem(abaAtiva,'foto',base64)}
+                    onRemover={() => updateElem(abaAtiva,'foto','')}
+                  />
+                  {/* Campos */}
+                  <div className="flex-1 p-4 space-y-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div><label className={lbl}>Tipo</label>
+                      <select className={inp} value={e.tipo} onChange={up('tipo')}>
+                        <option value="Terreno">Terreno (sem benfeitoria)</option>
+                        <option value="Terreno c/ benfeitoria">Terreno c/ benfeitoria</option>
+                      </select>
+                    </div>
+                    <div><label className={lbl}>Data</label><input className={inp} type="date" value={e.data} onChange={up('data')}/></div>
+                    <div><label className={lbl}>Tipo oferta</label>
+                      <select className={inp} value={e.tipoOferta} onChange={up('tipoOferta')}>
+                        <option>Venda</option><option>Locação</option>
+                      </select>
+                    </div>
+                    <div className="col-span-2"><label className={lbl}>Logradouro</label><input className={inp} value={e.logradouro} onChange={up('logradouro')}/></div>
+                    <div>
+                      <label className={lbl}>Distância (km)</label>
+                      <input className={inp} value={e.distancia}
+                        onChange={up('distancia')}
+                        onBlur={ev=>updateElem(abaAtiva,'distancia',fmtBR(ev.target.value,3))}
+                        placeholder="0,000"/>
+                    </div>
+                    <div><label className={lbl}>Bairro</label><input className={inp} value={e.bairro} onChange={up('bairro')}/></div>
+                    <div><label className={lbl}>Cidade</label><input className={inp} value={e.cidade} onChange={up('cidade')}/></div>
+                    <div><label className={lbl}>UF</label><input className={inp} value={e.uf} onChange={up('uf')}/></div>
+                    <div className="col-span-2"><label className={lbl}>Coordenadas geográficas</label><input className={inp} value={e.coordenadas} onChange={up('coordenadas')}/></div>
+                    <div><label className={lbl}>Fonte</label><input className={inp} value={e.fonte} onChange={up('fonte')}/></div>
+                  </div>
+
+                  <div className="border-t border-slate-100 pt-3">
+                    <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Áreas e valores</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className={lbl}>Área terreno (m²)</label>
+                        <input className={inp} value={e.areaTerreno}
+                          onChange={up('areaTerreno')}
+                          onBlur={ev=>updateElem(abaAtiva,'areaTerreno',fmtBR(ev.target.value,2))}
+                          placeholder="4.000,00"/>
+                      </div>
+                      <div>
+                        <label className={lbl}>Área construída (m²)</label>
+                        <input className={inp} value={e.areaConstruida}
+                          onChange={up('areaConstruida')}
+                          onBlur={ev=>updateElem(abaAtiva,'areaConstruida',fmtBR(ev.target.value,2))}
+                          placeholder="0,00"/>
+                      </div>
+                      {e.tipo === 'Terreno c/ benfeitoria' ? (
+                        <div>
+                          <label className={lbl}>Valor benfeitorias do elemento (R$)</label>
+                          <input className={inp} value={e.benfElem}
+                            onChange={up('benfElem')}
+                            onBlur={ev=>updateElem(abaAtiva,'benfElem',fmtBR(ev.target.value,2))}
+                            placeholder="150.000,00"/>
+                          <p className="text-[10px] text-amber-600 mt-1">Será subtraído do valor de oferta antes de calcular o VU</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className={lbl}>Valor benfeitorias (R$)</label>
+                          <input className={inp+' bg-slate-100 text-slate-400 cursor-not-allowed'} value="—" readOnly
+                            title="Habilitado apenas para 'Terreno c/ benfeitoria'"/>
+                        </div>
+                      )}
+                      <div>
+                        <label className={lbl}>Valor de oferta (R$)</label>
+                        <input className={inp} value={e.valorOferta}
+                          onChange={up('valorOferta')}
+                          onBlur={ev=>updateElem(abaAtiva,'valorOferta',fmtBR(ev.target.value,2))}
+                          placeholder="1.500.000,00"/>
+                      </div>
+                      <div>
+                        <label className={lbl}>Fator oferta</label>
+                        <input className={inp} value={e.fatorOferta}
+                          onChange={up('fatorOferta')}
+                          onBlur={ev=>updateElem(abaAtiva,'fatorOferta',fmtBRDec(ev.target.value,4))}
+                          placeholder="0,9000"/>
+                      </div>
+                      <div><label className={lbl}>V.U. terreno (R$/m²)</label>
+                        <input className={inp+' bg-slate-50 text-blue-700 font-semibold'} readOnly
+                          value={vu > 0 ? `R$ ${fmt(vu)}/m²` : '—'}/>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-100 pt-3">
+                    <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Fatores do elemento</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className={lbl}>Nota local (100=neutro)</label>
+                        <input className={inp} value={e.fatorLocal}
+                          onChange={up('fatorLocal')}
+                          onBlur={ev=>updateElem(abaAtiva,'fatorLocal',fmtBR(ev.target.value,2))}
+                          placeholder="100,00"/>
+                      </div>
+                      <div>
+                        <label className={lbl}>Nota topografia (100=neutro)</label>
+                        <input className={inp} value={e.fatorTopografia}
+                          onChange={up('fatorTopografia')}
+                          onBlur={ev=>updateElem(abaAtiva,'fatorTopografia',fmtBR(ev.target.value,2))}
+                          placeholder="100,00"/>
+                      </div>
+                      <div>
+                        <label className={lbl}>Nota visibilidade (100=neutro)</label>
+                        <input className={inp} value={e.fatorVisibilidade}
+                          onChange={up('fatorVisibilidade')}
+                          onBlur={ev=>updateElem(abaAtiva,'fatorVisibilidade',fmtBR(ev.target.value,2))}
+                          placeholder="100,00"/>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-100 pt-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div><label className={lbl}>Telefone</label><input className={inp} value={e.telefone} onChange={up('telefone')}/></div>
+                      <div><label className={lbl}>Link</label><input className={inp} value={e.link} onChange={up('link')}/></div>
+                      <div className="col-span-2"><label className={lbl}>Observações</label>
+                        <textarea className={inp} rows={2} value={e.observacoes}
+                          onChange={ev=>updateElem(abaAtiva,'observacoes',ev.target.value)}/></div>
+                    </div>
+                  </div>
+
+                  {totalElems > 3 && (
+                    <button type="button" onClick={()=>removeElem(abaAtiva)}
+                      className="text-xs text-red-500 hover:underline">Remover este elemento</button>
+                  )}
+                  </div>
+                </div>
+              
+  )
+}
+
+
+// ─── Componente de painel lateral de foto para elementos ────────────────────
+function PainelFotoElem({ foto, onCarregar, onRemover }: {
+  foto: string
+  onCarregar: (base64: string) => void
+  onRemover: () => void
+}) {
+  function handleFile(file: File | null | undefined) {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (e) => onCarregar(e.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+  return (
+    <div className="w-48 flex-shrink-0 border-r border-slate-100 flex flex-col items-center justify-start gap-2 p-4">
+      {foto ? (
+        <div className="relative w-full">
+          <img src={foto} alt="Foto do imóvel" className="w-full h-36 object-cover rounded-xl border border-slate-200"/>
+          <button type="button" onClick={onRemover}
+            className="absolute top-1 right-1 bg-white/80 hover:bg-white rounded-full w-5 h-5 text-slate-500 text-xs flex items-center justify-center border border-slate-200">
+            ✕
+          </button>
+        </div>
+      ) : (
+        <label className="w-full h-36 flex flex-col items-center justify-center gap-2 border border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition text-slate-400 hover:text-blue-500">
+          <span style={{fontSize:32,opacity:.4}}>🖼</span>
+          <span className="text-[11px] text-center">Foto do imóvel</span>
+          <input type="file" accept="image/*" className="hidden"
+            onChange={e => handleFile(e.target.files?.[0])}/>
+        </label>
+      )}
+      <p className="text-[10px] text-slate-400 text-center leading-relaxed">
+        Clique para carregar ou cole (Ctrl+V)
+      </p>
+    </div>
+  )
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -262,6 +459,21 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
     const n = elementos.filter((_,i)=>i!==idx).map((e,i)=>({...e,id:i+1}))
     setElementos(n); setAbaAtiva(Math.min(abaAtiva, n.length-1))
   }
+  // Paste de imagem (Ctrl+V) para o elemento ativo
+  useEffect(() => {
+    function handlePaste(ev: ClipboardEvent) {
+      const item = Array.from(ev.clipboardData?.items || []).find(i => i.type.startsWith('image/'))
+      if (!item) return
+      const file = item.getAsFile()
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = e2 => updateElem(abaAtiva, 'foto', e2.target?.result as string)
+      reader.readAsDataURL(file)
+    }
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [abaAtiva])
+
   function addBenf() { setBenfeitorias(prev => [...prev, benfInicial(prev.length+1)]) }
   function removeBenf(idx: number) { setBenfeitorias(prev => prev.filter((_,i)=>i!==idx).map((b,i)=>({...b,id:i+1}))) }
   function updateBenf(idx: number, campo: keyof BenfeitoriaCUB, val: string) {
@@ -440,6 +652,21 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
   const tAv   = 'bg-blue-50 px-3 py-2 border border-slate-200 text-xs text-center font-medium text-blue-800'
 
   // ─── Render ───────────────────────────────────────────────────────────────
+  const cardElemAtivo = elementos[abaAtiva] ? (
+    <CardElemEv
+      e={elementos[abaAtiva]}
+      r={resultado.elementos[abaAtiva]}
+      abaAtiva={abaAtiva}
+      updateElem={updateElem}
+      removeElem={removeElem}
+      inp={inp}
+      lbl={lbl}
+      fmt={fmt}
+      fmtM={fmtM}
+      totalElems={elementos.length}
+    />
+  ) : null
+
   return (
     <div className="space-y-6">
 
@@ -516,143 +743,7 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
               </button>
             </div>
 
-            {/* Card do elemento ativo */}
-            {(() => {
-              const e  = elementos[abaAtiva]
-              if (!e) return null
-              const up = (c: keyof ElementoEv) => (ev: React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>) => updateElem(abaAtiva, c, ev.target.value)
-              const r  = resultado.elementos[abaAtiva]
-              const vu = r?.vu ?? 0
-
-              return (
-                <div className="p-4 space-y-3">
-                  <div className="grid grid-cols-3 gap-3">
-                    <div><label className={lbl}>Tipo</label>
-                      <select className={inp} value={e.tipo} onChange={up('tipo')}>
-                        <option value="Terreno">Terreno (sem benfeitoria)</option>
-                        <option value="Terreno c/ benfeitoria">Terreno c/ benfeitoria</option>
-                      </select>
-                    </div>
-                    <div><label className={lbl}>Data</label><input className={inp} type="date" value={e.data} onChange={up('data')}/></div>
-                    <div><label className={lbl}>Tipo oferta</label>
-                      <select className={inp} value={e.tipoOferta} onChange={up('tipoOferta')}>
-                        <option>Venda</option><option>Locação</option>
-                      </select>
-                    </div>
-                    <div className="col-span-2"><label className={lbl}>Logradouro</label><input className={inp} value={e.logradouro} onChange={up('logradouro')}/></div>
-                    <div>
-                      <label className={lbl}>Distância (km)</label>
-                      <input className={inp} value={e.distancia}
-                        onChange={up('distancia')}
-                        onBlur={ev=>updateElem(abaAtiva,'distancia',fmtBR(ev.target.value,3))}
-                        placeholder="0,000"/>
-                    </div>
-                    <div><label className={lbl}>Bairro</label><input className={inp} value={e.bairro} onChange={up('bairro')}/></div>
-                    <div><label className={lbl}>Cidade</label><input className={inp} value={e.cidade} onChange={up('cidade')}/></div>
-                    <div><label className={lbl}>UF</label><input className={inp} value={e.uf} onChange={up('uf')}/></div>
-                    <div className="col-span-2"><label className={lbl}>Coordenadas geográficas</label><input className={inp} value={e.coordenadas} onChange={up('coordenadas')}/></div>
-                    <div><label className={lbl}>Fonte</label><input className={inp} value={e.fonte} onChange={up('fonte')}/></div>
-                  </div>
-
-                  <div className="border-t border-slate-100 pt-3">
-                    <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Áreas e valores</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <label className={lbl}>Área terreno (m²)</label>
-                        <input className={inp} value={e.areaTerreno}
-                          onChange={up('areaTerreno')}
-                          onBlur={ev=>updateElem(abaAtiva,'areaTerreno',fmtBR(ev.target.value,2))}
-                          placeholder="4.000,00"/>
-                      </div>
-                      <div>
-                        <label className={lbl}>Área construída (m²)</label>
-                        <input className={inp} value={e.areaConstruida}
-                          onChange={up('areaConstruida')}
-                          onBlur={ev=>updateElem(abaAtiva,'areaConstruida',fmtBR(ev.target.value,2))}
-                          placeholder="0,00"/>
-                      </div>
-                      {e.tipo === 'Terreno c/ benfeitoria' ? (
-                        <div>
-                          <label className={lbl}>Valor benfeitorias do elemento (R$)</label>
-                          <input className={inp} value={e.benfElem}
-                            onChange={up('benfElem')}
-                            onBlur={ev=>updateElem(abaAtiva,'benfElem',fmtBR(ev.target.value,2))}
-                            placeholder="150.000,00"/>
-                          <p className="text-[10px] text-amber-600 mt-1">Será subtraído do valor de oferta antes de calcular o VU</p>
-                        </div>
-                      ) : (
-                        <div>
-                          <label className={lbl}>Valor benfeitorias (R$)</label>
-                          <input className={inp+' bg-slate-100 text-slate-400 cursor-not-allowed'} value="—" readOnly
-                            title="Habilitado apenas para 'Terreno c/ benfeitoria'"/>
-                        </div>
-                      )}
-                      <div>
-                        <label className={lbl}>Valor de oferta (R$)</label>
-                        <input className={inp} value={e.valorOferta}
-                          onChange={up('valorOferta')}
-                          onBlur={ev=>updateElem(abaAtiva,'valorOferta',fmtBR(ev.target.value,2))}
-                          placeholder="1.500.000,00"/>
-                      </div>
-                      <div>
-                        <label className={lbl}>Fator oferta</label>
-                        <input className={inp} value={e.fatorOferta}
-                          onChange={up('fatorOferta')}
-                          onBlur={ev=>updateElem(abaAtiva,'fatorOferta',fmtBRDec(ev.target.value,4))}
-                          placeholder="0,9000"/>
-                      </div>
-                      <div><label className={lbl}>V.U. terreno (R$/m²)</label>
-                        <input className={inp+' bg-slate-50 text-blue-700 font-semibold'} readOnly
-                          value={vu > 0 ? `R$ ${fmt(vu)}/m²` : '—'}/>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-slate-100 pt-3">
-                    <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Fatores do elemento</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <label className={lbl}>Nota local (100=neutro)</label>
-                        <input className={inp} value={e.fatorLocal}
-                          onChange={up('fatorLocal')}
-                          onBlur={ev=>updateElem(abaAtiva,'fatorLocal',fmtBR(ev.target.value,2))}
-                          placeholder="100,00"/>
-                      </div>
-                      <div>
-                        <label className={lbl}>Nota topografia (100=neutro)</label>
-                        <input className={inp} value={e.fatorTopografia}
-                          onChange={up('fatorTopografia')}
-                          onBlur={ev=>updateElem(abaAtiva,'fatorTopografia',fmtBR(ev.target.value,2))}
-                          placeholder="100,00"/>
-                      </div>
-                      <div>
-                        <label className={lbl}>Nota visibilidade (100=neutro)</label>
-                        <input className={inp} value={e.fatorVisibilidade}
-                          onChange={up('fatorVisibilidade')}
-                          onBlur={ev=>updateElem(abaAtiva,'fatorVisibilidade',fmtBR(ev.target.value,2))}
-                          placeholder="100,00"/>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-slate-100 pt-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><label className={lbl}>Telefone</label><input className={inp} value={e.telefone} onChange={up('telefone')}/></div>
-                      <div><label className={lbl}>Link</label><input className={inp} value={e.link} onChange={up('link')}/></div>
-                      <div className="col-span-2"><label className={lbl}>Observações</label>
-                        <textarea className={inp} rows={2} value={e.observacoes}
-                          onChange={ev=>updateElem(abaAtiva,'observacoes',ev.target.value)}/></div>
-                    </div>
-                  </div>
-
-                  {elementos.length > 3 && (
-                    <button type="button" onClick={()=>removeElem(abaAtiva)}
-                      className="text-xs text-red-500 hover:underline">Remover este elemento</button>
-                  )}
-                </div>
-              )
-            })()}
-          </div>
+            {cardElemAtivo}
 
           {/* Tabelas de homogeneização */}
           <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
@@ -811,6 +902,7 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
             </div>
           </div>
         </div>
+      </div>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
