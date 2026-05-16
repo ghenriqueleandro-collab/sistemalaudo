@@ -597,19 +597,38 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elementos])
 
-  // Avaliando vem do form principal
+  // ── Estados editáveis do avaliando (inicializam do form, editáveis no componente) ──
+  const areaAvInit = form.areaTerrenoTotal || form.areaConstruidaTotal || ''
+  const [avArea,        setAvArea]        = useState(areaAvInit)
+  const [avFatorLocal,  setAvFatorLocal]  = useState(form.fatorLocalAvaliando  || '100')
+  const [avFatorAndar,  setAvFatorAndar]  = useState(form.fatorAndarAvaliando  || '100')
+  const [avVagas,       setAvVagas]       = useState(form.vagasAvaliando       || '0')
+  const [avIdade,       setAvIdade]       = useState(form.idadeAparente        || '0')
+
+  // Atualiza o form quando o usuário edita o avaliando aqui
+  useEffect(() => {
+    if (!setForm) return
+    setForm((prev: any) => ({
+      ...prev,
+      areaTerrenoTotal:    avArea,
+      fatorLocalAvaliando: avFatorLocal,
+      fatorAndarAvaliando: avFatorAndar,
+      vagasAvaliando:      avVagas,
+      idadeAparente:       avIdade,
+    }))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avArea, avFatorLocal, avFatorAndar, avVagas, avIdade])
+
   const avaliando = useMemo<AvalianoCDDM>(() => ({
-    // area do avaliando: usa areaTerrenoTotal quando disponível
-    // (planilha usa a área de terreno para o cálculo do fatorArea)
-    area: form.areaTerrenoTotal || form.areaConstruidaTotal || '',
+    area:             avArea,
     padraoConstrutivo: form.padraoCDDM || form.padrao || '',
     estadoConservacao: (CONSERVACAO_PARA_FOC[form.estadoConservacao] ?? '') as FOCLetra,
-    fatorLocal: form.fatorLocalAvaliando || '100',
-    fatorAndar: form.fatorAndarAvaliando || '100',
-    vagas: form.vagasAvaliando || '0',
-    idadeAparente: form.idadeAparente || '0',
-  }), [form.areaConstruidaTotal, form.padraoCDDM, form.padrao, form.estadoConservacao,
-       form.idadeAparente, form.fatorLocalAvaliando, form.fatorAndarAvaliando, form.vagasAvaliando])
+    fatorLocal:       avFatorLocal,
+    fatorAndar:       avFatorAndar,
+    vagas:            avVagas,
+    idadeAparente:    avIdade,
+  }), [avArea, avFatorLocal, avFatorAndar, avVagas, avIdade,
+       form.padraoCDDM, form.padrao, form.estadoConservacao])
 
   const resultado = useMemo(
     () => calcularResultado(elementos, avaliando, fatores),
@@ -653,20 +672,28 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
         </p>
       </div>
 
-      {/* Dados do avaliando (referência) */}
+      {/* Dados do avaliando — editáveis diretamente aqui */}
       <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-        <p className="text-xs font-semibold text-blue-800 mb-3 uppercase tracking-wide">Dados do avaliando — referência para o cálculo</p>
+        <p className="text-xs font-semibold text-blue-800 mb-3 uppercase tracking-wide">
+          Dados do avaliando — referência para o cálculo
+        </p>
+        <p className="text-[11px] text-blue-600 mb-3">
+          Estes campos vêm da seção 1–6 mas podem ser ajustados aqui diretamente.
+        </p>
         <div className="grid grid-cols-3 gap-3 text-sm">
           <div>
-            <span className="text-xs text-blue-600 font-medium block mb-1">Área construída (m²)</span>
-            <div className="bg-white border border-blue-200 rounded-xl px-3 py-2 font-medium text-slate-800">
-              {form.areaConstruidaTotal || '—'}
-            </div>
+            <span className="text-xs text-blue-700 font-semibold block mb-1">Área do avaliando (m²)</span>
+            <input
+              className="w-full bg-white border border-blue-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              value={avArea}
+              onChange={e => setAvArea(e.target.value)}
+              placeholder="Ex: 250"
+            />
           </div>
           <div>
             <span className="text-xs text-blue-600 font-medium block mb-1">Padrão construtivo (CDDM)</span>
             <div className="bg-white border border-blue-200 rounded-xl px-3 py-2 font-medium text-slate-800 truncate text-xs">
-              {form.padraoCDDM || form.padrao || <span className="text-red-400">Não preenchido</span>}
+              {form.padraoCDDM || form.padrao || <span className="text-red-400">Não preenchido na seção 1–6</span>}
             </div>
           </div>
           <div>
@@ -677,20 +704,37 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
           </div>
           <div>
             <span className="text-xs text-blue-600 font-medium block mb-1">Idade aparente (anos)</span>
-            <div className="bg-white border border-blue-200 rounded-xl px-3 py-2 font-medium text-slate-800">
-              {form.idadeAparente || '0'}
-            </div>
+            <input
+              className="w-full bg-white border border-blue-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              value={avIdade}
+              onChange={e => setAvIdade(e.target.value)}
+              placeholder="0"
+            />
           </div>
           <div>
             <span className="text-xs text-blue-600 font-medium block mb-1">Fator local</span>
-            <div className="bg-white border border-blue-200 rounded-xl px-3 py-2 font-medium text-slate-800">
-              {form.fatorLocalAvaliando || '100'}
-            </div>
+            <input
+              className="w-full bg-white border border-blue-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              value={avFatorLocal}
+              onChange={e => setAvFatorLocal(e.target.value)}
+              placeholder="100"
+            />
           </div>
           <div>
             <span className="text-xs text-blue-600 font-medium block mb-1">Fator andar / Vagas</span>
-            <div className="bg-white border border-blue-200 rounded-xl px-3 py-2 font-medium text-slate-800">
-              {form.fatorAndarAvaliando || '100'} / {form.vagasAvaliando || '0'}
+            <div className="flex gap-2">
+              <input
+                className="w-full bg-white border border-blue-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                value={avFatorAndar}
+                onChange={e => setAvFatorAndar(e.target.value)}
+                placeholder="100"
+              />
+              <input
+                className="w-20 bg-white border border-blue-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                value={avVagas}
+                onChange={e => setAvVagas(e.target.value)}
+                placeholder="0"
+              />
             </div>
           </div>
         </div>

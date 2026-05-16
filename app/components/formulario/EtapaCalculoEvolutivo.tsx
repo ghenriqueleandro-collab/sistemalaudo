@@ -340,17 +340,36 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
               Dados do avaliando
             </p>
             <div className="grid grid-cols-4 gap-3">
-              <div><label className={lbl}>Área terreno (m²)</label>
-                <input className={inp} value={areaAv} onChange={e=>setAreaAv(e.target.value)} placeholder="272"/></div>
-              <div><label className={lbl}>Nota local</label>
-                <input className={inp} value={notaLocal} onChange={e=>setNotaLocal(e.target.value)} placeholder="100"/></div>
-              <div><label className={lbl}>Nota topografia</label>
-                <input className={inp} value={notaTopo} onChange={e=>setNotaTopo(e.target.value)} placeholder="100"/></div>
-              <div><label className={lbl}>Nota visibilidade</label>
-                <input className={inp} value={notaVis} onChange={e=>setNotaVis(e.target.value)} placeholder="100"/></div>
+              <div>
+                <label className={lbl}>Área terreno (m²)</label>
+                <input className={inp} value={areaAv} onChange={e=>setAreaAv(e.target.value)} placeholder="6.680"/>
+                {/* Mostrar o valor interpretado pelo sistema para evitar confusão de formato */}
+                {pn(areaAv) > 0 && (
+                  <p className={`text-[10px] mt-1 font-medium ${pn(areaAv) > 100000 ? 'text-red-500' : 'text-blue-600'}`}>
+                    {pn(areaAv) > 100000
+                      ? `⚠ Sistema usa ${pn(areaAv).toLocaleString('pt-BR')} m² — confira o formato (use vírgula para decimal: ex. 6.677 = 6677 m²)`
+                      : `= ${pn(areaAv).toLocaleString('pt-BR')} m²`}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className={lbl}>Nota local</label>
+                <input className={inp} value={notaLocal} onChange={e=>setNotaLocal(e.target.value)} placeholder="100"/>
+                <p className="text-[10px] text-blue-600 mt-1">= {pn(notaLocal)||100}</p>
+              </div>
+              <div>
+                <label className={lbl}>Nota topografia</label>
+                <input className={inp} value={notaTopo} onChange={e=>setNotaTopo(e.target.value)} placeholder="100"/>
+                <p className="text-[10px] text-blue-600 mt-1">= {pn(notaTopo)||100}</p>
+              </div>
+              <div>
+                <label className={lbl}>Nota visibilidade</label>
+                <input className={inp} value={notaVis} onChange={e=>setNotaVis(e.target.value)} placeholder="100"/>
+                <p className="text-[10px] text-blue-600 mt-1">= {pn(notaVis)||100}</p>
+              </div>
             </div>
             <p className="text-xs text-blue-600 mt-2 opacity-75">
-              Nota 100 = padrão de referência. Valores acima/abaixo indicam superioridade/inferioridade relativa.
+              Nota 100 = padrão de referência. Use <strong>ponto como separador de milhar</strong> (ex: 6.677 = 6677 m²) e <strong>vírgula como decimal</strong>.
             </p>
           </div>
 
@@ -406,7 +425,11 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                   <div className="border-t border-slate-100 pt-3">
                     <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Áreas e valores</p>
                     <div className="grid grid-cols-3 gap-3">
-                      <div><label className={lbl}>Área de terreno (m²)</label><input className={inp} value={e.areaTerreno} onChange={up('areaTerreno')} placeholder="0"/></div>
+                      <div>
+                        <label className={lbl}>Área de terreno (m²)</label>
+                        <input className={inp} value={e.areaTerreno} onChange={up('areaTerreno')} placeholder="4.000"/>
+                        {pn(e.areaTerreno) > 0 && <p className="text-[10px] text-slate-400 mt-0.5">= {pn(e.areaTerreno).toLocaleString('pt-BR')} m²</p>}
+                      </div>
                       <div><label className={lbl}>Área construída (m²)</label><input className={inp} value={e.areaConstruida} onChange={up('areaConstruida')} placeholder="0"/></div>
                       {e.tipo === 'Terreno c/ benfeitoria' ? (
                         <div>
@@ -421,7 +444,11 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                             title="Habilitado apenas para 'Terreno c/ benfeitoria'"/>
                         </div>
                       )}
-                      <div><label className={lbl}>Valor de oferta (R$)</label><input className={inp} value={e.valorOferta} onChange={up('valorOferta')} placeholder="0"/></div>
+                      <div>
+                        <label className={lbl}>Valor de oferta (R$)</label>
+                        <input className={inp} value={e.valorOferta} onChange={up('valorOferta')} placeholder="1.500.000"/>
+                        {pn(e.valorOferta) > 0 && <p className="text-[10px] text-slate-400 mt-0.5">= {pn(e.valorOferta).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</p>}
+                      </div>
                       <div><label className={lbl}>Fator oferta</label><input className={inp} value={e.fatorOferta} onChange={up('fatorOferta')} placeholder="0,90"/></div>
                       <div><label className={lbl}>V.U. terreno (R$/m²)</label>
                         <input className={inp+' bg-slate-50 text-blue-700 font-semibold'} readOnly
