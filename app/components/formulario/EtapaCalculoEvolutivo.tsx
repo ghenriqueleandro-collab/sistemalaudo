@@ -109,7 +109,7 @@ function calcKaFoc(Ie: number, Ir: number, estadoConserv: string, R: number) {
 }
 
 function elemInicial(id: number): ElementoEv {
-  return { id, tipo:'', logradouro:'', bairro:'', cidade:'', uf:'', coordenadas:'',
+  return { id, tipo:'Terreno', logradouro:'', bairro:'', cidade:'', uf:'', coordenadas:'',
     distancia:'', areaTerreno:'', areaConstruida:'', valorOferta:'', benfElem:'',
     fatorOferta:'0,90', fatorLocal:'100', fatorTopografia:'100', fatorVisibilidade:'100',
     fonte:'', telefone:'', link:'', data:'', tipoOferta:'Venda', observacoes:'' }
@@ -181,7 +181,7 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
       const aE  = pn(e.areaTerreno)
       const vO  = pn(e.valorOferta)
       const fO  = pn(e.fatorOferta) || 1
-      const bE  = pn(e.benfElem)
+      const bE  = e.tipo === 'Terreno c/ benfeitoria' ? pn(e.benfElem) : 0
       if (aE <= 0 || vO <= 0) return null
 
       // VU terreno (fórmula planilha: F12 = (valorOferta×fOferta - benf) / área)
@@ -382,7 +382,22 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
               return (
                 <div className="p-4 space-y-3">
                   <div className="grid grid-cols-3 gap-3">
-                    <div><label className={lbl}>Tipo</label><input className={inp} value={e.tipo} onChange={up('tipo')} placeholder="Terreno"/></div>
+                    <div><label className={lbl}>Tipo</label>
+                      <select className={inp} value={e.tipo} onChange={up('tipo')}>
+                        <option value="">Selecione…</option>
+                        <option value="Terreno">Terreno (sem benfeitoria)</option>
+                        <option value="Terreno c/ benfeitoria">Terreno c/ benfeitoria</option>
+                        <option value="Apartamento">Apartamento</option>
+                        <option value="Casa">Casa</option>
+                        <option value="Casa justaposta">Casa justaposta</option>
+                        <option value="Chácara">Chácara</option>
+                        <option value="Galpão">Galpão</option>
+                        <option value="Prédio">Prédio</option>
+                        <option value="Prédio Misto">Prédio Misto</option>
+                        <option value="Sala">Sala</option>
+                        <option value="Outro">Outro</option>
+                      </select>
+                    </div>
                     <div><label className={lbl}>Data</label><input className={inp} type="date" value={e.data} onChange={up('data')}/></div>
                     <div><label className={lbl}>Tipo oferta</label>
                       <select className={inp} value={e.tipoOferta} onChange={up('tipoOferta')}>
@@ -403,7 +418,19 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                     <div className="grid grid-cols-3 gap-3">
                       <div><label className={lbl}>Área de terreno (m²)</label><input className={inp} value={e.areaTerreno} onChange={up('areaTerreno')} placeholder="0"/></div>
                       <div><label className={lbl}>Área construída (m²)</label><input className={inp} value={e.areaConstruida} onChange={up('areaConstruida')} placeholder="0"/></div>
-                      <div><label className={lbl}>Valor das benfeitorias (R$)</label><input className={inp} value={e.benfElem} onChange={up('benfElem')} placeholder="0 (deixar vazio se terreno puro)"/></div>
+                      {e.tipo === 'Terreno c/ benfeitoria' ? (
+                        <div>
+                          <label className={lbl}>Valor benfeitorias do elemento (R$)</label>
+                          <input className={inp} value={e.benfElem} onChange={up('benfElem')} placeholder="Ex: 150.000,00"/>
+                          <p className="text-[10px] text-amber-600 mt-1">Será subtraído do valor de oferta antes de calcular o VU</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className={lbl}>Valor benfeitorias (R$)</label>
+                          <input className={inp+' bg-slate-100 text-slate-400 cursor-not-allowed'} value="—" readOnly
+                            title="Habilitado apenas para 'Terreno c/ benfeitoria'"/>
+                        </div>
+                      )}
                       <div><label className={lbl}>Valor de oferta (R$)</label><input className={inp} value={e.valorOferta} onChange={up('valorOferta')} placeholder="0"/></div>
                       <div><label className={lbl}>Fator oferta</label><input className={inp} value={e.fatorOferta} onChange={up('fatorOferta')} placeholder="0,90"/></div>
                       <div><label className={lbl}>V.U. terreno (R$/m²)</label>
