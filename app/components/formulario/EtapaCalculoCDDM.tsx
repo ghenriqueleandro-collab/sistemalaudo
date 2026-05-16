@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -580,12 +580,22 @@ type Props = {
 
 export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onSave }: Props) {
   const fatores = fatoresCDDMAtivos ?? { local: true, padrao: true, foc: true, andar: true, vaga: true }
-  const [elementos, setElementos] = useState<ElementoCDDM[]>([
-    elemInicial(1), elemInicial(2), elemInicial(3),
-    elemInicial(4), elemInicial(5),
-  ])
+  const [elementos, setElementos] = useState<ElementoCDDM[]>(() => {
+    const saved = form?.elementosComparativos
+    if (Array.isArray(saved) && saved.length > 0) {
+      return saved.map((e: any, i: number) => ({ ...elemInicial(i + 1), ...e }))
+    }
+    return [elemInicial(1), elemInicial(2), elemInicial(3), elemInicial(4), elemInicial(5)]
+  })
   const [abaAtiva, setAbaAtiva] = useState(0)
   const [mostrarCalculo, setMostrarCalculo] = useState<'cddm' | 'homog' | 'fund'>('cddm')
+
+  // Persiste elementos no form para sobreviver à navegação entre etapas
+  useEffect(() => {
+    if (!setForm) return
+    setForm((prev: any) => ({ ...prev, elementosComparativos: elementos }))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elementos])
 
   // Avaliando vem do form principal
   const avaliando = useMemo<AvalianoCDDM>(() => ({

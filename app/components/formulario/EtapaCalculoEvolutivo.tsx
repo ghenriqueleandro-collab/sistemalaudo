@@ -111,23 +111,32 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
   // ─── estado elementos (restaura do snapshot) ─────────────────────────────
   const savedSnap = (form as any)?.dadosCalculoEvolutivo
   const [elementos, setElementos] = useState<ElementoEv[]>(() => {
-    if (savedSnap?.elementos?.length > 0) return savedSnap.elementos
+    // Restaura elementos brutos do snapshot (campos do usuário, não os calculados)
+    const saved = savedSnap?.elementos
+    if (Array.isArray(saved) && saved.length > 0) {
+      // Garante que cada elemento tem todos os campos (compatibilidade com snapshots antigos)
+      return saved.map((e: any, i: number) => ({ ...elemInicial(i + 1), ...e }))
+    }
     return [1,2,3,4,5].map(elemInicial)
   })
   const [abaAtiva, setAbaAtiva]   = useState(0)
   const [mostrarCalc, setMostrarCalc] = useState<'cddm'|'benf'>('cddm')
 
   // ─── avaliando (editável) ─────────────────────────────────────────────────
-  const [areaAv,    setAreaAv]    = useState<string>(savedSnap?.avaliando?.area     != null ? String(savedSnap.avaliando.area)     : (form?.areaTerrenoTotal ?? ''))
-  const [notaLocal, setNotaLocal] = useState<string>(savedSnap?.avaliando?.notaLocal != null ? String(savedSnap.avaliando.notaLocal) : '100')
-  const [notaTopo,  setNotaTopo]  = useState<string>(savedSnap?.avaliando?.notaTopo  != null ? String(savedSnap.avaliando.notaTopo)  : '100')
-  const [notaVis,   setNotaVis]   = useState<string>(savedSnap?.avaliando?.notaVis   != null ? String(savedSnap.avaliando.notaVis)   : '100')
+  const [areaAv,    setAreaAv]    = useState<string>(savedSnap?.avaliando?.area     ? String(savedSnap.avaliando.area)     : (form?.areaTerrenoTotal ?? ''))
+  const [notaLocal, setNotaLocal] = useState<string>(savedSnap?.avaliando?.notaLocal ? String(savedSnap.avaliando.notaLocal) : '100')
+  const [notaTopo,  setNotaTopo]  = useState<string>(savedSnap?.avaliando?.notaTopo  ? String(savedSnap.avaliando.notaTopo)  : '100')
+  const [notaVis,   setNotaVis]   = useState<string>(savedSnap?.avaliando?.notaVis   ? String(savedSnap.avaliando.notaVis)   : '100')
 
   // ─── benfeitorias + CUB ───────────────────────────────────────────────────
-  const [cubR8N,       setCubR8N]      = useState<string>(savedSnap?.cubR8N?.toString() ?? '')
-  const [benfeitorias, setBenfeitorias] = useState<BenfeitoriaCUB[]>(() =>
-    savedSnap?.benfeitoriasInput?.length > 0 ? savedSnap.benfeitoriasInput : []
-  )
+  const [cubR8N,       setCubR8N]      = useState<string>(savedSnap?.cubR8N ? String(savedSnap.cubR8N) : '')
+  const [benfeitorias, setBenfeitorias] = useState<BenfeitoriaCUB[]>(() => {
+    const saved = savedSnap?.benfeitoriasInput
+    if (Array.isArray(saved) && saved.length > 0) {
+      return saved.map((b: any, i: number) => ({ ...benfInicial(i + 1), ...b }))
+    }
+    return []
+  })
 
   function updateElem(idx: number, campo: keyof ElementoEv, val: string) {
     setElementos(prev => prev.map((e,i) => i===idx ? {...e,[campo]:val} : e))
@@ -243,32 +252,40 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
   const valorFinal     = resultado.valorTerreno + totalBenfeitorias
   const valorArredond  = Math.round(valorFinal / 1000) * 1000
 
-  // ─── Snapshot → form (deps primitivos para evitar loop) ─────────────────
+  // ─── Snapshot → form: salva SEMPRE (inclusive dados parciais) ───────────
   useEffect(() => {
-    if (!setForm || resultado.N < 2) return
+    if (!setForm) return
     const snap = {
-      avaliando: { area: pn(areaAv), notaLocal: pn(notaLocal), notaTopo: pn(notaTopo), notaVis: pn(notaVis) },
-      cubR8N: pn(cubR8N),
+      // campos do avaliando como string para restaurar nos inputs
+      avaliando: {
+        area: areaAv, notaLocal, notaTopo, notaVis,
+      },
+      cubR8N,
+      // elementos brutos (com todos os campos preenchidos pelo usuário)
+      elementos,
       benfeitoriasInput: benfeitorias,
-      elementos: elementos.map((e, i) => {
-        const r = resultado.elementos[i]
-        if (!r) return null
-        return { ...e, vuTerreno: r.vu, fatorArea: r.fA, fatorLocal: r.fL,
-          fatorTopografia: r.fT, fatorVisibilidade: r.fV, coefGeral: r.coef, soma: r.soma, valido: r.valido }
-      }).filter(Boolean),
+      // resultado calculado (pode estar zerado se N < 2)
       benfeitorias: benfeitorias.map((b, i) => ({ ...b, ...(calcBenfeitorias[i] ?? {}) })),
-      resultado: { N: resultado.N, media: resultado.media, desvio: resultado.desvio,
+      resultado: resultado.N >= 2 ? {
+        N: resultado.N, media: resultado.media, desvio: resultado.desvio,
         T: resultado.T, resultIC: resultado.resultIC, minimo: resultado.minimo, maximo: resultado.maximo,
         lim30inf: resultado.lim30inf, lim30sup: resultado.lim30sup,
-        grauPrecisao: resultado.grauPrecisao, intervaloConfianca: resultado.intervaloConfianca },
-      valorTerreno: resultado.valorTerreno, valorBenfeitorias: totalBenfeitorias,
+        grauPrecisao: resultado.grauPrecisao, intervaloConfianca: resultado.intervaloConfianca,
+      } : null,
+      valorTerreno: resultado.valorTerreno,
+      valorBenfeitorias: totalBenfeitorias,
       valorFinal, valorArredondado: valorArredond,
     }
     setForm((prev: any) => ({
       ...prev,
       dadosCalculoEvolutivo: snap,
-      valorTerreno: resultado.valorTerreno > 0 ? resultado.valorTerreno.toFixed(2).replace('.',',') : prev.valorTerreno,
-      valorBenfeitorias: totalBenfeitorias > 0 ? totalBenfeitorias.toFixed(2).replace('.',',') : prev.valorBenfeitorias,
+      // só preenche valorTerreno/Benfeitorias se há resultado válido
+      ...(resultado.valorTerreno > 0 && {
+        valorTerreno: resultado.valorTerreno.toFixed(2).replace('.', ','),
+      }),
+      ...(totalBenfeitorias > 0 && {
+        valorBenfeitorias: totalBenfeitorias.toFixed(2).replace('.', ','),
+      }),
     }))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elementos, areaAv, notaLocal, notaTopo, notaVis, benfeitorias, cubR8N])
