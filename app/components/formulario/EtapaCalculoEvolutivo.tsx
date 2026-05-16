@@ -75,6 +75,19 @@ function pn(s: any): number {
   if (typeof s === 'number') return isFinite(s) ? s : 0
   return parseFloat(String(s).replace(/[R$\s.]/g, '').replace(',', '.')) || 0
 }
+// Para campos decimais pequenos (Pc, R, fatorOferta) onde ponto = decimal (não milhar)
+// Ex: "0.456" → 0.456  |  "0,456" → 0.456  |  "0,4560" → 0.456
+function pnDec(s: any): number {
+  if (s == null || s === '') return 0
+  if (typeof s === 'number') return isFinite(s) ? s : 0
+  const str = String(s).replace(/[R$\s]/g, '').trim()
+  if (str.includes(',')) {
+    // BR: vírgula é decimal, pontos são milhar → remove pontos, troca vírgula
+    return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0
+  }
+  // Sem vírgula: ponto é decimal (ex: "0.456", "0.1")
+  return parseFloat(str) || 0
+}
 // Para o CUB: aceita vírgula OU ponto decimal (ex: 2111,61 ou 2111.61)
 // Detecta se há vírgula → formato BR; senão trata o último ponto como decimal
 function pnCub(s: any): number {
@@ -105,6 +118,13 @@ function round3(v: number) { return Math.round(v/0.001)*0.001 }
 function fmtBR(s: any, dec = 2): string {
   const n = pn(s)
   if (!n || !isFinite(n)) return String(s ?? '')
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec })
+}
+// Para campos decimais pequenos (Pc, R) onde ponto = decimal
+function fmtBRDec(s: any, dec = 4): string {
+  const n = pnDec(s)
+  if (n === 0 && String(s).trim() === '0') return '0'  // preserva zero explícito
+  if (!isFinite(n)) return String(s ?? '')
   return n.toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec })
 }
 function getPadrao(p: string) { return PADRAO_TABLE[p] ?? { Pc:1, Ir:60, R:0.2 } }
@@ -158,13 +178,13 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
     if (Array.isArray(saved) && saved.length > 0) {
       return saved.map((b: any, i: number) => {
         const base: BenfeitoriaCUB = { ...benfInicial(i + 1), ...b }
-        // Pré-preenche pc/ir/r da tabela Antigo quando estão ausentes ou com valor inválido
+        // SEMPRE pré-preenche pc/ir/r da tabela Antigo ao inicializar
+        // Isso garante que snapshots salvos com tabela errada (Novo) sejam corrigidos
         if (base.padrao) {
           const t = getPadrao(base.padrao)
-          const isBlank = (v: string) => !v || v === '0' || v === ''
-          if (isBlank(base.pc)) base.pc = t.Pc.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
-          if (isBlank(base.ir)) base.ir = String(t.Ir)
-          if (isBlank(base.r))  base.r  = t.R.toLocaleString('pt-BR',  { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+          base.pc = t.Pc.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+          base.ir = String(t.Ir)
+          base.r  = t.R.toLocaleString('pt-BR',  { minimumFractionDigits: 4, maximumFractionDigits: 4 })
         }
         return base
       })
@@ -284,9 +304,13 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
       if (!b.area || !b.idadeReal) return null
       // Usa valores editáveis do usuário; fallback para tabela se não preenchido
       const tabela = getPadrao(b.padrao)
-      const Pc  = pn(b.pc)  || tabela.Pc
-      const Ir  = pn(b.ir)  || tabela.Ir
-      const R   = pn(b.r)   || tabela.R
+      // pnDec: aceita ponto como decimal (ex: "0.456" → 0.456) — correto para Pc e R
+      // Verificação explícita de string: "" → usa tabela; "0" → usa 0 (intenção do usuário)
+      // Como init SEMPRE preenche pc/ir/r da tabela, estes campos nunca ficam vazios.
+      // pnDec aceita tanto "0,1000" (BR) quanto "0.1" (inglês) para Pc e R.
+      const Pc  = pnDec(b.pc) || tabela.Pc
+      const Ir  = pn(b.ir)    || tabela.Ir
+      const R   = b.r && b.r.trim() !== '' ? pnDec(b.r) : tabela.R
       const area = pn(b.area)
       const Ie   = pn(b.idadeReal)
       const pctVida = Ir > 0 ? Math.min(Ie/Ir, 1) * 100 : 0
@@ -511,7 +535,7 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                         <label className={lbl}>Fator oferta</label>
                         <input className={inp} value={e.fatorOferta}
                           onChange={up('fatorOferta')}
-                          onBlur={ev=>updateElem(abaAtiva,'fatorOferta',fmtBR(ev.target.value,4))}
+                          onBlur={ev=>updateElem(abaAtiva,'fatorOferta',fmtBRDec(ev.target.value,4))}
                           placeholder="0,9000"/>
                       </div>
                       <div><label className={lbl}>V.U. terreno (R$/m²)</label>
@@ -798,7 +822,7 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                         <label className={lbl}>Pc — Coef. Padrão Construtivo</label>
                         <input className={inp} value={b.pc}
                           onChange={e=>updateBenf(i,'pc',e.target.value)}
-                          onBlur={ev=>updateBenf(i,'pc',fmtBR(ev.target.value,4))}
+                          onBlur={ev=>updateBenf(i,'pc',fmtBRDec(ev.target.value,4))}
                           placeholder="0,4560"/>
                       </div>
                       <div>
@@ -812,7 +836,7 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                         <label className={lbl}>R — Valor residual</label>
                         <input className={inp} value={b.r}
                           onChange={e=>updateBenf(i,'r',e.target.value)}
-                          onBlur={ev=>updateBenf(i,'r',fmtBR(ev.target.value,4))}
+                          onBlur={ev=>updateBenf(i,'r',fmtBRDec(ev.target.value,4))}
                           placeholder="0,1000"/>
                       </div>
                       <div><label className={lbl}>Área construída (m²)</label>
@@ -837,7 +861,7 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                         <div className="mt-3 bg-blue-50 border border-blue-100 rounded-xl p-3">
                           <p className="text-[10px] text-blue-600 font-semibold uppercase tracking-wide mb-2">Resultados calculados</p>
                           <div className="grid grid-cols-8 gap-2 text-xs text-center">
-                            {[
+                            {([
                               ['Pc', fmt(r.Pc, 4)],
                               ['Ir', String(r.Ir)],
                               ['R', fmt(r.R, 4)],
@@ -846,7 +870,7 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                               ['Ec', fmt(r.Ec * 100, 4) + '%'],
                               ['K', fmt(r.K, 5)],
                               ['Foc', fmt(r.Foc, 5)],
-                            ].map(([l,v])=>(
+                            ] as [string,string][]).map(([l,v])=>(
                               <div key={l} className="bg-white rounded-lg p-2">
                                 <p className="text-slate-400 mb-1 text-[10px]">{l}</p>
                                 <p className="font-semibold text-blue-800">{v}</p>
