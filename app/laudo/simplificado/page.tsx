@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { buscarLaudo, definirLaudoAtual, limparLaudoAtual, obterLaudoAtual, salvarLaudo } from '@/lib/laudos-storage'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import MenuEtapasSimpl from '../../components/formulario/simplificado/MenuEtapasSimpl'
 import NavegacaoEtapasSimpl from '../../components/formulario/simplificado/NavegacaoEtapasSimpl'
 import Etapa01A06Simpl from '../../components/formulario/simplificado/Etapa01A06Simpl'
@@ -18,6 +18,33 @@ import EtapaAnexosAssinaturaSimpl from '../../components/formulario/simplificado
 import { EtapaIdSimpl } from '../../components/formulario/simplificado/etapas-simplificado'
 import AppShell from '../../components/AppShell'
 
+
+
+// ── ErrorBoundary para capturar crashes do EtapaCalculoEvolutivo ──────────────
+class EtapaEvolutivoErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  constructor(props: any) {
+    super(props)
+    this.state = { error: null }
+  }
+  static getDerivedStateFromError(error: Error) { return { error } }
+  componentDidCatch(error: Error, info: any) { console.error('[Evolutivo]', error, info) }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+          <p className="font-semibold text-red-700 mb-2">Erro ao carregar o cálculo evolutivo</p>
+          <pre className="text-xs text-red-600 whitespace-pre-wrap">{this.state.error.message}</pre>
+          <button type="button" onClick={() => this.setState({ error: null })}
+            className="mt-3 text-xs text-red-600 underline">Tentar novamente</button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 export default function LaudoSimplificadoPage() {
   const fatoresDisponiveis = [
@@ -804,7 +831,11 @@ export default function LaudoSimplificadoPage() {
           {/* ── SEÇÃO 10: METODOLOGIA — evolutivo ou CDDM conforme método selecionado ── */}
           {etapaAtual === '9.1' && (
             (form.metodoAvaliacao === 'evolutivo' && form.tratamentoDados === 'tratamento_por_fatores')
-              ? <EtapaCalculoEvolutivo form={form} setForm={setForm} />
+              ? (
+              <EtapaEvolutivoErrorBoundary>
+                <EtapaCalculoEvolutivo form={form} setForm={setForm} />
+              </EtapaEvolutivoErrorBoundary>
+            )
               : <EtapaCalculoCDDM form={form} setForm={setForm} fatoresCDDMAtivos={(form as any).fatoresCDDMAtivos} />
           )}
 
