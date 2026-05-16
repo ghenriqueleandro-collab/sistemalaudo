@@ -384,8 +384,15 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
   )
 
   // ─── Valor Final ──────────────────────────────────────────────────────────
-  const valorFinal     = resultado.valorTerreno + totalBenfeitorias
-  const valorArredond  = Math.round(valorFinal / 1000) * 1000
+  const valorFinal = resultado.valorTerreno + totalBenfeitorias
+  // Arredondamento por 3 algarismos significativos
+  // Ex: R$ 18.613.577,40 → R$ 18.600.000,00
+  const valorArredond = (() => {
+    if (!valorFinal || valorFinal <= 0) return 0
+    const exp = Math.floor(Math.log10(valorFinal)) - 2
+    const mag = Math.pow(10, exp)
+    return Math.round(valorFinal / mag) * mag
+  })()
 
   // ─── Snapshot → form: salva SEMPRE (inclusive dados parciais) ───────────
   useEffect(() => {
