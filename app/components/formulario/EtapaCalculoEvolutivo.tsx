@@ -175,8 +175,8 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
       const vu = (vO * fO - bE) / aE
       if (vu <= 0) return null
 
-      // Fator Área: E5 = ROUND((ratio^exp)/0.001,0)*0.001
-      const ratio = av > 0 ? aE/av : 1
+      // Fator Área: ratio = av/elem (avaliando sobre elemento)
+      const ratio = aE > 0 ? av/aE : 1
       const fA    = round3(Math.pow(ratio, (ratio<0.7||ratio>1.3) ? 0.125 : 0.25))
 
       // Fator Local, Topografia, Visibilidade: Cav/Celem
