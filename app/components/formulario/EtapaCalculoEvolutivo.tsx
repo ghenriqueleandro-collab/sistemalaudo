@@ -158,12 +158,13 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
     if (Array.isArray(saved) && saved.length > 0) {
       return saved.map((b: any, i: number) => {
         const base: BenfeitoriaCUB = { ...benfInicial(i + 1), ...b }
-        // Se padrão existe mas pc/ir/r estão vazios → pré-preenche da tabela
-        if (base.padrao && (!base.pc || !base.ir || !base.r)) {
+        // Pré-preenche pc/ir/r da tabela Antigo quando estão ausentes ou com valor inválido
+        if (base.padrao) {
           const t = getPadrao(base.padrao)
-          if (!base.pc) base.pc = t.Pc.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
-          if (!base.ir) base.ir = String(t.Ir)
-          if (!base.r)  base.r  = t.R.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+          const isBlank = (v: string) => !v || v === '0' || v === ''
+          if (isBlank(base.pc)) base.pc = t.Pc.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+          if (isBlank(base.ir)) base.ir = String(t.Ir)
+          if (isBlank(base.r))  base.r  = t.R.toLocaleString('pt-BR',  { minimumFractionDigits: 4, maximumFractionDigits: 4 })
         }
         return base
       })
@@ -188,6 +189,21 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
   function removeBenf(idx: number) { setBenfeitorias(prev => prev.filter((_,i)=>i!==idx).map((b,i)=>({...b,id:i+1}))) }
   function updateBenf(idx: number, campo: keyof BenfeitoriaCUB, val: string) {
     setBenfeitorias(prev => prev.map((b,i)=>i===idx ? {...b,[campo]:val} : b))
+  }
+  // Atualização ATÔMICA ao selecionar padrão — evita condições de corrida com múltiplos setState
+  function selecionarPadrao(idx: number, padrao: string) {
+    setBenfeitorias(prev => prev.map((b, i) => {
+      if (i !== idx) return b
+      if (!padrao) return { ...b, padrao: '' }
+      const t = getPadrao(padrao)
+      return {
+        ...b,
+        padrao,
+        pc: t.Pc.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }),
+        ir: String(t.Ir),
+        r:  t.R.toLocaleString('pt-BR',  { minimumFractionDigits: 4, maximumFractionDigits: 4 }),
+      }
+    }))
   }
 
   // ─── Motor de cálculo: terreno ────────────────────────────────────────────
@@ -765,17 +781,8 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                           onChange={e=>updateBenf(i,'descricao',e.target.value)}
                           placeholder="Ex: Cobertura de bombas"/></div>
                       <div className="col-span-2"><label className={lbl}>Padrão construtivo (ref_padrao Antigo)</label>
-                        <select className={inp} value={b.padrao} onChange={e=>{
-                          const p = e.target.value
-                          updateBenf(i,'padrao',p)
-                          if (p) {
-                            const t = getPadrao(p)
-                            // Pré-preenche Pc, Ir, R da tabela (usuário pode editar depois)
-                            updateBenf(i,'pc', fmt(t.Pc,4))
-                            updateBenf(i,'ir', String(t.Ir))
-                            updateBenf(i,'r',  fmt(t.R,4))
-                          }
-                        }}>
+                        <select className={inp} value={b.padrao}
+                          onChange={e => selecionarPadrao(i, e.target.value)}>
                           <option value="">Selecione…</option>
                           {PADRAO_GRUPOS.map(g => (
                             <optgroup key={g.grupo} label={g.grupo}>
