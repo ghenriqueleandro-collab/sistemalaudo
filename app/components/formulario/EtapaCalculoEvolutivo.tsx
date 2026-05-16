@@ -71,6 +71,19 @@ function pn(s: any): number {
   if (typeof s === 'number') return isFinite(s) ? s : 0
   return parseFloat(String(s).replace(/[R$\s.]/g, '').replace(',', '.')) || 0
 }
+// Para o CUB: aceita vírgula OU ponto decimal (ex: 2111,61 ou 2111.61)
+// Detecta se há vírgula → formato BR; senão trata o último ponto como decimal
+function pnCub(s: any): number {
+  if (s == null || s === '') return 0
+  if (typeof s === 'number') return isFinite(s) ? s : 0
+  const str = String(s).replace(/[R$\s]/g, '').trim()
+  if (str.includes(',')) {
+    // Formato BR: pontos são separadores de milhar, vírgula é decimal
+    return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0
+  }
+  // Sem vírgula: pontos são decimais (ex: 2111.61) ou sem decimal (ex: 2111)
+  return parseFloat(str) || 0
+}
 function fmt(v: number, dec = 2) {
   if (!isFinite(v)||isNaN(v)) return '-'
   return v.toLocaleString('pt-BR',{minimumFractionDigits:dec,maximumFractionDigits:dec})
@@ -230,7 +243,7 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
 
   // ─── Motor de cálculo: benfeitorias ──────────────────────────────────────
   const calcBenfeitorias = useMemo(() => {
-    const cub = pn(cubR8N)
+    const cub = pnCub(cubR8N)
     return benfeitorias.map(b => {
       if (!b.padrao || !b.area || !b.idadeReal) return null
       const { Pc, Ir, R } = getPadrao(b.padrao)
