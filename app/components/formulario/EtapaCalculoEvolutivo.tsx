@@ -66,9 +66,10 @@ type Props = {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-function pn(s: string): number {
-  if (!s) return 0
-  return parseFloat(s.replace(/[R$\s.]/g, '').replace(',', '.')) || 0
+function pn(s: any): number {
+  if (s == null || s === '') return 0
+  if (typeof s === 'number') return isFinite(s) ? s : 0
+  return parseFloat(String(s).replace(/[R$\s.]/g, '').replace(',', '.')) || 0
 }
 function fmt(v: number, dec = 2) {
   if (!isFinite(v)||isNaN(v)) return '-'
@@ -117,10 +118,10 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
   const [mostrarCalc, setMostrarCalc] = useState<'cddm'|'benf'>('cddm')
 
   // ─── avaliando (editável) ─────────────────────────────────────────────────
-  const [areaAv,    setAreaAv]    = useState<string>(savedSnap?.avaliando?.area     ?? form?.areaTerrenoTotal ?? '')
-  const [notaLocal, setNotaLocal] = useState<string>(savedSnap?.avaliando?.notaLocal ?? '100')
-  const [notaTopo,  setNotaTopo]  = useState<string>(savedSnap?.avaliando?.notaTopo  ?? '100')
-  const [notaVis,   setNotaVis]   = useState<string>(savedSnap?.avaliando?.notaVis   ?? '100')
+  const [areaAv,    setAreaAv]    = useState<string>(savedSnap?.avaliando?.area     != null ? String(savedSnap.avaliando.area)     : (form?.areaTerrenoTotal ?? ''))
+  const [notaLocal, setNotaLocal] = useState<string>(savedSnap?.avaliando?.notaLocal != null ? String(savedSnap.avaliando.notaLocal) : '100')
+  const [notaTopo,  setNotaTopo]  = useState<string>(savedSnap?.avaliando?.notaTopo  != null ? String(savedSnap.avaliando.notaTopo)  : '100')
+  const [notaVis,   setNotaVis]   = useState<string>(savedSnap?.avaliando?.notaVis   != null ? String(savedSnap.avaliando.notaVis)   : '100')
 
   // ─── benfeitorias + CUB ───────────────────────────────────────────────────
   const [cubR8N,       setCubR8N]      = useState<string>(savedSnap?.cubR8N?.toString() ?? '')
