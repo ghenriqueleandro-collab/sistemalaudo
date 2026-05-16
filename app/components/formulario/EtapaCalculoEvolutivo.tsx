@@ -137,9 +137,9 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
 
   // ─── avaliando (editável) ─────────────────────────────────────────────────
   const [areaAv,    setAreaAv]    = useState<string>(savedSnap?.avaliando?.area     ? String(savedSnap.avaliando.area)     : (form?.areaTerrenoTotal ?? ''))
-  const [notaLocal, setNotaLocal] = useState<string>(savedSnap?.avaliando?.notaLocal ? String(savedSnap.avaliando.notaLocal) : '100')
-  const [notaTopo,  setNotaTopo]  = useState<string>(savedSnap?.avaliando?.notaTopo  ? String(savedSnap.avaliando.notaTopo)  : '100')
-  const [notaVis,   setNotaVis]   = useState<string>(savedSnap?.avaliando?.notaVis   ? String(savedSnap.avaliando.notaVis)   : '100')
+  const [notaLocal, setNotaLocal] = useState<string>(savedSnap?.avaliando?.notaLocal ? String(savedSnap.avaliando.notaLocal) : (form?.notaLocalAvaliando || '100'))
+  const [notaTopo,  setNotaTopo]  = useState<string>(savedSnap?.avaliando?.notaTopo  ? String(savedSnap.avaliando.notaTopo)  : (form?.notaTopografiaAvaliando || '100'))
+  const [notaVis,   setNotaVis]   = useState<string>(savedSnap?.avaliando?.notaVis   ? String(savedSnap.avaliando.notaVis)   : (form?.notaVisibilidadeAvaliando || '100'))
 
   // ─── benfeitorias + CUB ───────────────────────────────────────────────────
   const [cubR8N,       setCubR8N]      = useState<string>(savedSnap?.cubR8N ? String(savedSnap.cubR8N) : '')

@@ -744,7 +744,41 @@ export default function Etapa01A06({
       </SectionCard>
 
       {/* ── Dados do avaliando para cálculo CDDM ──────────────────────────────── */}
-      <SectionCard title="Dados do avaliando para cálculo CDDM">
+      {form.metodoAvaliacao === 'evolutivo' ? (
+        <SectionCard title="Dados do avaliando — Método Evolutivo">
+          <p className="text-xs text-slate-400 mb-4">
+            Variáveis do avaliando usadas no cálculo VEIU (Terreno). Nota 100 = referência neutra.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <FieldLabel>Área de terreno (m²)</FieldLabel>
+              <div className={inputCls() + ' bg-slate-50 text-slate-500 cursor-default'}>
+                {form.areaTerrenoTotal || '—'}
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1">Preenchida automaticamente das áreas acima.</p>
+            </div>
+            <div>
+              <FieldLabel>Nota local (avaliando)</FieldLabel>
+              <input name="notaLocalAvaliando" type="number" placeholder="100"
+                value={form.notaLocalAvaliando || ''} onChange={handleChange} className={inputCls()} />
+              <p className="text-[11px] text-slate-400 mt-1">Índice de localização. 100 = neutro.</p>
+            </div>
+            <div>
+              <FieldLabel>Nota topografia (avaliando)</FieldLabel>
+              <input name="notaTopografiaAvaliando" type="number" placeholder="100"
+                value={form.notaTopografiaAvaliando || ''} onChange={handleChange} className={inputCls()} />
+              <p className="text-[11px] text-slate-400 mt-1">Plano = 100. Declive/aclive menor que 100.</p>
+            </div>
+            <div>
+              <FieldLabel>Nota visibilidade (avaliando)</FieldLabel>
+              <input name="notaVisibilidadeAvaliando" type="number" placeholder="100"
+                value={form.notaVisibilidadeAvaliando || ''} onChange={handleChange} className={inputCls()} />
+              <p className="text-[11px] text-slate-400 mt-1">Alta visibilidade = 100. Encravado menor que 100.</p>
+            </div>
+          </div>
+        </SectionCard>
+      ) : (
+        <SectionCard title="Dados do avaliando para cálculo CDDM">
         <p className="text-xs text-slate-400 mb-4">
           Ative ou desative cada fator. Fatores desativados são fixados em 1,0 no cálculo e removidos da seção de elementos comparativos.
         </p>
@@ -872,6 +906,7 @@ export default function Etapa01A06({
           </div>
         </div>
       </SectionCard>
+      )}
 
       {/* ── Especificações de divisões ────────────────────────────────────────── */}
       <SectionCard title="Especificações de divisões">
