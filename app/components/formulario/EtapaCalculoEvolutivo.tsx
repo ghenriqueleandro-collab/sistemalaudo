@@ -58,7 +58,11 @@ type ElementoEv = {
   fonte: string; telefone: string; link: string; data: string; tipoOferta: string; observacoes: string
 }
 type BenfeitoriaCUB = {
-  id: number; descricao: string; padrao: string; area: string; idadeReal: string; estadoConservacao: string
+  id: number; descricao: string; padrao: string
+  pc: string   // Coef. Padrão — pré-preenchido da tabela, editável
+  ir: string   // Vida referencial (anos) — pré-preenchido da tabela, editável
+  r: string    // Valor residual — pré-preenchido da tabela, editável
+  area: string; idadeReal: string; estadoConservacao: string
 }
 type Props = {
   form: any
@@ -122,7 +126,7 @@ function elemInicial(id: number): ElementoEv {
 }
 
 function benfInicial(id: number): BenfeitoriaCUB {
-  return { id, descricao:'', padrao:'', area:'', idadeReal:'', estadoConservacao:'C' }
+  return { id, descricao:'', padrao:'', pc:'', ir:'', r:'', area:'', idadeReal:'', estadoConservacao:'C' }
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -251,14 +255,19 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
   const calcBenfeitorias = useMemo(() => {
     const cub = pnCub(cubR8N)
     return benfeitorias.map(b => {
-      if (!b.padrao || !b.area || !b.idadeReal) return null
-      const { Pc, Ir, R } = getPadrao(b.padrao)
+      if (!b.area || !b.idadeReal) return null
+      // Usa valores editáveis do usuário; fallback para tabela se não preenchido
+      const tabela = getPadrao(b.padrao)
+      const Pc  = pn(b.pc)  || tabela.Pc
+      const Ir  = pn(b.ir)  || tabela.Ir
+      const R   = pn(b.r)   || tabela.R
       const area = pn(b.area)
       const Ie   = pn(b.idadeReal)
+      const pctVida = Ir > 0 ? Math.min(Ie/Ir, 1) * 100 : 0
       const { Ka, Ec, K, Foc } = calcKaFoc(Ie, Ir, b.estadoConservacao, R)
       // P = ROUND(CUB × Pc × Área × Foc, 2)  — fórmula exata da planilha
       const valor = Math.round(cub * Pc * area * Foc * 100) / 100
-      return { Pc, Ir, R, Ka, Ec, K, Foc, valor }
+      return { Pc, Ir, R, pctVida, Ka, Ec, K, Foc, valor }
     })
   }, [benfeitorias, cubR8N])
 
@@ -745,8 +754,18 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                         <input className={inp} value={b.descricao}
                           onChange={e=>updateBenf(i,'descricao',e.target.value)}
                           placeholder="Ex: Cobertura de bombas"/></div>
-                      <div className="col-span-2"><label className={lbl}>Padrão construtivo</label>
-                        <select className={inp} value={b.padrao} onChange={e=>updateBenf(i,'padrao',e.target.value)}>
+                      <div className="col-span-2"><label className={lbl}>Padrão construtivo (ref_padrao Antigo)</label>
+                        <select className={inp} value={b.padrao} onChange={e=>{
+                          const p = e.target.value
+                          updateBenf(i,'padrao',p)
+                          if (p) {
+                            const t = getPadrao(p)
+                            // Pré-preenche Pc, Ir, R da tabela (usuário pode editar depois)
+                            updateBenf(i,'pc', fmt(t.Pc,4))
+                            updateBenf(i,'ir', String(t.Ir))
+                            updateBenf(i,'r',  fmt(t.R,4))
+                          }
+                        }}>
                           <option value="">Selecione…</option>
                           {PADRAO_GRUPOS.map(g => (
                             <optgroup key={g.grupo} label={g.grupo}>
@@ -756,6 +775,28 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                             </optgroup>
                           ))}
                         </select>
+                      </div>
+                      {/* Pc, Ir, R — pré-preenchidos da tabela Antigo, editáveis */}
+                      <div>
+                        <label className={lbl}>Pc — Coef. Padrão Construtivo</label>
+                        <input className={inp} value={b.pc}
+                          onChange={e=>updateBenf(i,'pc',e.target.value)}
+                          onBlur={ev=>updateBenf(i,'pc',fmtBR(ev.target.value,4))}
+                          placeholder="0,4560"/>
+                      </div>
+                      <div>
+                        <label className={lbl}>Ir — Vida referencial (anos)</label>
+                        <input className={inp} value={b.ir}
+                          onChange={e=>updateBenf(i,'ir',e.target.value)}
+                          onBlur={ev=>updateBenf(i,'ir',fmtBR(ev.target.value,0))}
+                          placeholder="30"/>
+                      </div>
+                      <div>
+                        <label className={lbl}>R — Valor residual</label>
+                        <input className={inp} value={b.r}
+                          onChange={e=>updateBenf(i,'r',e.target.value)}
+                          onBlur={ev=>updateBenf(i,'r',fmtBR(ev.target.value,4))}
+                          placeholder="0,1000"/>
                       </div>
                       <div><label className={lbl}>Área construída (m²)</label>
                         <input className={inp} value={b.area}
@@ -774,20 +815,30 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                       </div>
                     </div>
 
-                    {r && b.padrao && b.area && b.idadeReal && (() => {
-                      const d = getPadrao(b.padrao)
+                    {r && b.area && b.idadeReal && (() => {
                       return (
-                        <div className="mt-3 bg-slate-50 rounded-lg p-3">
-                          <div className="grid grid-cols-7 gap-2 text-xs text-center">
-                            {[['Pc',fmt(d.Pc,3)],['Ir (anos)',String(d.Ir)],['R',fmt(d.R,1)],
-                              ['Ka',fmt(r.Ka,5)],['K',fmt(r.K,5)],['Foc',fmt(r.Foc,5)],
-                              ['Valor',fmtM(r.valor)]
+                        <div className="mt-3 bg-blue-50 border border-blue-100 rounded-xl p-3">
+                          <p className="text-[10px] text-blue-600 font-semibold uppercase tracking-wide mb-2">Resultados calculados</p>
+                          <div className="grid grid-cols-8 gap-2 text-xs text-center">
+                            {[
+                              ['Pc', fmt(r.Pc, 4)],
+                              ['Ir', String(r.Ir)],
+                              ['R', fmt(r.R, 4)],
+                              ['%v (Ie/Ir)', fmt(r.pctVida, 1) + '%'],
+                              ['Ka', fmt(r.Ka, 5)],
+                              ['Ec', fmt(r.Ec * 100, 4) + '%'],
+                              ['K', fmt(r.K, 5)],
+                              ['Foc', fmt(r.Foc, 5)],
                             ].map(([l,v])=>(
-                              <div key={l}>
-                                <p className="text-slate-400 mb-1">{l}</p>
-                                <p className="font-semibold text-slate-800">{v}</p>
+                              <div key={l} className="bg-white rounded-lg p-2">
+                                <p className="text-slate-400 mb-1 text-[10px]">{l}</p>
+                                <p className="font-semibold text-blue-800">{v}</p>
                               </div>
                             ))}
+                          </div>
+                          <div className="mt-2 bg-blue-600 text-white rounded-lg px-4 py-2 flex justify-between items-center">
+                            <span className="text-xs opacity-80">Valor da edificação = CUB × Pc × Área × Foc</span>
+                            <span className="text-base font-bold">{fmtM(r.valor)}</span>
                           </div>
                         </div>
                       )
