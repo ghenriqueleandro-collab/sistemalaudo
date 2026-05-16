@@ -116,6 +116,7 @@ type ElementoEv = {
 }
 type BenfeitoriaCUB = {
   id: number; descricao: string; padrao: string
+  cub: string  // CUB R8N da edificação (R$/m²) — individual por edificação
   pc: string   // Coef. Padrão — pré-preenchido da tabela, editável
   ir: string   // Vida referencial (anos) — pré-preenchido da tabela, editável
   r: string    // Valor residual — pré-preenchido da tabela, editável
@@ -203,7 +204,7 @@ function elemInicial(id: number): ElementoEv {
 }
 
 function benfInicial(id: number): BenfeitoriaCUB {
-  return { id, descricao:'', padrao:'', pc:'', ir:'', r:'', area:'', idadeReal:'', estadoConservacao:'C' }
+  return { id, descricao:'', padrao:'', cub:'', pc:'', ir:'', r:'', area:'', idadeReal:'', estadoConservacao:'C' }
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -228,8 +229,7 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
   const [notaTopo,  setNotaTopo]  = useState<string>(savedSnap?.avaliando?.notaTopo  ? String(savedSnap.avaliando.notaTopo)  : (form?.notaTopografiaAvaliando || '100'))
   const [notaVis,   setNotaVis]   = useState<string>(savedSnap?.avaliando?.notaVis   ? String(savedSnap.avaliando.notaVis)   : (form?.notaVisibilidadeAvaliando || '100'))
 
-  // ─── benfeitorias + CUB ───────────────────────────────────────────────────
-  const [cubR8N,       setCubR8N]      = useState<string>(savedSnap?.cubR8N ? String(savedSnap.cubR8N) : '')
+  // ─── benfeitorias ──────────────────────────────────────────────────────────
   const [benfeitorias, setBenfeitorias] = useState<BenfeitoriaCUB[]>(() => {
     const saved = savedSnap?.benfeitoriasInput
     if (Array.isArray(saved) && saved.length > 0) {
@@ -356,9 +356,9 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
 
   // ─── Motor de cálculo: benfeitorias ──────────────────────────────────────
   const calcBenfeitorias = useMemo(() => {
-    const cub = pnCub(cubR8N)
     return benfeitorias.map(b => {
       if (!b.area || !b.idadeReal) return null
+      const cub = pnCub(b.cub)
       // Usa valores editáveis do usuário; fallback para tabela se não preenchido
       const tabela = getPadrao(b.padrao)
       // pnDec: aceita ponto como decimal (ex: "0.456" → 0.456) — correto para Pc e R
@@ -376,7 +376,7 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
       const valor = Math.round(cub * Pc * area * Foc * 100) / 100
       return { Pc, Ir, R, pctVida, Ka, Ec, K, Foc, valor }
     })
-  }, [benfeitorias, cubR8N])
+  }, [benfeitorias])
 
   const totalBenfeitorias = useMemo(() =>
     calcBenfeitorias.reduce((s, b) => s + (b?.valor ?? 0), 0),
@@ -395,7 +395,6 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
       avaliando: {
         area: areaAv, notaLocal, notaTopo, notaVis,
       },
-      cubR8N,
       // elementos brutos (com todos os campos preenchidos pelo usuário)
       elementos,
       benfeitoriasInput: benfeitorias,
@@ -423,7 +422,7 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
       }),
     }))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [elementos, areaAv, notaLocal, notaTopo, notaVis, benfeitorias, cubR8N])
+  }, [elementos, areaAv, notaLocal, notaTopo, notaVis, benfeitorias])
 
   // ─── Layout auxiliar ─────────────────────────────────────────────────────
   const inp = 'border border-slate-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white'
@@ -813,23 +812,6 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
       {mostrarCalc === 'benf' && (
         <div className="space-y-6">
 
-          {/* CUB */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-sm font-semibold text-slate-700 mb-3">CUB R8N de referência</p>
-            <div className="flex items-center gap-3">
-              <div className="w-56">
-                <label className={lbl}>CUB R8N (R$/m²) — preencha manualmente</label>
-                <input className={inp} value={cubR8N}
-                  onChange={e=>setCubR8N(e.target.value)}
-                  onBlur={e=>setCubR8N(fmtBR(e.target.value,2))}
-                  placeholder="2.111,61"/>
-              </div>
-              <p className="text-xs text-slate-400 mt-4">
-                Consulte o site da CBIC ou SINDUSCON do seu estado para o valor atualizado.
-              </p>
-            </div>
-          </div>
-
           {/* Tabela benfeitorias */}
           <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
             <div className="px-5 py-3 bg-blue-600 text-white text-xs font-semibold uppercase tracking-wide flex justify-between items-center">
@@ -861,7 +843,14 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                         <input className={inp} value={b.descricao}
                           onChange={e=>updateBenf(i,'descricao',e.target.value)}
                           placeholder="Ex: Cobertura de bombas"/></div>
-                      <div className="col-span-2"><label className={lbl}>Padrão construtivo (ref_padrao Antigo)</label>
+                      <div>
+                        <label className={lbl}>CUB R8N (R$/m²)</label>
+                        <input className={inp} value={b.cub}
+                          onChange={e=>updateBenf(i,'cub',e.target.value)}
+                          onBlur={ev=>updateBenf(i,'cub',fmtBR(ev.target.value,2))}
+                          placeholder="2.111,61"/>
+                      </div>
+                      <div><label className={lbl}>Padrão construtivo (ref_padrao Antigo)</label>
                         <select className={inp} value={b.padrao}
                           onChange={e => selecionarPadrao(i, e.target.value)}>
                           <option value="">Selecione…</option>
