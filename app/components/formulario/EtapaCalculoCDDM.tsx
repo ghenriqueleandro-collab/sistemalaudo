@@ -308,14 +308,14 @@ function calcularResultado(
     // VU = Valor Líquido / Área
     const vu = area > 0 ? (valOfer * fOfer) / area : 0
 
-    // Fator Área — fórmula da planilha (VEIU):
-    // ratio = areaAv / areaElem (avaliando sobre elemento)
-    // Se ratio < 0.7 ou > 1.3 → expoente 0.125; senão → 0.25
-    // Arredondado a 3 casas decimais como no Excel
+    // Fator Área — fórmula exata da planilha:
+    // E5 = ROUND((C5/C53)^exp / 0.001, 0) × 0.001
+    // onde C5 = área do elemento, C53 = área do avaliando → ratio = elem/av
+    // exp = 0.125 se ratio < 0.7 ou > 1.3; senão = 0.25
     const round3 = (v: number) => Math.round(v / 0.001) * 0.001
     const fatorArea = (() => {
       if (area <= 0 || areaAv <= 0) return 1
-      const ratio = areaAv / area
+      const ratio = area / areaAv
       return round3(Math.pow(ratio, (ratio < 0.7 || ratio > 1.3) ? 0.125 : 0.25))
     })()
 
