@@ -97,6 +97,12 @@ function fmtF(v: number) {
   return v.toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4})
 }
 function round3(v: number) { return Math.round(v/0.001)*0.001 }
+// Formata número em padrão BR ao sair do campo (onBlur)
+function fmtBR(s: any, dec = 2): string {
+  const n = pn(s)
+  if (!n || !isFinite(n)) return String(s ?? '')
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec })
+}
 function getPadrao(p: string) { return PADRAO_TABLE[p] ?? { Pc:1, Ir:60, R:0.2 } }
 // Ka VEIU: K=(1-0.5*(v+v²)) | Foc=R+K*(1-R)   (fórmulas exatas da planilha)
 function calcKaFoc(Ie: number, Ir: number, estadoConserv: string, R: number) {
@@ -111,7 +117,7 @@ function calcKaFoc(Ie: number, Ir: number, estadoConserv: string, R: number) {
 function elemInicial(id: number): ElementoEv {
   return { id, tipo:'Terreno', logradouro:'', bairro:'', cidade:'', uf:'', coordenadas:'',
     distancia:'', areaTerreno:'', areaConstruida:'', valorOferta:'', benfElem:'',
-    fatorOferta:'0,90', fatorLocal:'100', fatorTopografia:'100', fatorVisibilidade:'100',
+    fatorOferta:'0,9000', fatorLocal:'100,00', fatorTopografia:'100,00', fatorVisibilidade:'100,00',
     fonte:'', telefone:'', link:'', data:'', tipoOferta:'Venda', observacoes:'' }
 }
 
@@ -342,35 +348,33 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
             <div className="grid grid-cols-4 gap-3">
               <div>
                 <label className={lbl}>Área terreno (m²)</label>
-                <input className={inp} value={areaAv} onChange={e=>setAreaAv(e.target.value)} placeholder="6.680"/>
-                {/* Mostrar o valor interpretado pelo sistema para evitar confusão de formato */}
-                {pn(areaAv) > 0 && (
-                  <p className={`text-[10px] mt-1 font-medium ${pn(areaAv) > 100000 ? 'text-red-500' : 'text-blue-600'}`}>
-                    {pn(areaAv) > 100000
-                      ? `⚠ Sistema usa ${pn(areaAv).toLocaleString('pt-BR')} m² — confira o formato (use vírgula para decimal: ex. 6.677 = 6677 m²)`
-                      : `= ${pn(areaAv).toLocaleString('pt-BR')} m²`}
-                  </p>
-                )}
+                <input className={inp} value={areaAv}
+                  onChange={e=>setAreaAv(e.target.value)}
+                  onBlur={e=>setAreaAv(fmtBR(e.target.value, 2))}
+                  placeholder="6.680,00"/>
               </div>
               <div>
-                <label className={lbl}>Nota local</label>
-                <input className={inp} value={notaLocal} onChange={e=>setNotaLocal(e.target.value)} placeholder="100"/>
-                <p className="text-[10px] text-blue-600 mt-1">= {pn(notaLocal)||100}</p>
+                <label className={lbl}>Nota local (100=neutro)</label>
+                <input className={inp} value={notaLocal}
+                  onChange={e=>setNotaLocal(e.target.value)}
+                  onBlur={e=>setNotaLocal(fmtBR(e.target.value, 2))}
+                  placeholder="100,00"/>
               </div>
               <div>
-                <label className={lbl}>Nota topografia</label>
-                <input className={inp} value={notaTopo} onChange={e=>setNotaTopo(e.target.value)} placeholder="100"/>
-                <p className="text-[10px] text-blue-600 mt-1">= {pn(notaTopo)||100}</p>
+                <label className={lbl}>Nota topografia (100=neutro)</label>
+                <input className={inp} value={notaTopo}
+                  onChange={e=>setNotaTopo(e.target.value)}
+                  onBlur={e=>setNotaTopo(fmtBR(e.target.value, 2))}
+                  placeholder="100,00"/>
               </div>
               <div>
-                <label className={lbl}>Nota visibilidade</label>
-                <input className={inp} value={notaVis} onChange={e=>setNotaVis(e.target.value)} placeholder="100"/>
-                <p className="text-[10px] text-blue-600 mt-1">= {pn(notaVis)||100}</p>
+                <label className={lbl}>Nota visibilidade (100=neutro)</label>
+                <input className={inp} value={notaVis}
+                  onChange={e=>setNotaVis(e.target.value)}
+                  onBlur={e=>setNotaVis(fmtBR(e.target.value, 2))}
+                  placeholder="100,00"/>
               </div>
             </div>
-            <p className="text-xs text-blue-600 mt-2 opacity-75">
-              Nota 100 = padrão de referência. Use <strong>ponto como separador de milhar</strong> (ex: 6.677 = 6677 m²) e <strong>vírgula como decimal</strong>.
-            </p>
           </div>
 
           {/* Tabs de elementos */}
@@ -414,7 +418,13 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                       </select>
                     </div>
                     <div className="col-span-2"><label className={lbl}>Logradouro</label><input className={inp} value={e.logradouro} onChange={up('logradouro')}/></div>
-                    <div><label className={lbl}>Distância (km)</label><input className={inp} value={e.distancia} onChange={up('distancia')}/></div>
+                    <div>
+                      <label className={lbl}>Distância (km)</label>
+                      <input className={inp} value={e.distancia}
+                        onChange={up('distancia')}
+                        onBlur={ev=>updateElem(abaAtiva,'distancia',fmtBR(ev.target.value,3))}
+                        placeholder="0,000"/>
+                    </div>
                     <div><label className={lbl}>Bairro</label><input className={inp} value={e.bairro} onChange={up('bairro')}/></div>
                     <div><label className={lbl}>Cidade</label><input className={inp} value={e.cidade} onChange={up('cidade')}/></div>
                     <div><label className={lbl}>UF</label><input className={inp} value={e.uf} onChange={up('uf')}/></div>
@@ -426,15 +436,26 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                     <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Áreas e valores</p>
                     <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className={lbl}>Área de terreno (m²)</label>
-                        <input className={inp} value={e.areaTerreno} onChange={up('areaTerreno')} placeholder="4.000"/>
-                        {pn(e.areaTerreno) > 0 && <p className="text-[10px] text-slate-400 mt-0.5">= {pn(e.areaTerreno).toLocaleString('pt-BR')} m²</p>}
+                        <label className={lbl}>Área terreno (m²)</label>
+                        <input className={inp} value={e.areaTerreno}
+                          onChange={up('areaTerreno')}
+                          onBlur={ev=>updateElem(abaAtiva,'areaTerreno',fmtBR(ev.target.value,2))}
+                          placeholder="4.000,00"/>
                       </div>
-                      <div><label className={lbl}>Área construída (m²)</label><input className={inp} value={e.areaConstruida} onChange={up('areaConstruida')} placeholder="0"/></div>
+                      <div>
+                        <label className={lbl}>Área construída (m²)</label>
+                        <input className={inp} value={e.areaConstruida}
+                          onChange={up('areaConstruida')}
+                          onBlur={ev=>updateElem(abaAtiva,'areaConstruida',fmtBR(ev.target.value,2))}
+                          placeholder="0,00"/>
+                      </div>
                       {e.tipo === 'Terreno c/ benfeitoria' ? (
                         <div>
                           <label className={lbl}>Valor benfeitorias do elemento (R$)</label>
-                          <input className={inp} value={e.benfElem} onChange={up('benfElem')} placeholder="Ex: 150.000,00"/>
+                          <input className={inp} value={e.benfElem}
+                            onChange={up('benfElem')}
+                            onBlur={ev=>updateElem(abaAtiva,'benfElem',fmtBR(ev.target.value,2))}
+                            placeholder="150.000,00"/>
                           <p className="text-[10px] text-amber-600 mt-1">Será subtraído do valor de oferta antes de calcular o VU</p>
                         </div>
                       ) : (
@@ -446,10 +467,18 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                       )}
                       <div>
                         <label className={lbl}>Valor de oferta (R$)</label>
-                        <input className={inp} value={e.valorOferta} onChange={up('valorOferta')} placeholder="1.500.000"/>
-                        {pn(e.valorOferta) > 0 && <p className="text-[10px] text-slate-400 mt-0.5">= {pn(e.valorOferta).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</p>}
+                        <input className={inp} value={e.valorOferta}
+                          onChange={up('valorOferta')}
+                          onBlur={ev=>updateElem(abaAtiva,'valorOferta',fmtBR(ev.target.value,2))}
+                          placeholder="1.500.000,00"/>
                       </div>
-                      <div><label className={lbl}>Fator oferta</label><input className={inp} value={e.fatorOferta} onChange={up('fatorOferta')} placeholder="0,90"/></div>
+                      <div>
+                        <label className={lbl}>Fator oferta</label>
+                        <input className={inp} value={e.fatorOferta}
+                          onChange={up('fatorOferta')}
+                          onBlur={ev=>updateElem(abaAtiva,'fatorOferta',fmtBR(ev.target.value,4))}
+                          placeholder="0,9000"/>
+                      </div>
                       <div><label className={lbl}>V.U. terreno (R$/m²)</label>
                         <input className={inp+' bg-slate-50 text-blue-700 font-semibold'} readOnly
                           value={vu > 0 ? `R$ ${fmt(vu)}/m²` : '—'}/>
@@ -460,9 +489,27 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                   <div className="border-t border-slate-100 pt-3">
                     <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Fatores do elemento</p>
                     <div className="grid grid-cols-3 gap-3">
-                      <div><label className={lbl}>Fator local</label><input className={inp} value={e.fatorLocal} onChange={up('fatorLocal')} placeholder="100"/></div>
-                      <div><label className={lbl}>Fator topografia</label><input className={inp} value={e.fatorTopografia} onChange={up('fatorTopografia')} placeholder="100"/></div>
-                      <div><label className={lbl}>Fator visibilidade</label><input className={inp} value={e.fatorVisibilidade} onChange={up('fatorVisibilidade')} placeholder="100"/></div>
+                      <div>
+                        <label className={lbl}>Nota local (100=neutro)</label>
+                        <input className={inp} value={e.fatorLocal}
+                          onChange={up('fatorLocal')}
+                          onBlur={ev=>updateElem(abaAtiva,'fatorLocal',fmtBR(ev.target.value,2))}
+                          placeholder="100,00"/>
+                      </div>
+                      <div>
+                        <label className={lbl}>Nota topografia (100=neutro)</label>
+                        <input className={inp} value={e.fatorTopografia}
+                          onChange={up('fatorTopografia')}
+                          onBlur={ev=>updateElem(abaAtiva,'fatorTopografia',fmtBR(ev.target.value,2))}
+                          placeholder="100,00"/>
+                      </div>
+                      <div>
+                        <label className={lbl}>Nota visibilidade (100=neutro)</label>
+                        <input className={inp} value={e.fatorVisibilidade}
+                          onChange={up('fatorVisibilidade')}
+                          onBlur={ev=>updateElem(abaAtiva,'fatorVisibilidade',fmtBR(ev.target.value,2))}
+                          placeholder="100,00"/>
+                      </div>
                     </div>
                   </div>
 
@@ -658,7 +705,8 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                 <label className={lbl}>CUB R8N (R$/m²) — preencha manualmente</label>
                 <input className={inp} value={cubR8N}
                   onChange={e=>setCubR8N(e.target.value)}
-                  placeholder="Ex: 2.111,61"/>
+                  onBlur={e=>setCubR8N(fmtBR(e.target.value,2))}
+                  placeholder="2.111,61"/>
               </div>
               <p className="text-xs text-slate-400 mt-4">
                 Consulte o site da CBIC ou SINDUSCON do seu estado para o valor atualizado.
@@ -710,9 +758,15 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
                         </select>
                       </div>
                       <div><label className={lbl}>Área construída (m²)</label>
-                        <input className={inp} value={b.area} onChange={e=>updateBenf(i,'area',e.target.value)} placeholder="m²"/></div>
+                        <input className={inp} value={b.area}
+                          onChange={e=>updateBenf(i,'area',e.target.value)}
+                          onBlur={ev=>updateBenf(i,'area',fmtBR(ev.target.value,2))}
+                          placeholder="500,00"/></div>
                       <div><label className={lbl}>Idade real — Ie (anos)</label>
-                        <input className={inp} value={b.idadeReal} onChange={e=>updateBenf(i,'idadeReal',e.target.value)} placeholder="anos"/></div>
+                        <input className={inp} value={b.idadeReal}
+                          onChange={e=>updateBenf(i,'idadeReal',e.target.value)}
+                          onBlur={ev=>updateBenf(i,'idadeReal',fmtBR(ev.target.value,0))}
+                          placeholder="10"/></div>
                       <div><label className={lbl}>Estado de conservação</label>
                         <select className={inp} value={b.estadoConservacao} onChange={e=>updateBenf(i,'estadoConservacao',e.target.value)}>
                           {Object.entries(FOC_LABEL).map(([k,v])=><option key={k} value={k}>{v}</option>)}
