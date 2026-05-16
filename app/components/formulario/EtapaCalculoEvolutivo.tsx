@@ -242,42 +242,35 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
   const valorFinal     = resultado.valorTerreno + totalBenfeitorias
   const valorArredond  = Math.round(valorFinal / 1000) * 1000
 
-  // ─── Snapshot → form ──────────────────────────────────────────────────────
+  // ─── Snapshot → form (deps primitivos para evitar loop) ─────────────────
   useEffect(() => {
     if (!setForm || resultado.N < 2) return
+    const snap = {
+      avaliando: { area: pn(areaAv), notaLocal: pn(notaLocal), notaTopo: pn(notaTopo), notaVis: pn(notaVis) },
+      cubR8N: pn(cubR8N),
+      benfeitoriasInput: benfeitorias,
+      elementos: elementos.map((e, i) => {
+        const r = resultado.elementos[i]
+        if (!r) return null
+        return { ...e, vuTerreno: r.vu, fatorArea: r.fA, fatorLocal: r.fL,
+          fatorTopografia: r.fT, fatorVisibilidade: r.fV, coefGeral: r.coef, soma: r.soma, valido: r.valido }
+      }).filter(Boolean),
+      benfeitorias: benfeitorias.map((b, i) => ({ ...b, ...(calcBenfeitorias[i] ?? {}) })),
+      resultado: { N: resultado.N, media: resultado.media, desvio: resultado.desvio,
+        T: resultado.T, resultIC: resultado.resultIC, minimo: resultado.minimo, maximo: resultado.maximo,
+        lim30inf: resultado.lim30inf, lim30sup: resultado.lim30sup,
+        grauPrecisao: resultado.grauPrecisao, intervaloConfianca: resultado.intervaloConfianca },
+      valorTerreno: resultado.valorTerreno, valorBenfeitorias: totalBenfeitorias,
+      valorFinal, valorArredondado: valorArredond,
+    }
     setForm((prev: any) => ({
       ...prev,
-      dadosCalculoEvolutivo: {
-        avaliando: { area: pn(areaAv), notaLocal: pn(notaLocal), notaTopo: pn(notaTopo), notaVis: pn(notaVis) },
-        cubR8N: pn(cubR8N),
-        benfeitoriasInput: benfeitorias,
-        elementos: elementos.map((e, i) => {
-          const r = resultado.elementos[i]
-          if (!r) return null
-          return {
-            ...e,
-            vuTerreno: r.vu, fatorArea: r.fA, fatorLocal: r.fL,
-            fatorTopografia: r.fT, fatorVisibilidade: r.fV,
-            coefGeral: r.coef, soma: r.soma, valido: r.valido,
-          }
-        }).filter(Boolean),
-        benfeitorias: benfeitorias.map((b, i) => ({ ...b, ...(calcBenfeitorias[i] ?? {}) })),
-        resultado: {
-          N: resultado.N, media: resultado.media, desvio: resultado.desvio,
-          T: resultado.T, resultIC: resultado.resultIC,
-          minimo: resultado.minimo, maximo: resultado.maximo,
-          lim30inf: resultado.lim30inf, lim30sup: resultado.lim30sup,
-          grauPrecisao: resultado.grauPrecisao, intervaloConfianca: resultado.intervaloConfianca,
-        },
-        valorTerreno: resultado.valorTerreno,
-        valorBenfeitorias: totalBenfeitorias,
-        valorFinal, valorArredondado: valorArredond,
-      },
-      // Preenche seção 11 automaticamente
+      dadosCalculoEvolutivo: snap,
       valorTerreno: resultado.valorTerreno > 0 ? resultado.valorTerreno.toFixed(2).replace('.',',') : prev.valorTerreno,
       valorBenfeitorias: totalBenfeitorias > 0 ? totalBenfeitorias.toFixed(2).replace('.',',') : prev.valorBenfeitorias,
     }))
-  }, [resultado, totalBenfeitorias, benfeitorias, cubR8N])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elementos, areaAv, notaLocal, notaTopo, notaVis, benfeitorias, cubR8N])
 
   // ─── Layout auxiliar ─────────────────────────────────────────────────────
   const inp = 'border border-slate-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white'
