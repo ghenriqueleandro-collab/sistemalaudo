@@ -156,7 +156,17 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
   const [benfeitorias, setBenfeitorias] = useState<BenfeitoriaCUB[]>(() => {
     const saved = savedSnap?.benfeitoriasInput
     if (Array.isArray(saved) && saved.length > 0) {
-      return saved.map((b: any, i: number) => ({ ...benfInicial(i + 1), ...b }))
+      return saved.map((b: any, i: number) => {
+        const base: BenfeitoriaCUB = { ...benfInicial(i + 1), ...b }
+        // Se padrão existe mas pc/ir/r estão vazios → pré-preenche da tabela
+        if (base.padrao && (!base.pc || !base.ir || !base.r)) {
+          const t = getPadrao(base.padrao)
+          if (!base.pc) base.pc = t.Pc.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+          if (!base.ir) base.ir = String(t.Ir)
+          if (!base.r)  base.r  = t.R.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+        }
+        return base
+      })
     }
     return []
   })
