@@ -352,8 +352,13 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
     outliersDescartados: number
   } | undefined
 
+  const evSnap = (dados as any).dadosCalculoEvolutivo as { elementos: any[] } | undefined
+  const isEvolutivo = dados.metodoAvaliacao === 'evolutivo'
   const elementosCddm = cddm?.elementos || []
+  const elementosEv   = evSnap?.elementos || []
+  const elementosExibir: any[] = isEvolutivo ? elementosEv : elementosCddm
   const temCddm = elementosCddm.length > 0
+  const temElementos = elementosExibir.length > 0
 
   const capaMetodologia = dados.metodoAvaliacao==='evolutivo'?'Evolutivo':dados.metodoAvaliacao==='comparativo'?'Comparativo Direto':dados.metodoAvaliacao||'-'
 
@@ -587,7 +592,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
           </View>
 
           {/* Cards de elemento — blocos temáticos, até 3 colunas, campos vazios omitidos */}
-          {temCddm && elementosCddm.map((el: any, i: number) => {
+          {temElementos && elementosExibir.map((el: any, i: number) => {
             const valorOf  = el.valorOferta > 0 ? fm(el.valorOferta) : ''
             const valorLiq = el.valorOferta > 0 && el.fatorOferta
               ? fm(el.valorOferta * (parseFloat(String(el.fatorOferta).replace(',', '.')) || 1))
@@ -691,8 +696,10 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
               r3('Dormitórios', el.dormitorios > 0 ? el.dormitorios : '', 'Suítes', el.suites > 0 ? el.suites : '', 'Vagas', el.vagas > 0 ? el.vagas : ''),
 
               // Bloco 4 — Financeiro
-              r3('Valor oferta', valorOf, 'Valor líquido', valorLiq !== valorOf ? valorLiq : '', 'V.U./m²', el.valorUnitarioOferta > 0 ? fm(el.valorUnitarioOferta) : ''),
-              r3('F. Oferta', (el.fatorOferta||'').toString().replace('.', ','), 'F. Local', el.fatorLocalBruto, 'F. Andar', el.fatorAndarBruto),
+              // Para evolutivo: areaTerreno e vuTerreno; para CDDM: area e valorUnitarioOferta
+              el.areaTerreno > 0 ? r2('Área terreno', `${Number(el.areaTerreno).toLocaleString('pt-BR')} m²`, 'Área construída', el.areaConstruida > 0 ? `${Number(el.areaConstruida).toLocaleString('pt-BR')} m²` : '') : null,
+              r3('Valor oferta', valorOf, 'Valor líquido', valorLiq !== valorOf ? valorLiq : '', 'V.U./m²', el.valorUnitarioOferta > 0 ? fm(el.valorUnitarioOferta) : (el.vuTerreno > 0 ? fm(el.vuTerreno) : '')),
+              r3('F. Oferta', (el.fatorOferta||'').toString().replace('.', ','), 'Nota local', ok(el.fatorLocalBruto || el.notaLocal), 'F. Andar', ok(el.fatorAndarBruto || el.fatorAndar)),
 
               // Bloco 5 — Contato / tipo
               r3('Tipo oferta', el.tipoOferta, 'Status', el.status, 'Telefone', el.telefone),
@@ -704,15 +711,23 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
 
             if (linhas.length === 0) return null
 
+            const foto = el.foto || ''
             return (
-              <View key={`elem-${i}`} wrap={false} style={{ marginTop: 5 }}>
-                <View style={s.elemHeader}>
-                  <Text style={s.elemHeaderTxt}>ELEMENTO COMPARATIVO {String(i+1).padStart(2,'0')}</Text>
+              <View key={`elem-${i}`} wrap={false} style={{ marginTop: 5, borderWidth: 1, borderColor: '#b8c4d8' }}>
+                <View style={[s.elemHeader, { backgroundColor: AZUL }]}>
+                  <Text style={s.elemHeaderTxt}>{isEvolutivo ? 'ELEMENTO' : 'ELEMENTO COMPARATIVO'} {String(i+1).padStart(2,'0')}</Text>
                   <Text style={s.elemHeaderSub}>
                     {el.fonte ? el.fonte : ''}{el.data ? ` • ${fd(el.data)}` : ''}
                   </Text>
                 </View>
-                <View style={s.elemTable}>{linhas}</View>
+                <View style={{ flexDirection: 'row' }}>
+                  <View style={{ flex: 1 }}><View style={s.elemTable}>{linhas}</View></View>
+                  {foto ? (
+                    <View style={{ width: 100, borderLeftWidth: 0.5, borderColor: CINZA }}>
+                      <Image src={foto} style={{ width: 100, height: '100%', objectFit: 'cover' }} />
+                    </View>
+                  ) : null}
+                </View>
               </View>
             )
           })}
@@ -725,8 +740,8 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
         </View>
       </Page>
 
-      {/* ══ PÁGINA 4 — Homogeneização + Valor + Graus (resumo) ══ */}
-      <Page size="A4" style={s.page}>
+      {/* ══ PÁGINAS 4-5 — Homogeneização + Valor + Graus + Conclusão (conteúdo fluido) ══ */}
+      <Page size="A4" style={s.page} wrap>
         <DocHeader solicitante={dados.solicitante} proprietario={dados.proprietario} />
 
         <View style={s.content}>
@@ -881,14 +896,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
           </View>
         </View>
 
-        <DocFooter pagina={4} total={totalPaginas} dataLaudo={dados.dataLaudo} />
-      </Page>
-
-      {/* ══ PÁGINA 5 — Tabelas detalhadas de Fundamentação e Precisão + Conclusão ══ */}
-      <Page size="A4" style={s.page}>
-        <DocHeader solicitante={dados.solicitante} proprietario={dados.proprietario} />
-
-        <View style={s.content}>
+        {/* ↓ conteúdo continua — graus + conclusão na mesma página fluida */}
           {/* Tabela de Fundamentação detalhada (estilo MK seção 17) */}
           <SecHeader num={`${secGraus}.1`} titulo="Grau de Fundamentação — Tratamento por Fatores" />
           {(() => {
@@ -1014,10 +1022,11 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
               <Text style={s.signSub}>Lesath Engenharia – CNPJ: 49.068.717/0001-64</Text>
               {dados.dataLaudo && <Text style={[s.signSub,{marginTop:3}]}>{dataExtenso}</Text>}
             </View>
-          </View>
         </View>
 
-        <DocFooter pagina={5} total={totalPaginas} dataLaudo={dados.dataLaudo} />
+        <View fixed style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
+          <DocFooter pagina={4} total={totalPaginas} dataLaudo={dados.dataLaudo} />
+        </View>
       </Page>
 
       {/* ══ PÁGINAS DE FOTOS ════════════════════════════════════ */}
