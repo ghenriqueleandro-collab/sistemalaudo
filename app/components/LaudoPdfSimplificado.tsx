@@ -79,7 +79,7 @@ const s = StyleSheet.create({
   page: {
     backgroundColor: BRANCO,
     paddingTop: 58,      // altura do header fixo
-    paddingBottom: 28,   // altura do footer fixo
+    paddingBottom: 26,   // altura do footer fixo
     paddingLeft: 28,
     paddingRight: 28,
     fontSize: 8,
@@ -109,8 +109,8 @@ const s = StyleSheet.create({
   fixedFooter: {
     position: 'absolute',
     bottom: 0, left: 0, right: 0,
+    height: 20,
     backgroundColor: AZUL,
-    paddingVertical: 4,
     paddingHorizontal: 18,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -139,11 +139,11 @@ const s = StyleSheet.create({
   },
   titleTxt: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center' },
   // Tabelas
-  table:    { width: '100%', borderWidth: 0.5, borderColor: CINZA, marginTop: 3 },
+  table:    { width: '100%', borderWidth: 0.5, borderColor: CINZA, marginTop: 3, backgroundColor: BRANCO },
   row:      { flexDirection: 'row', borderBottomWidth: 0.5, borderColor: CINZA },
   rowLast:  { flexDirection: 'row' },
   cellLbl:  { backgroundColor: AZULLT, paddingVertical: 3, paddingHorizontal: 5, fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: AZUL },
-  cellVal:  { paddingVertical: 3, paddingHorizontal: 5, fontSize: 7.5, color: TEXTO },
+  cellVal:  { paddingVertical: 3, paddingHorizontal: 5, fontSize: 7.5, color: TEXTO, backgroundColor: BRANCO },
   cellHead: { backgroundColor: AZULLT, paddingVertical: 3, paddingHorizontal: 5, fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: AZUL, textAlign: 'center' },
   // Valores em destaque
   valorRow:  { flexDirection: 'row', marginTop: 5, marginBottom: 4 },
@@ -157,7 +157,7 @@ const s = StyleSheet.create({
   valorExtD: { fontSize: 7, color: '#5a7090', marginTop: 1 },
   // Graus resumo
   grauRow: { flexDirection: 'row', marginTop: 4, marginBottom: 6 },
-  grauBox: { flex: 1, borderWidth: 0.5, borderColor: CINZA, marginRight: 4 },
+  grauBox: { flex: 1, borderWidth: 0.5, borderColor: CINZA, marginRight: 4, backgroundColor: BRANCO },
   grauLbl: { backgroundColor: AZULLT, paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: AZUL, textAlign: 'center' },
   grauNum: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: AZUL2, textAlign: 'center', paddingVertical: 6 },
   // Assinatura
@@ -175,33 +175,34 @@ const s = StyleSheet.create({
   txt:     { fontSize: 8, color: TEXTO, lineHeight: 1.5, marginTop: 4 },
   txtBold: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: AZUL },
   // Cards de elemento
-  elemCard:  { marginTop: 5, borderWidth: 1, borderColor: '#b8c4d8' },
+  elemCard:  { marginTop: 5, borderWidth: 1, borderColor: '#b8c4d8', backgroundColor: BRANCO },
   elemHeader: {
     backgroundColor: AZUL,
     paddingVertical: 2.5,
     paddingHorizontal: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   elemHeaderTxt: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BRANCO, letterSpacing: 0.5 },
   elemHeaderSub: { fontSize: 7, color: '#cfddef' },
   elemBody:  { flexDirection: 'row' },
-  elemTable: { flex: 1, borderTopWidth: 0.5, borderColor: CINZA },
+  elemTable: { flex: 1, borderTopWidth: 0.5, borderColor: CINZA, backgroundColor: BRANCO },
   elemRowB:  { flexDirection: 'row', borderBottomWidth: 0.5, borderColor: CINZA },
   elemCellLbl: { backgroundColor: AZULLT, paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, fontFamily: 'Helvetica-Bold', color: AZUL, borderRightWidth: 0.5, borderColor: CINZA },
-  elemCellVal: { paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, color: TEXTO, borderRightWidth: 0.5, borderColor: CINZA },
-  elemCellValLast: { paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, color: TEXTO },
+  elemCellVal: { paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, color: TEXTO, borderRightWidth: 0.5, borderColor: CINZA, backgroundColor: BRANCO },
+  elemCellValLast: { paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, color: TEXTO, backgroundColor: BRANCO },
   elemFotoCol: { width: 100, borderLeftWidth: 0.5, borderColor: CINZA },
-  elemFotoImg: { width: 100, height: '100%', objectFit: 'cover' },
+  elemFotoImg: { width: 100, height: 80, objectFit: 'cover' },
   // Tabela homogeneização
-  homogTable: { borderWidth: 0.5, borderColor: CINZA, marginTop: 4 },
+  homogTable: { borderWidth: 0.5, borderColor: CINZA, marginTop: 4, backgroundColor: BRANCO },
   homogRowH:  { flexDirection: 'row', backgroundColor: AZUL2, borderBottomWidth: 0.5, borderColor: CINZA },
   homogRowB:  { flexDirection: 'row', borderBottomWidth: 0.5, borderColor: CINZA },
   homogRow:   { flexDirection: 'row' },
   homogTh:    { fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, paddingVertical: 3, textAlign: 'center', borderRightWidth: 0.5, borderColor: '#475e9b' },
   homogThLast:{ fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, paddingVertical: 3, textAlign: 'center' },
-  homogTd:    { fontSize: 6.5, color: TEXTO, paddingVertical: 2.5, textAlign: 'center', borderRightWidth: 0.5, borderColor: CINZA },
-  homogTdLast:{ fontSize: 6.5, color: TEXTO, paddingVertical: 2.5, textAlign: 'center' },
+  homogTd:    { fontSize: 6.5, color: TEXTO, paddingVertical: 2.5, textAlign: 'center', borderRightWidth: 0.5, borderColor: CINZA, backgroundColor: BRANCO },
+  homogTdLast:{ fontSize: 6.5, color: TEXTO, paddingVertical: 2.5, textAlign: 'center', backgroundColor: BRANCO },
   homogTdOut: { fontSize: 6.5, color: '#9ca3af', fontFamily: 'Helvetica-Oblique', paddingVertical: 2.5, textAlign: 'center', borderRightWidth: 0.5, borderColor: CINZA },
   // Legenda + memorial
   legendaWrap: { marginTop: 4, marginBottom: 2, padding: 5, borderWidth: 0.5, borderColor: CINZA, backgroundColor: AZULLT },
@@ -211,7 +212,7 @@ const s = StyleSheet.create({
   memorialLbl: { flex: 1.5, paddingVertical: 2.5, paddingHorizontal: 5, fontSize: 7, color: TEXTO, borderRightWidth: 0.5, borderColor: CINZA },
   memorialVal: { flex: 1, paddingVertical: 2.5, paddingHorizontal: 5, fontSize: 7, fontFamily: 'Helvetica-Bold', color: AZUL, textAlign: 'right' },
   // Tabela de fundamentação
-  grausTable:  { borderWidth: 0.5, borderColor: CINZA, marginTop: 4 },
+  grausTable:  { borderWidth: 0.5, borderColor: CINZA, marginTop: 4, backgroundColor: BRANCO },
   grausHead:   { flexDirection: 'row', backgroundColor: AZUL, borderBottomWidth: 0.5, borderColor: CINZA },
   grausItemRow:{ flexDirection: 'row', borderBottomWidth: 0.5, borderColor: CINZA },
   grausThIdx:  { width: 30, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 3, borderRightWidth: 0.5, borderColor: '#475e9b' },
@@ -220,7 +221,7 @@ const s = StyleSheet.create({
   grausThPts:  { width: 44, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 3 },
   grausTdIdx:  { width: 30, fontSize: 6.5, color: TEXTO, textAlign: 'center', paddingVertical: 3, borderRightWidth: 0.5, borderColor: CINZA },
   grausTdDesc: { flex: 2, fontSize: 6.5, color: TEXTO, paddingVertical: 3, paddingHorizontal: 4, borderRightWidth: 0.5, borderColor: CINZA },
-  grausTdGrau: { flex: 1.7, fontSize: 6, color: TEXTO, paddingVertical: 3, paddingHorizontal: 3, borderRightWidth: 0.5, borderColor: CINZA, lineHeight: 1.3 },
+  grausTdGrau: { flex: 1.7, fontSize: 6, color: TEXTO, paddingVertical: 3, paddingHorizontal: 3, borderRightWidth: 0.5, borderColor: CINZA, lineHeight: 1.3, backgroundColor: BRANCO },
   grausTdGrauOk:{ flex: 1.7, fontSize: 6, color: AZUL, fontFamily: 'Helvetica-Bold', paddingVertical: 3, paddingHorizontal: 3, borderRightWidth: 0.5, borderColor: CINZA, lineHeight: 1.3, backgroundColor: '#dbeafe' },
   grausTdPts:  { width: 44, fontSize: 7, fontFamily: 'Helvetica-Bold', color: AZUL, textAlign: 'center', paddingVertical: 3, backgroundColor: AZULLT },
   grausSomaRow:{ flexDirection: 'row', backgroundColor: AZUL, borderTopWidth: 0.5, borderColor: CINZA },
@@ -230,15 +231,15 @@ const s = StyleSheet.create({
   grausResLbl: { flex: 1, fontSize: 7, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'right', paddingVertical: 3, paddingHorizontal: 6 },
   grausResVal: { width: 44, fontSize: 10, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 2 },
   // Tabela de precisão
-  precTable:   { borderWidth: 0.5, borderColor: CINZA, marginTop: 4 },
+  precTable:   { borderWidth: 0.5, borderColor: CINZA, marginTop: 4, backgroundColor: BRANCO },
   precHeadRow: { flexDirection: 'row', backgroundColor: AZUL, borderBottomWidth: 0.5, borderColor: CINZA },
   precThGrau:  { width: 50, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 3, borderRightWidth: 0.5, borderColor: '#475e9b' },
   precThDesc:  { flex: 1, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, paddingVertical: 3, paddingHorizontal: 5, borderRightWidth: 0.5, borderColor: '#475e9b' },
   precThRes:   { width: 80, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 3 },
   precBodyRow: { flexDirection: 'row', borderBottomWidth: 0.5, borderColor: CINZA },
   precTdGrau:  { width: 50, fontSize: 7, fontFamily: 'Helvetica-Bold', color: AZUL, textAlign: 'center', paddingVertical: 3, borderRightWidth: 0.5, borderColor: CINZA },
-  precTdDesc:  { flex: 1, fontSize: 6.5, color: TEXTO, paddingVertical: 3, paddingHorizontal: 5, borderRightWidth: 0.5, borderColor: CINZA },
-  precTdRes:   { width: 80, fontSize: 6.5, color: TEXTO, textAlign: 'center', paddingVertical: 3 },
+  precTdDesc:  { flex: 1, fontSize: 6.5, color: TEXTO, paddingVertical: 3, paddingHorizontal: 5, borderRightWidth: 0.5, borderColor: CINZA, backgroundColor: BRANCO },
+  precTdRes:   { width: 80, fontSize: 6.5, color: TEXTO, textAlign: 'center', paddingVertical: 3, backgroundColor: BRANCO },
   precTdResOk: { width: 80, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: AZUL, textAlign: 'center', paddingVertical: 3, backgroundColor: '#dbeafe' },
   precResRow:  { flexDirection: 'row', backgroundColor: AZUL2 },
   precResLbl:  { flex: 1, fontSize: 7, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'right', paddingVertical: 3, paddingHorizontal: 6 },
@@ -268,9 +269,9 @@ function DocHeader({ solicitante, proprietario }: { solicitante?: string; propri
 function DocFooter({ dataLaudo }: { dataLaudo?: string }) {
   return (
     <View fixed style={s.fixedFooter}>
-      <Text style={s.footerTxt}>www.lesathengenharia.com.br</Text>
-      {dataLaudo && <Text style={s.footerTxt}>{fd(dataLaudo)}</Text>}
-      <Text style={s.footerPag} render={({ pageNumber, totalPages }) => `Página ${pageNumber} / ${totalPages}`} />
+      <Text style={[s.footerTxt, { lineHeight: 1 }]}>www.lesathengenharia.com.br</Text>
+      {dataLaudo ? <Text style={[s.footerTxt, { lineHeight: 1 }]}>{fd(dataLaudo)}</Text> : <Text />}
+      <Text style={[s.footerPag, { lineHeight: 1 }]} render={({ pageNumber, totalPages }) => `Página ${pageNumber} / ${totalPages}`} />
     </View>
   )
 }
@@ -414,13 +415,17 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
 
     return (
       <View key={`elem-${i}`} wrap={false} style={s.elemCard}>
-        <View style={s.elemHeader}>
+        <View style={[s.elemHeader, { marginTop: 0 }]}>
           <Text style={s.elemHeaderTxt}>{isEvolutivo ? 'ELEMENTO' : 'ELEMENTO COMPARATIVO'} {String(i+1).padStart(2,'0')}</Text>
           <Text style={s.elemHeaderSub}>{el.fonte||''}{el.data ? ` • ${fd(el.data)}` : ''}</Text>
         </View>
         <View style={s.elemBody}>
           <View style={s.elemTable}>{linhas}</View>
-          {foto ? <View style={s.elemFotoCol}><Image src={foto} style={s.elemFotoImg} /></View> : null}
+          {foto ? (
+            <View style={s.elemFotoCol}>
+              <Image src={foto} style={s.elemFotoImg} />
+            </View>
+          ) : null}
         </View>
       </View>
     )
