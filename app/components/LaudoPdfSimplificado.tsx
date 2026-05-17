@@ -184,7 +184,7 @@ const s = StyleSheet.create({
   elemBody:  { flexDirection: 'row' },
   elemTable: { flex: 1, borderTopWidth: 0.5, borderColor: CINZA, backgroundColor: BRANCO },
   elemRowB:  { flexDirection: 'row', borderBottomWidth: 0.5, borderColor: CINZA },
-  elemCellLbl: { backgroundColor: AZULLT, paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, fontFamily: 'Helvetica-Bold', color: AZUL, borderRightWidth: 0.5, borderColor: CINZA, overflow: 'hidden' },
+  elemCellLbl: { backgroundColor: AZULLT, paddingVertical: 2.5, paddingHorizontal: 3, fontSize: 6.8, fontFamily: 'Helvetica-Bold', color: AZUL, borderRightWidth: 0.5, borderColor: CINZA, overflow: 'hidden' },
   elemCellVal: { paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, color: TEXTO, borderRightWidth: 0.5, borderColor: CINZA, backgroundColor: BRANCO, overflow: 'hidden' },
   elemCellValLast: { paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, color: TEXTO, backgroundColor: BRANCO, overflow: 'hidden' },
   elemFotoCol: { width: 120, borderLeftWidth: 0.5, borderColor: CINZA, alignItems: 'center', justifyContent: 'center' },
@@ -370,18 +370,20 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
     const bvL = s.elemCellValLast
     const sep = { borderRightWidth: 0.5, borderColor: CINZA }
 
-    const C1L=65,C1V=474
-    const C2L=65,C2V=200,C2L2=65,C2V2=209
-    const C3L=50,C3V=120,C3L2=50,C3V2=120,C3L3=50,C3V3=149
 
-    // numberOfLines={1} em todo Text dos cards — sem quebra de linha
+    // ── Labels: largura fixa calibrada para o texto mais longo de cada tipo
+    //    Valores: flex:1 — preenche o restante automaticamente, com ou sem foto
+    //    wrap={false} em todos os Text → nunca quebra linha dentro da célula
+    const L1 = 76  // r1: 'Logradouro' (10c), 'Obs.' (4c)
+    const L2 = 76  // r2: 'Coordenadas' (12c), 'Área construída' (15c max)
+    const L3 = 60  // r3: 'Conservação' (11c), 'Dormitórios' (11c), 'Distância' (9c)
 
     const r1 = (l1: string, v1: any) => {
       const a = ok(v1); if (!a) return null
       return (
         <View style={s.elemRowB}>
-          <View style={[bl,{width:C1L}]}><Text wrap={false}>{l1}</Text></View>
-          <View style={[bvL,{width:C1V}]}><Text wrap={false}>{a}</Text></View>
+          <View style={[bl,{width:L1}]}><Text wrap={false}>{l1}</Text></View>
+          <View style={[bvL,{flex:1}]}><Text wrap={false}>{a}</Text></View>
         </View>
       )
     }
@@ -390,10 +392,10 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
       if(!b) return r1(l1,a); if(!a) return r1(l2,b)
       return (
         <View style={s.elemRowB}>
-          <View style={[bl,{width:C2L}]}><Text wrap={false}>{l1}</Text></View>
-          <View style={[bv,{width:C2V,...sep}]}><Text wrap={false}>{a}</Text></View>
-          <View style={[bl,{width:C2L2,...sep}]}><Text wrap={false}>{l2}</Text></View>
-          <View style={[bvL,{width:C2V2}]}><Text wrap={false}>{b}</Text></View>
+          <View style={[bl,{width:L2}]}><Text wrap={false}>{l1}</Text></View>
+          <View style={[bv,{flex:1,...sep}]}><Text wrap={false}>{a}</Text></View>
+          <View style={[bl,{width:L2,...sep}]}><Text wrap={false}>{l2}</Text></View>
+          <View style={[bvL,{flex:1}]}><Text wrap={false}>{b}</Text></View>
         </View>
       )
     }
@@ -403,33 +405,33 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
       if(!a) return r2(l2,b,l3,c); if(!b) return r2(l1,a,l3,c)
       return (
         <View style={s.elemRowB}>
-          <View style={[bl,{width:C3L}]}><Text wrap={false}>{l1}</Text></View>
-          <View style={[bv,{width:C3V,...sep}]}><Text wrap={false}>{a}</Text></View>
-          <View style={[bl,{width:C3L2,...sep}]}><Text wrap={false}>{l2}</Text></View>
-          <View style={[bv,{width:C3V2,...sep}]}><Text wrap={false}>{b}</Text></View>
-          <View style={[bl,{width:C3L3,...sep}]}><Text wrap={false}>{l3}</Text></View>
-          <View style={[bvL,{width:C3V3}]}><Text wrap={false}>{c}</Text></View>
+          <View style={[bl,{width:L3}]}><Text wrap={false}>{l1}</Text></View>
+          <View style={[bv,{flex:1,...sep}]}><Text wrap={false}>{a}</Text></View>
+          <View style={[bl,{width:L3,...sep}]}><Text wrap={false}>{l2}</Text></View>
+          <View style={[bv,{flex:1,...sep}]}><Text wrap={false}>{b}</Text></View>
+          <View style={[bl,{width:L3,...sep}]}><Text wrap={false}>{l3}</Text></View>
+          <View style={[bvL,{flex:1}]}><Text wrap={false}>{c}</Text></View>
         </View>
       )
     }
 
     const linhas = [
-      r3('Tipo', el.tipo, 'Data', el.data ? fd(el.data) : '', 'Empreendimento', el.empreendimento),
+      r3('Tipo', el.tipo, 'Data', el.data ? fd(el.data) : '', 'Empreen.', el.empreendimento),
       r1('Logradouro', el.logradouro || el.endereco),
       r3('Bairro', el.bairro, 'Cidade/UF', cidadeUF, 'Distância', el.distanciaAvaliando || el.distancia),
       r2('Coordenadas', el.coordenadas, 'Fonte', el.fonte),
       r3('Conservação', el.estadoConservacao, 'Idade', el.idadeAparente > 0 ? `${el.idadeAparente} anos` : (el.idade ? `${el.idade} anos` : ''), 'Andar', el.andar > 0 ? String(el.andar) : ''),
       el.areaTerreno > 0 ? r2('Área terreno', `${Number(el.areaTerreno).toLocaleString('pt-BR')} m²`, 'Área construída', el.areaConstruida > 0 ? `${Number(el.areaConstruida).toLocaleString('pt-BR')} m²` : '') : null,
-      r2('Área constr./útil', el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '', 'Padrão constr.', el.padraoConstrutivo),
+      r2('Área c./útil', el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '', 'Padrão', el.padraoConstrutivo),
       r3('Dormitórios', el.dormitorios > 0 ? String(el.dormitorios) : '', 'Suítes', el.suites > 0 ? String(el.suites) : '', 'Vagas', el.vagas > 0 ? String(el.vagas) : ''),
-      r3('Valor oferta', vOf, 'Valor líquido', vLiq !== vOf ? vLiq : '', 'V.U./m²', vuOf),
+      r3('Valor oferta', vOf, 'Vl. líquido', vLiq !== vOf ? vLiq : '', 'V.U./m²', vuOf),
       r3('F. Oferta', ok(el.fatorOferta), 'Nota local', ok(el.fatorLocalBruto || el.notaLocal || el.fatorLocal), 'F. Andar', ok(el.fatorAndarBruto || el.fatorAndar)),
       r3('Tipo oferta', el.tipoOferta, 'Status', el.status, 'Telefone', el.telefone),
       el.link ? (
         <View key="link" style={s.elemRowB}>
-          <View style={[bl,{width:C1L}]}><Text>Link</Text></View>
-          <View style={[bvL,{width:C1V}]}>
-            <Text style={{fontSize:6.3,color:AZUL2}}>{String(el.link).slice(0,110)}</Text>
+          <View style={[bl,{width:L1}]}><Text wrap={false}>Link</Text></View>
+          <View style={[bvL,{flex:1}]}>
+            <Text wrap={false} style={{fontSize:6.3,color:AZUL2}}>{String(el.link).slice(0,100)}</Text>
           </View>
         </View>
       ) : null,
