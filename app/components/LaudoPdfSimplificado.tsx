@@ -32,11 +32,6 @@ function metLabel(m?: string) {
   return m || '–'
 }
 function arredondar(v: number) { return Math.round(v * 100) / 100 }
-function chunkArray<T>(arr: T[], n: number): T[][] {
-  const r: T[][] = []
-  for (let i = 0; i < arr.length; i += n) r.push(arr.slice(i, i + n))
-  return r
-}
 function numeroPorExtenso(valor: number): string {
   const un = ['','um','dois','três','quatro','cinco','seis','sete','oito','nove','dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove']
   const dz = ['','','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa']
@@ -153,13 +148,13 @@ const s = StyleSheet.create({
   valorLblD: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: AZUL2, letterSpacing: 0.5 },
   valorNum:  { fontSize: 14, fontFamily: 'Helvetica-Bold', color: BRANCO, marginTop: 3 },
   valorNumD: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: AZUL, marginTop: 3 },
-  valorExt:  { fontSize: 7, color: '#8FA4C7', marginTop: 1 },
-  valorExtD: { fontSize: 7, color: '#5a7090', marginTop: 1 },
+  valorExt:  { fontSize: 7, color: '#8FA4C7', marginTop: 4 },
+  valorExtD: { fontSize: 7, color: '#5a7090', marginTop: 4 },
   // Graus resumo
   grauRow: { flexDirection: 'row', marginTop: 4, marginBottom: 6 },
   grauBox: { flex: 1, borderWidth: 0.5, borderColor: CINZA, marginRight: 4, backgroundColor: BRANCO },
   grauLbl: { backgroundColor: AZULLT, paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: AZUL, textAlign: 'center' },
-  grauNum: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: AZUL2, textAlign: 'center', paddingVertical: 6 },
+  grauNum: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: AZUL2, textAlign: 'center', paddingVertical: 5 },
   // Assinatura
   signArea: { alignItems: 'center', marginTop: 18 },
   signLine: { width: 160, height: 0.5, backgroundColor: '#334155', marginBottom: 3 },
@@ -167,9 +162,9 @@ const s = StyleSheet.create({
   signSub:  { fontSize: 7.5, color: '#475569' },
   // Fotos
   foto:      { width: '100%', height: 120, objectFit: 'cover', borderWidth: 0.5, borderColor: CINZA, marginTop: 6, marginBottom: 4 },
-  fotosGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 },
-  fotoItem:  { width: '49%', marginRight: '1%', marginBottom: 5 },
-  fotoImg:   { height: 95, objectFit: 'cover', borderWidth: 0.5, borderColor: CINZA },
+  fotosGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6, justifyContent: 'space-between' },
+  fotoItem:  { width: '49%', marginBottom: 8 },
+  fotoImg:   { height: 175, objectFit: 'cover', borderWidth: 0.5, borderColor: CINZA },
   fotoLeg:   { backgroundColor: AZULLT, paddingVertical: 2, paddingHorizontal: 4, fontSize: 7, color: AZUL, borderWidth: 0.5, borderColor: CINZA, borderTopWidth: 0 },
   // Texto
   txt:     { fontSize: 8, color: TEXTO, lineHeight: 1.5, marginTop: 4 },
@@ -192,8 +187,8 @@ const s = StyleSheet.create({
   elemCellLbl: { backgroundColor: AZULLT, paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, fontFamily: 'Helvetica-Bold', color: AZUL, borderRightWidth: 0.5, borderColor: CINZA },
   elemCellVal: { paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, color: TEXTO, borderRightWidth: 0.5, borderColor: CINZA, backgroundColor: BRANCO },
   elemCellValLast: { paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, color: TEXTO, backgroundColor: BRANCO },
-  elemFotoCol: { width: 100, borderLeftWidth: 0.5, borderColor: CINZA },
-  elemFotoImg: { width: 100, height: 80, objectFit: 'cover' },
+  elemFotoCol: { width: 120, borderLeftWidth: 0.5, borderColor: CINZA, alignItems: 'center', justifyContent: 'center' },
+  elemFotoImg: { width: 120, height: 120, objectFit: 'cover' },
   // Tabela homogeneização
   homogTable: { borderWidth: 0.5, borderColor: CINZA, marginTop: 4, backgroundColor: BRANCO },
   homogRowH:  { flexDirection: 'row', backgroundColor: AZUL2, borderBottomWidth: 0.5, borderColor: CINZA },
@@ -450,6 +445,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
           <Row label="Solicitante" value={dados.solicitante} />
           <Row label="Proponente"  value={dados.proprietario} />
           <Row label="Logradouro"  value={logradouro} />
+          {dados.coordenadasImovel && <Row label="Coordenadas" value={dados.coordenadasImovel} />}
           <View style={s.rowLast}>
             <View style={[s.cellLbl,{flex:0.7,borderRightWidth:0.5,borderColor:CINZA}]}><Text>CEP</Text></View>
             <View style={[s.cellVal,{flex:1.2,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{cep||'–'}</Text></View>
@@ -567,21 +563,15 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
           </>
         )}
 
-        {/* ── 8. LOCALIZAÇÃO ───────────────────────────────────────────────── */}
-        <SecHeader num="8" titulo="Localização" />
-        {dados.coordenadasImovel && (
-          <View style={s.table}>
-            <Row label="Coordenadas" value={dados.coordenadasImovel} last />
-          </View>
-        )}
+        {/* Mapa de localização (se disponível) — sem título de seção separado */}
         {dados.localizacaoComparativos && (
-          <View wrap={false}>
-            <Image src={dados.localizacaoComparativos} style={{ width: '100%', height: 200, objectFit: 'cover', marginTop: 4, borderWidth: 0.5, borderColor: CINZA }} />
+          <View wrap={false} style={{ marginTop: 6 }}>
+            <Image src={dados.localizacaoComparativos} style={{ width: '100%', height: 180, objectFit: 'cover', borderWidth: 0.5, borderColor: CINZA }} />
           </View>
         )}
 
-        {/* ── 9. PESQUISA IMOBILIÁRIA ──────────────────────────────────────── */}
-        <SecHeader num="9" titulo="Pesquisa Imobiliária" />
+        {/* ── 8. PESQUISA IMOBILIÁRIA (renumerado de 9 para 8) ─────────────── */}
+        <SecHeader num="8" titulo="Pesquisa Imobiliária" />
         <View style={s.table}>
           <View style={s.row}>
             <View style={[s.cellHead,{flex:2,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Período</Text></View>
@@ -607,7 +597,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
         {/* ── 9.1. HOMOGENEIZAÇÃO (só comparativo) ────────────────────────── */}
         {temCddm && (
           <>
-            <SecHeader num="9.1" titulo="Homogeneização" />
+            <SecHeader num="8.1" titulo="Homogeneização" />
             <View style={s.homogTable}>
               <View style={s.homogRowH}>
                 <Text style={[s.homogTh,{flex:0.6}]}>Elem.</Text>
@@ -747,7 +737,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
           ].map(({ label, valor }) => (
             <View key={label} style={s.grauBox}>
               <Text style={s.grauLbl}>{label}</Text>
-              <Text style={s.grauNum}>{valor}</Text>
+              <Text style={[s.grauNum, valor && valor.length > 5 ? { fontSize: 10 } : {}]}>{valor}</Text>
             </View>
           ))}
         </View>
@@ -869,24 +859,24 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
         </View>
       </Page>
 
-      {/* ── PÁGINAS DE FOTOS ─────────────────────────────────────────────────── */}
-      {chunkArray(fotosAnexo, 6).map((grupo:any[], idx:number) => (
-        <Page key={`fotos-${idx}`} size="A4" style={s.page}>
+      {/* ── PÁGINA DE FOTOS — sequenciadas, sem limite por página ────────── */}
+      {fotosAnexo.length > 0 && (
+        <Page size="A4" style={s.page}>
           <DocHeader solicitante={dados.solicitante} proprietario={dados.proprietario} />
           <DocFooter dataLaudo={dados.dataLaudo} />
           <View style={{ backgroundColor: AZUL2, paddingVertical: 4, paddingHorizontal: 8, marginBottom: 8, marginTop: 4 }}>
             <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: BRANCO }}>ANEXO | DOCUMENTAÇÃO FOTOGRÁFICA</Text>
           </View>
           <View style={s.fotosGrid}>
-            {grupo.map((f:any, fi:number) => (
-              <View key={fi} style={s.fotoItem}>
+            {fotosAnexo.map((f:any, fi:number) => (
+              <View key={fi} style={s.fotoItem} wrap={false}>
                 <Image src={f.preview} style={s.fotoImg} />
-                <Text style={s.fotoLeg}>{f.legenda || `Foto ${idx*6+fi+1}`}</Text>
+                <Text style={s.fotoLeg}>{f.legenda || `Foto ${fi+1}`}</Text>
               </View>
             ))}
           </View>
         </Page>
-      ))}
+      )}
     </Document>
   )
 }
