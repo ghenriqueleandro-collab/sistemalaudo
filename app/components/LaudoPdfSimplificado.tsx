@@ -79,7 +79,7 @@ function chunkArray<T>(arr: T[], n: number): T[][] {
 
 // ─── Paleta ───────────────────────────────────────────────────────────────────
 
-const AZUL   = '#17325C'
+const AZUL   = '#1a3564'
 const AZUL2  = '#2347C6'
 const AZULLT = '#EAF0FB'
 const CINZA  = '#C9D3E6'
@@ -136,7 +136,11 @@ const s = StyleSheet.create({
     paddingVertical: 3.5,
     paddingHorizontal: 8,
     marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
+  secBadge: { backgroundColor: AZUL2, paddingVertical: 1.5, paddingHorizontal: 5, borderRadius: 2 },
   secTitle: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: BRANCO, textTransform: 'uppercase', letterSpacing: 0.5 },
   // Título central
   titleBand: {
@@ -187,7 +191,7 @@ const s = StyleSheet.create({
   // ─── Estilos MK-style (Pesquisa + Homog + Memorial) ──────────────
   // Card de elemento comparativo
   elemHeader: {
-    backgroundColor: AZUL2,
+    backgroundColor: AZUL,
     paddingVertical: 2.5,
     paddingHorizontal: 6,
     flexDirection: 'row',
@@ -234,13 +238,35 @@ const s = StyleSheet.create({
   grausThIdx: { width: 30, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 3, borderRightWidth: 0.5, borderColor: '#475e9b' },
   grausThDesc: { flex: 2, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, paddingVertical: 3, paddingHorizontal: 4, borderRightWidth: 0.5, borderColor: '#475e9b' },
   grausThGrau: { flex: 1.7, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 3, borderRightWidth: 0.5, borderColor: '#475e9b' },
-  grausThGrauLast: { flex: 1.7, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 3 },
+  grausThGrauLast: { flex: 1.7, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 3, borderRightWidth: 0.5, borderColor: '#475e9b' },
+  grausThPts: { width: 44, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 3 },
   grausTdIdx: { width: 30, fontSize: 6.5, color: TEXTO, textAlign: 'center', paddingVertical: 3, borderRightWidth: 0.5, borderColor: CINZA },
   grausTdDesc: { flex: 2, fontSize: 6.5, color: TEXTO, paddingVertical: 3, paddingHorizontal: 4, borderRightWidth: 0.5, borderColor: CINZA },
   grausTdGrau: { flex: 1.7, fontSize: 6, color: TEXTO, paddingVertical: 3, paddingHorizontal: 3, borderRightWidth: 0.5, borderColor: CINZA, lineHeight: 1.3 },
-  grausTdGrauLast: { flex: 1.7, fontSize: 6, color: TEXTO, paddingVertical: 3, paddingHorizontal: 3, lineHeight: 1.3 },
+  grausTdGrauLast: { flex: 1.7, fontSize: 6, color: TEXTO, paddingVertical: 3, paddingHorizontal: 3, borderRightWidth: 0.5, borderColor: CINZA, lineHeight: 1.3 },
   grausTdGrauOk: { flex: 1.7, fontSize: 6, color: AZUL, fontFamily: 'Helvetica-Bold', paddingVertical: 3, paddingHorizontal: 3, borderRightWidth: 0.5, borderColor: CINZA, lineHeight: 1.3, backgroundColor: '#dbeafe' },
-  grausTdGrauOkLast: { flex: 1.7, fontSize: 6, color: AZUL, fontFamily: 'Helvetica-Bold', paddingVertical: 3, paddingHorizontal: 3, lineHeight: 1.3, backgroundColor: '#dbeafe' },
+  grausTdGrauOkLast: { flex: 1.7, fontSize: 6, color: AZUL, fontFamily: 'Helvetica-Bold', paddingVertical: 3, paddingHorizontal: 3, borderRightWidth: 0.5, borderColor: CINZA, lineHeight: 1.3, backgroundColor: '#dbeafe' },
+  grausTdPts: { width: 44, fontSize: 7, fontFamily: 'Helvetica-Bold', color: AZUL, textAlign: 'center', paddingVertical: 3, backgroundColor: AZULLT },
+  grausSomaRow: { flexDirection: 'row', backgroundColor: AZUL, borderTopWidth: 0.5, borderColor: CINZA },
+  grausSomaLbl: { flex: 1, fontSize: 7, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'right', paddingVertical: 3, paddingHorizontal: 6 },
+  grausSomaVal: { width: 44, fontSize: 9, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 2 },
+  grausResRow: { flexDirection: 'row', backgroundColor: AZUL2, borderTopWidth: 0.5, borderColor: '#3a57d0' },
+  grausResLbl: { flex: 1, fontSize: 7, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'right', paddingVertical: 3, paddingHorizontal: 6 },
+  grausResVal: { width: 44, fontSize: 10, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 2 },
+  // Tabela de precisão
+  precTable: { borderWidth: 0.5, borderColor: CINZA, marginTop: 4 },
+  precHeadRow: { flexDirection: 'row', backgroundColor: AZUL, borderBottomWidth: 0.5, borderColor: CINZA },
+  precThGrau: { width: 50, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 3, borderRightWidth: 0.5, borderColor: '#475e9b' },
+  precThDesc: { flex: 1, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, paddingVertical: 3, paddingHorizontal: 5, borderRightWidth: 0.5, borderColor: '#475e9b' },
+  precThRes: { width: 80, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 3 },
+  precBodyRow: { flexDirection: 'row', borderBottomWidth: 0.5, borderColor: CINZA },
+  precTdGrau: { width: 50, fontSize: 7, fontFamily: 'Helvetica-Bold', color: AZUL, textAlign: 'center', paddingVertical: 3, borderRightWidth: 0.5, borderColor: CINZA },
+  precTdDesc: { flex: 1, fontSize: 6.5, color: TEXTO, paddingVertical: 3, paddingHorizontal: 5, borderRightWidth: 0.5, borderColor: CINZA },
+  precTdRes: { width: 80, fontSize: 6.5, color: TEXTO, textAlign: 'center', paddingVertical: 3 },
+  precTdResOk: { width: 80, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: AZUL, textAlign: 'center', paddingVertical: 3, backgroundColor: '#dbeafe' },
+  precResRow: { flexDirection: 'row', backgroundColor: AZUL2 },
+  precResLbl: { flex: 1, fontSize: 7, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'right', paddingVertical: 3, paddingHorizontal: 6 },
+  precResVal: { width: 50+80, fontSize: 9, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 2 },
 })
 
 // ─── Componentes auxiliares ───────────────────────────────────────────────────
@@ -272,7 +298,8 @@ const DocFooter = ({ pagina, total, dataLaudo }: { pagina: number; total: number
 
 const SecHeader = ({ num, titulo }: { num: string; titulo: string }) => (
   <View style={s.secHeader}>
-    <Text style={s.secTitle}>{num} — {titulo}</Text>
+    <View style={s.secBadge}><Text style={[s.secTitle, { fontSize: 7.5 }]}>{num}</Text></View>
+    <Text style={s.secTitle}>{titulo.toUpperCase()}</Text>
   </View>
 )
 
@@ -869,10 +896,12 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
             const fund = (dados.fundamentacao || []) as any[]
             const itensPadrao = [
               { id: '01', desc: 'Caracterização do imóvel avaliando', g3: 'Completa quanto a todos os fatores analisados', g2: 'Completa quanto aos fatores utilizados no tratamento', g1: 'Adoção de situação paradigma' },
-              { id: '02', desc: 'Quantidade mínima de dados de mercado, efetivamente utilizados', g3: '12', g2: '5', g1: '3' },
-              { id: '03', desc: 'Identificação dos dados de mercado', g3: 'Apresentação de informações relativas a todas as características dos dados analisados, com foto e características observadas pelo autor do laudo', g2: 'Apresentação de informações relativas a todas as características dos dados analisados', g1: 'Apresentação de informações relativas a todas as características dos dados correspondentes aos fatores utilizados' },
+              { id: '02', desc: 'Quantidade mínima de dados de mercado efetivamente utilizados', g3: '12', g2: '5', g1: '3' },
+              { id: '03', desc: 'Identificação dos dados de mercado', g3: 'Informações de todas as características com foto e características observadas pelo autor do laudo', g2: 'Informações relativas a todas as características dos dados analisados', g1: 'Informações relativas às características dos fatores utilizados' },
               { id: '04', desc: 'Intervalo admissível de ajuste para o conjunto de fatores', g3: '0,80 a 1,25', g2: '0,50 a 2,00', g1: '0,40 a 2,50' },
             ]
+            const somaPts = fund.reduce((acc: number, f: any) => acc + (f?.pontos || 0), 0)
+            const grauFinal = somaPts >= 10 ? 'III' : somaPts >= 6 ? 'II' : somaPts >= 4 ? 'I' : '-'
             return (
               <View style={s.grausTable}>
                 <View style={s.grausHead}>
@@ -881,66 +910,83 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                   <Text style={s.grausThGrau}>Grau III</Text>
                   <Text style={s.grausThGrau}>Grau II</Text>
                   <Text style={s.grausThGrauLast}>Grau I</Text>
+                  <Text style={s.grausThPts}>Pontos obtidos</Text>
                 </View>
                 {itensPadrao.map((it, idx) => {
-                  const last = idx === itensPadrao.length - 1
                   const itemAtual = fund[idx]
                   const grauAtual = itemAtual?.grau || ''
                   return (
-                    <View key={it.id} style={last ? s.grausLastRow : s.grausItemRow}>
+                    <View key={it.id} style={s.grausItemRow}>
                       <Text style={s.grausTdIdx}>{it.id}</Text>
                       <Text style={s.grausTdDesc}>{it.desc}</Text>
                       <Text style={grauAtual === 'III' ? s.grausTdGrauOk : s.grausTdGrau}>{it.g3}</Text>
                       <Text style={grauAtual === 'II' ? s.grausTdGrauOk : s.grausTdGrau}>{it.g2}</Text>
                       <Text style={grauAtual === 'I' ? s.grausTdGrauOkLast : s.grausTdGrauLast}>{it.g1}</Text>
+                      <Text style={s.grausTdPts}>{itemAtual?.pontos ?? '-'}</Text>
                     </View>
                   )
                 })}
+                {/* Pontos mínimos — linha informativa */}
+                <View style={{flexDirection:'row',borderTopWidth:0.5,borderColor:CINZA,backgroundColor:AZULLT}}>
+                  <Text style={{flex:1,fontSize:6,color:AZUL,paddingVertical:3,paddingHorizontal:4,borderRightWidth:0.5,borderColor:CINZA,fontFamily:'Helvetica-Bold'}}>Pontos mínimos</Text>
+                  <Text style={{flex:1.7,fontSize:6.5,color:AZUL,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA,fontFamily:'Helvetica-Bold'}}>10</Text>
+                  <Text style={{flex:1.7,fontSize:6.5,color:AZUL,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA,fontFamily:'Helvetica-Bold'}}>6</Text>
+                  <Text style={{flex:1.7,fontSize:6.5,color:AZUL,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA,fontFamily:'Helvetica-Bold'}}>4</Text>
+                  <Text style={{width:44,fontSize:6,color:AZUL,textAlign:'center',paddingVertical:3,fontFamily:'Helvetica-Bold'}}>—</Text>
+                </View>
+                <View style={{flexDirection:'row',borderTopWidth:0.5,borderColor:CINZA,backgroundColor:AZULLT}}>
+                  <Text style={{flex:1,fontSize:6,color:AZUL,paddingVertical:3,paddingHorizontal:4,borderRightWidth:0.5,borderColor:CINZA,fontFamily:'Helvetica-Bold'}}>Itens obrigatórios</Text>
+                  <Text style={{flex:1.7,fontSize:5.5,color:TEXTO,paddingVertical:3,paddingHorizontal:3,textAlign:'center',borderRightWidth:0.5,borderColor:CINZA,lineHeight:1.3}}>2 e 4 no grau III, demais mín. grau II</Text>
+                  <Text style={{flex:1.7,fontSize:5.5,color:TEXTO,paddingVertical:3,paddingHorizontal:3,textAlign:'center',borderRightWidth:0.5,borderColor:CINZA,lineHeight:1.3}}>2 e 4 mín. grau II, demais mín. grau I</Text>
+                  <Text style={{flex:1.7,fontSize:5.5,color:TEXTO,paddingVertical:3,paddingHorizontal:3,textAlign:'center',borderRightWidth:0.5,borderColor:CINZA,lineHeight:1.3}}>Todos mín. grau I</Text>
+                  <Text style={{width:44,fontSize:6,color:AZUL,textAlign:'center',paddingVertical:3}}>—</Text>
+                </View>
+                <View style={s.grausSomaRow}>
+                  <Text style={s.grausSomaLbl}>Somatória de pontos</Text>
+                  <Text style={s.grausSomaVal}>{somaPts}</Text>
+                </View>
+                <View style={s.grausResRow}>
+                  <Text style={s.grausResLbl}>Grau de fundamentação obtido</Text>
+                  <Text style={s.grausResVal}>{grauFinal}</Text>
+                </View>
               </View>
             )
           })()}
           <Text style={[s.legendaTxt,{marginTop:3,fontStyle:'italic',color:'#475569'}]}>
-            No caso de utilização de menos de cinco dados de mercado, o intervalo admissível de ajuste é de 0,80 a 1,25, pois é desejável que, com um número menor de dados de mercado, a amostra seja menos heterogênea.
+            Para menos de 5 dados de mercado, o intervalo admissível de ajuste é de 0,80 a 1,25. (ABNT NBR 14653-2:2011)
           </Text>
 
-          {/* Pontos mínimos */}
-          <View style={[s.grausTable,{marginTop:4}]}>
-            <View style={{flexDirection:'row',backgroundColor:AZULLT,borderBottomWidth:0.5,borderColor:CINZA}}>
-              <Text style={{flex:1,fontSize:6.5,fontFamily:'Helvetica-Bold',color:AZUL,paddingVertical:3,paddingHorizontal:4,borderRightWidth:0.5,borderColor:CINZA}}>Graus</Text>
-              <Text style={{flex:1.7,fontSize:6.5,fontFamily:'Helvetica-Bold',color:AZUL,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA}}>III</Text>
-              <Text style={{flex:1.7,fontSize:6.5,fontFamily:'Helvetica-Bold',color:AZUL,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA}}>II</Text>
-              <Text style={{flex:1.7,fontSize:6.5,fontFamily:'Helvetica-Bold',color:AZUL,textAlign:'center',paddingVertical:3}}>I</Text>
-            </View>
-            <View style={{flexDirection:'row',borderBottomWidth:0.5,borderColor:CINZA}}>
-              <Text style={{flex:1,fontSize:6.5,color:TEXTO,paddingVertical:3,paddingHorizontal:4,borderRightWidth:0.5,borderColor:CINZA}}>Pontos Mínimos</Text>
-              <Text style={{flex:1.7,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA}}>10</Text>
-              <Text style={{flex:1.7,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA}}>6</Text>
-              <Text style={{flex:1.7,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:3}}>4</Text>
-            </View>
-            <View style={{flexDirection:'row'}}>
-              <Text style={{flex:1,fontSize:6.5,color:TEXTO,paddingVertical:3,paddingHorizontal:4,borderRightWidth:0.5,borderColor:CINZA}}>Itens obrigatórios</Text>
-              <Text style={{flex:1.7,fontSize:6,color:TEXTO,paddingVertical:3,paddingHorizontal:3,textAlign:'center',borderRightWidth:0.5,borderColor:CINZA,lineHeight:1.3}}>Itens 2 e 4 no grau III, com os demais, no mín., grau II</Text>
-              <Text style={{flex:1.7,fontSize:6,color:TEXTO,paddingVertical:3,paddingHorizontal:3,textAlign:'center',borderRightWidth:0.5,borderColor:CINZA,lineHeight:1.3}}>Itens 2 e 4, no mín., grau II e demais, no mín., grau I</Text>
-              <Text style={{flex:1.7,fontSize:6,color:TEXTO,paddingVertical:3,paddingHorizontal:3,textAlign:'center',lineHeight:1.3}}>Todos, no mín., no grau I</Text>
-            </View>
-          </View>
-
-          {/* Tabela de Precisão (estilo MK seção 18) */}
+          {/* Tabela de Precisão — nova versão com linha de resultado */}
           <SecHeader num={`${secGraus}.2`} titulo="Grau de Precisão — Tratamento por Fatores" />
-          <View style={s.grausTable}>
-            <View style={s.grausHead}>
-              <Text style={[s.grausThDesc,{flex:3}]}>Descrição</Text>
-              <Text style={s.grausThGrau}>Grau III</Text>
-              <Text style={s.grausThGrau}>Grau II</Text>
-              <Text style={s.grausThGrauLast}>Grau I</Text>
+          <View style={s.precTable}>
+            <View style={s.precHeadRow}>
+              <Text style={s.precThGrau}>Grau</Text>
+              <Text style={s.precThDesc}>Amplitude do intervalo de confiança de 80% em torno da estimativa de tendência central</Text>
+              <Text style={s.precThRes}>Resultado obtido</Text>
             </View>
-            <View style={s.grausLastRow}>
-              <Text style={[s.grausTdDesc,{flex:3}]}>Amplitude do intervalo de confiança de 80% em torno da estimativa de tendência central</Text>
-              <Text style={capaGrauPrec === 'III' ? s.grausTdGrauOk : s.grausTdGrau}>≤ 30%</Text>
-              <Text style={capaGrauPrec === 'II' ? s.grausTdGrauOk : s.grausTdGrau}>≤ 40%</Text>
-              <Text style={capaGrauPrec === 'I' ? s.grausTdGrauOkLast : s.grausTdGrauLast}>≤ 50%</Text>
+            {[
+              { grau: 'III', limite: '≤ 30%' },
+              { grau: 'II',  limite: '≤ 40%' },
+              { grau: 'I',   limite: '≤ 50%' },
+            ].map(({ grau, limite }, i) => {
+              const isOk = capaGrauPrec === grau
+              const ic = cddm ? `${cddm.intervaloConfianca.toFixed(2).replace('.', ',')}%` : '-'
+              return (
+                <View key={grau} style={s.precBodyRow}>
+                  <Text style={[s.precTdGrau, isOk ? { color: AZUL2 } : {}]}>{grau}</Text>
+                  <Text style={s.precTdDesc}>{limite}</Text>
+                  <Text style={isOk ? s.precTdResOk : s.precTdRes}>{isOk ? ic + ' ✓' : '—'}</Text>
+                </View>
+              )
+            })}
+            <View style={s.precResRow}>
+              <Text style={s.precResLbl}>Grau de precisão obtido</Text>
+              <Text style={s.precResVal}>{capaGrauPrec !== '-' ? `Precisão ${capaGrauPrec}` : '-'}</Text>
             </View>
           </View>
+          <Text style={[s.legendaTxt,{marginTop:3,fontStyle:'italic',color:'#475569'}]}>
+            * Quando a amplitude do intervalo de confiança ultrapassar 50%, não há classificação quanto à precisão e é necessária justificativa com base no diagnóstico do mercado. (ABNT NBR 14653-2:2011 — item 13.4)
+          </Text>
 
           {/* Benfeitorias (opcional) */}
           {temBenfeitorias && (
