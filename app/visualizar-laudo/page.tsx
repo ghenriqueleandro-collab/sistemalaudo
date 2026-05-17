@@ -996,37 +996,8 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                       <tbody><tr><TDL>Metodologia</TDL><TDV>{metLabel}</TDV></tr></tbody>
                     </table>
 
-                    {/* 3 — Dimensões */}
-                    <SecHeader num="3" titulo="Dimensões" />
-                    <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-                      <table style={{ flex: 1, borderCollapse: 'collapse', border: '0.5px solid #C9D3E6' }}>
-                        <thead><tr><TH colSpan={2} style={{ textAlign: 'center' }}>Imóvel isolado</TH></tr></thead>
-                        <tbody>
-                          <tr><TDL>Averbada</TDL><TDV>{formatarArea(dados.areaConstruidaAverbada)}</TDV></tr>
-                          <tr><TDL>Não averbada</TDL><TDV>{formatarArea(dados.areaConstruidaNaoAverbada?.toString())}</TDV></tr>
-                          <tr><TDL>Total construída</TDL><TDV>{formatarArea(dados.areaConstruidaTotal)}</TDV></tr>
-                          <tr><TDL>Terreno</TDL><TDV>{formatarArea(dados.areaTerrenoTotal)}</TDV></tr>
-                        </tbody>
-                      </table>
-                      <table style={{ flex: 1, borderCollapse: 'collapse', border: '0.5px solid #C9D3E6' }}>
-                        <thead><tr><TH colSpan={2} style={{ textAlign: 'center' }}>Referências</TH></tr></thead>
-                        <tbody>
-                          <tr><TDL>Padrão</TDL><TDV>{dados.padrao}</TDV></tr>
-                          <tr><TDL>Idade</TDL><TDV>{dados.idadeAparente ? dados.idadeAparente + ' anos' : '—'}</TDV></tr>
-                          <tr><TDL>Conservação</TDL><TDV>{dados.estadoConservacao}</TDV></tr>
-                          <tr><TDL>Finalidade</TDL><TDV>{capaFinalidade}</TDV></tr>
-                        </tbody>
-                      </table>
-                    </div>
-                    <DocFooter pag="1" />
-                  </Pagina>
-
-                  {/* ─── PÁGINA 2 ─────────────────────────────────────── */}
-                  <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                    <DocHeader />
-
-                    {/* 4 — Características do avaliando */}
-                    <SecHeader num="4" titulo="Características e Dimensões do Avaliando" />
+                    {/* 3 — Características e Dimensões do Avaliando (unificado) */}
+                    <SecHeader num="3" titulo="Características e Dimensões do Avaliando" />
                     <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
                       <tbody>
                         <tr>
@@ -1034,21 +1005,32 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                           <TDL>IPTU</TDL><TDV>{dados.iptu}</TDV>
                         </tr>
                         <tr>
-                          <TDL>Área terreno</TDL><TDV>{formatarArea(dados.areaTerrenoTotal)}</TDV>
-                          <TDL>Área construída</TDL><TDV>{formatarArea(dados.areaConstruidaTotal)}</TDV>
+                          <TDL>Área de terreno</TDL><TDV>{formatarArea(dados.areaTerrenoTotal)}</TDV>
+                          <TDL>Área construída total</TDL><TDV>{formatarArea(dados.areaConstruidaTotal)}</TDV>
                         </tr>
                         <tr>
-                          <TDL>Padrão</TDL><TDV>{dados.padrao}</TDV>
+                          <TDL>Área averbada</TDL><TDV>{formatarArea(dados.areaConstruidaAverbada)}</TDV>
+                          <TDL>Área não averbada</TDL><TDV>{formatarArea(dados.areaConstruidaNaoAverbada?.toString())}</TDV>
+                        </tr>
+                        <tr>
+                          <TDL>Padrão construtivo</TDL><TDV>{dados.padrao}</TDV>
                           <TDL>Idade aparente</TDL><TDV>{dados.idadeAparente ? dados.idadeAparente + ' anos' : '—'}</TDV>
                         </tr>
                         <tr>
-                          <TDL>Conservação</TDL><TDV colSpan={3}>{dados.estadoConservacao}</TDV>
+                          <TDL>Estado de conservação</TDL><TDV>{dados.estadoConservacao}</TDV>
+                          <TDL>Finalidade</TDL><TDV>{capaFinalidade}</TDV>
                         </tr>
                       </tbody>
                     </table>
+                    <DocFooter pag="1" />
+                  </Pagina>
 
-                    {/* 5 — Documentação */}
-                    <SecHeader num="5" titulo="Documentação Apresentada" />
+                  {/* ─── PÁGINA 2 ─────────────────────────────────────── */}
+                  <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
+                    <DocHeader />
+
+                    {/* 4 — Documentação (renumerada) */}
+                    <SecHeader num="4" titulo="Documentação Apresentada" />
                     <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
                       <tbody>
                         <tr><TDL>Matrícula</TDL><TDV>{dados.matricula}</TDV></tr>
@@ -1057,7 +1039,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     </table>
 
                     {/* 6 — Descrição */}
-                    <SecHeader num="6" titulo="Descrição do Imóvel Avaliando" />
+                    <SecHeader num="5" titulo="Descrição do Imóvel Avaliando" />
                     <div style={{ border: '0.5px solid #C9D3E6', padding: '8px', fontSize: '8.5px', lineHeight: '1.55', color: '#1e293b', marginTop: '4px' }}>
                       <strong style={{ color: '#17325C', fontSize: '8.5px' }}>6.1 — Descrição do imóvel avaliando</strong>
                       <div style={{ marginTop: '4px' }}>
@@ -1070,7 +1052,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     {/* 7 — Divisões */}
                     {divisoesFilt.length > 0 && (
                       <>
-                        <SecHeader num="7" titulo="Características do Imóvel Avaliando" />
+                        <SecHeader num="6" titulo="Características do Imóvel Avaliando" />
                         <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
                           <thead>
                             <tr>
@@ -1105,7 +1087,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     </table>
 
                     {/* 9 — Pesquisa imobiliária */}
-                    <SecHeader num="9" titulo="Pesquisa Imobiliária" />
+                    <SecHeader num="8" titulo="Pesquisa Imobiliária" />
                     <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px', marginBottom: '6px' }}>
                       <thead>
                         <tr>
@@ -1211,7 +1193,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     {/* 9.1 — Homogeneização */}
                     {temCddm && (
                       <>
-                        <SecHeader num="9.1" titulo="Homogeneização" />
+                        <SecHeader num="8.1" titulo="Homogeneização" />
                         <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
                           <thead>
                             <tr style={{ background: '#2347C6' }}>
@@ -1330,7 +1312,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     )}
 
                     {/* 10 — Valor final */}
-                    <SecHeader num="10" titulo="Valor Final da Avaliação" />
+                    <SecHeader num="9" titulo="Valor Final da Avaliação" />
                     {temCddm && cddm && (
                       <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px', marginBottom: '4px' }}>
                         <thead>
@@ -1365,7 +1347,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     </div>
 
                     {/* 11 — Graus */}
-                    <SecHeader num="11" titulo="Grau de Fundamentação e Precisão" />
+                    <SecHeader num="10" titulo="Grau de Fundamentação e Precisão" />
                     <div style={{ display: 'flex', gap: '6px', margin: '4px 0 6px' }}>
                       {[
                         { label: 'Grau de Fundamentação', valor: capaGrauFund },
@@ -1396,7 +1378,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                       const tdPts: React.CSSProperties = { width: '7%', fontSize: '8px', fontWeight: 700, color: '#1a3564', textAlign: 'center', padding: '3px 4px', background: '#EAF0FB', borderRight: 'none' }
                       return (
                         <>
-                          <SecHeader num="11.1" titulo="Grau de Fundamentação — Tratamento por Fatores" />
+                          <SecHeader num="10.1" titulo="Grau de Fundamentação — Tratamento por Fatores" />
                           <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '7px', marginTop: '4px' }}>
                             <thead>
                               <tr style={{ background: '#1a3564' }}>
@@ -1456,7 +1438,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                             Para menos de 5 dados de mercado, o intervalo admissível de ajuste é de 0,80 a 1,25. (ABNT NBR 14653-2:2011)
                           </div>
 
-                          <SecHeader num="11.2" titulo="Grau de Precisão — Tratamento por Fatores" />
+                          <SecHeader num="10.2" titulo="Grau de Precisão — Tratamento por Fatores" />
                           <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '7px', marginTop: '4px' }}>
                             <thead>
                               <tr style={{ background: '#1a3564' }}>
@@ -1495,7 +1477,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     })()}
 
                     {/* 12 — Conclusão + Assinatura */}
-                    <SecHeader num="12" titulo="Considerações Finais" />
+                    <SecHeader num="11" titulo="Considerações Finais" />
                     <div style={{ border: '0.5px solid #C9D3E6', padding: '8px', fontSize: '8.5px', lineHeight: '1.55', color: '#1e293b', marginTop: '4px' }}>
                       <strong style={{ color: '#17325C' }}>INFORMAÇÕES FINAIS</strong>
                       <div style={{ marginTop: '4px' }}>

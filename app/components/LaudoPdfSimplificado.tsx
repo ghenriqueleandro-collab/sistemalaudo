@@ -351,9 +351,9 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
   const divisoesFilt = (dados.divisoes||[]).filter((d:any)=>d.ambiente?.trim())
   const temBenfeitorias = !!dados.imagemBenfeitorias
 
-  const secValor = temBenfeitorias ? '11' : '10'
-  const secGraus = temBenfeitorias ? '12' : '11'
-  const secConcl = temBenfeitorias ? '13' : '12'
+  const secValor = temBenfeitorias ? '10' : '9'
+  const secGraus = temBenfeitorias ? '11' : '10'
+  const secConcl = temBenfeitorias ? '12' : '11'
 
   // ─── Helper: card de elemento (evolutivo e comparativo) ─────────────────────
   const renderElemento = (el: any, i: number) => {
@@ -480,61 +480,55 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
           <Row label="Metodologia de cálculo" value={metLabel(dados.metodoAvaliacao)} last />
         </View>
 
-        {/* ── 3. DIMENSÕES ─────────────────────────────────────────────────── */}
-        <SecHeader num="3" titulo="Dimensões" />
-        <View style={{ flexDirection: 'row', marginTop: 3 }}>
-          <View style={[s.table, { flex: 1, marginTop: 0, marginRight: 4 }]}>
-            <View style={s.row}><View style={[s.cellHead,{flex:1}]}><Text>Imóvel isolado</Text></View></View>
-            <Row label="Averbada"         value={fa(dados.areaConstruidaAverbada)} flex1={1.5} flex2={1} />
-            <Row label="Não Averbada"     value={fa(String(dados.areaConstruidaNaoAverbada??0))} flex1={1.5} flex2={1} />
-            <Row label="Total Construída" value={fa(dados.areaConstruidaTotal)} flex1={1.5} flex2={1} />
-            <Row label="Terreno"          value={fa(dados.areaTerrenoTotal)} flex1={1.5} flex2={1} last />
-          </View>
-          <View style={[s.table, { flex: 1, marginTop: 0 }]}>
-            <View style={s.row}><View style={[s.cellHead,{flex:1}]}><Text>Referências</Text></View></View>
-            <Row label="Padrão"      value={dados.padrao} flex1={1.5} flex2={1} />
-            <Row label="Idade"       value={dados.idadeAparente ? dados.idadeAparente+' anos' : '–'} flex1={1.5} flex2={1} />
-            <Row label="Conservação" value={dados.estadoConservacao} flex1={1.5} flex2={1} />
-            <Row label="Finalidade"  value={capaFinalidade} flex1={1.5} flex2={1} last />
-          </View>
-        </View>
-
-        {/* ── 4. CARACTERÍSTICAS ───────────────────────────────────────────── */}
-        <SecHeader num="4" titulo="Características e Dimensões do Avaliando" />
-        <View style={s.table}>
+        {/* ── 3. CARACTERÍSTICAS E DIMENSÕES DO AVALIANDO (unificado) ────────── */}
+        <SecHeader num="3" titulo="Características e Dimensões do Avaliando" />
+        <View style={[s.table, { marginTop: 3 }]}>
+          {/* Linha 1: Tipo + IPTU */}
           <View style={s.row}>
             <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Tipo</Text></View>
             <View style={[s.cellVal,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{dados.tipo||'–'}</Text></View>
             <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>IPTU</Text></View>
             <View style={[s.cellVal,{flex:1.5}]}><Text>{dados.iptu||'–'}</Text></View>
           </View>
+          {/* Linha 2: Área terreno + Área construída */}
           <View style={s.row}>
-            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Área terreno</Text></View>
+            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Área de terreno</Text></View>
             <View style={[s.cellVal,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{fa(dados.areaTerrenoTotal)}</Text></View>
-            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Área construída</Text></View>
+            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Área construída total</Text></View>
             <View style={[s.cellVal,{flex:1.5}]}><Text>{fa(dados.areaConstruidaTotal)}</Text></View>
           </View>
+          {/* Linha 3: Área averbada + Área não averbada */}
           <View style={s.row}>
-            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Padrão</Text></View>
+            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Área averbada</Text></View>
+            <View style={[s.cellVal,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{fa(dados.areaConstruidaAverbada)}</Text></View>
+            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Área não averbada</Text></View>
+            <View style={[s.cellVal,{flex:1.5}]}><Text>{fa(String(dados.areaConstruidaNaoAverbada??0))}</Text></View>
+          </View>
+          {/* Linha 4: Padrão + Idade aparente */}
+          <View style={s.row}>
+            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Padrão construtivo</Text></View>
             <View style={[s.cellVal,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{dados.padrao||'–'}</Text></View>
             <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Idade aparente</Text></View>
             <View style={[s.cellVal,{flex:1.5}]}><Text>{dados.idadeAparente ? dados.idadeAparente+' anos' : '–'}</Text></View>
           </View>
+          {/* Linha 5: Conservação + Finalidade */}
           <View style={s.rowLast}>
-            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Conservação</Text></View>
-            <View style={[s.cellVal,{flex:4}]}><Text>{dados.estadoConservacao||'–'}</Text></View>
+            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Estado de conservação</Text></View>
+            <View style={[s.cellVal,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{dados.estadoConservacao||'–'}</Text></View>
+            <View style={[s.cellLbl,{flex:1,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Finalidade</Text></View>
+            <View style={[s.cellVal,{flex:1.5}]}><Text>{capaFinalidade}</Text></View>
           </View>
         </View>
 
-        {/* ── 5. DOCUMENTAÇÃO ──────────────────────────────────────────────── */}
-        <SecHeader num="5" titulo="Documentação Apresentada" />
+        {/* ── 4. DOCUMENTAÇÃO (renumerada de 5 para 4) ─────────────────────── */}
+        <SecHeader num="4" titulo="Documentação Apresentada" />
         <View style={s.table}>
           <Row label="Matrícula"             value={dados.matricula} />
           <Row label="Inscrição imobiliária" value={dados.iptu} last />
         </View>
 
         {/* ── 6. DESCRIÇÃO ─────────────────────────────────────────────────── */}
-        <SecHeader num="6" titulo="Descrição do Imóvel Avaliando" />
+        <SecHeader num="5" titulo="Descrição do Imóvel Avaliando" />
         <View style={{ borderWidth: 0.5, borderColor: CINZA, padding: 6, marginTop: 3 }}>
           <Text style={s.txtBold}>6.1 - Descrição do imóvel avaliando</Text>
           <Text style={s.txt}>
@@ -547,7 +541,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
         {/* ── 7. DIVISÕES ──────────────────────────────────────────────────── */}
         {divisoesFilt.length > 0 && (
           <>
-            <SecHeader num="7" titulo="Características do Imóvel Avaliando" />
+            <SecHeader num="6" titulo="Características do Imóvel Avaliando" />
             <View style={s.table}>
               <View style={s.row}>
                 <View style={[s.cellHead,{flex:2,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Divisão Interna</Text></View>
@@ -571,7 +565,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
         )}
 
         {/* ── 8. PESQUISA IMOBILIÁRIA (renumerado de 9 para 8) ─────────────── */}
-        <SecHeader num="8" titulo="Pesquisa Imobiliária" />
+        <SecHeader num="7" titulo="Pesquisa Imobiliária" />
         <View style={s.table}>
           <View style={s.row}>
             <View style={[s.cellHead,{flex:2,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Período</Text></View>
@@ -597,7 +591,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
         {/* ── 9.1. HOMOGENEIZAÇÃO (só comparativo) ────────────────────────── */}
         {temCddm && (
           <>
-            <SecHeader num="8.1" titulo="Homogeneização" />
+            <SecHeader num="7.1" titulo="Homogeneização" />
             <View style={s.homogTable}>
               <View style={s.homogRowH}>
                 <Text style={[s.homogTh,{flex:0.6}]}>Elem.</Text>
@@ -652,9 +646,9 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                     <Text style={{flex:1,fontSize:6.5,fontFamily:'Helvetica-Bold',color:AZUL,textAlign:'center',paddingVertical:2}}>I</Text>
                   </View>
                   <View style={{flexDirection:'row'}}>
-                    <Text style={{flex:1,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:2,borderTopWidth:0.5,borderRightWidth:0.5,borderColor:CINZA}}>≤ 30%</Text>
-                    <Text style={{flex:1,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:2,borderTopWidth:0.5,borderRightWidth:0.5,borderColor:CINZA}}>≤ 40%</Text>
-                    <Text style={{flex:1,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:2,borderTopWidth:0.5,borderColor:CINZA}}>≤ 50%</Text>
+                    <Text style={{flex:1,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:2,borderTopWidth:0.5,borderRightWidth:0.5,borderColor:CINZA}}>{'<= 30%'}</Text>
+                    <Text style={{flex:1,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:2,borderTopWidth:0.5,borderRightWidth:0.5,borderColor:CINZA}}>{'<= 40%'}</Text>
+                    <Text style={{flex:1,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:2,borderTopWidth:0.5,borderColor:CINZA}}>{'<= 50%'}</Text>
                   </View>
                 </View>
               </View>
@@ -816,9 +810,9 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
             <Text style={s.precThRes}>Resultado obtido</Text>
           </View>
           {([
-            { grau: 'III', limite: '≤ 30%' },
-            { grau: 'II',  limite: '≤ 40%' },
-            { grau: 'I',   limite: '≤ 50%' },
+            { grau: 'III', limite: '<= 30%' },
+            { grau: 'II',  limite: '<= 40%' },
+            { grau: 'I',   limite: '<= 50%' },
           ] as const).map(({ grau, limite }) => {
             const isOk = capaGrauPrec === grau
             const ic = cddm ? `${cddm.intervaloConfianca.toFixed(2).replace('.',',')}%` : '–'
