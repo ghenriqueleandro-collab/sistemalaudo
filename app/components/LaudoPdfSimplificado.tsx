@@ -184,9 +184,9 @@ const s = StyleSheet.create({
   elemBody:  { flexDirection: 'row' },
   elemTable: { flex: 1, borderTopWidth: 0.5, borderColor: CINZA, backgroundColor: BRANCO },
   elemRowB:  { flexDirection: 'row', borderBottomWidth: 0.5, borderColor: CINZA },
-  elemCellLbl: { backgroundColor: AZULLT, paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, fontFamily: 'Helvetica-Bold', color: AZUL, borderRightWidth: 0.5, borderColor: CINZA },
-  elemCellVal: { paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, color: TEXTO, borderRightWidth: 0.5, borderColor: CINZA, backgroundColor: BRANCO },
-  elemCellValLast: { paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, color: TEXTO, backgroundColor: BRANCO },
+  elemCellLbl: { backgroundColor: AZULLT, paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, fontFamily: 'Helvetica-Bold', color: AZUL, borderRightWidth: 0.5, borderColor: CINZA, overflow: 'hidden' },
+  elemCellVal: { paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, color: TEXTO, borderRightWidth: 0.5, borderColor: CINZA, backgroundColor: BRANCO, overflow: 'hidden' },
+  elemCellValLast: { paddingVertical: 2.5, paddingHorizontal: 4, fontSize: 6.8, color: TEXTO, backgroundColor: BRANCO, overflow: 'hidden' },
   elemFotoCol: { width: 120, borderLeftWidth: 0.5, borderColor: CINZA, alignItems: 'center', justifyContent: 'center' },
   elemFotoImg: { width: 120, height: 120, objectFit: 'cover' },
   // Tabela homogeneização
@@ -374,26 +374,49 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
     const C2L=65,C2V=200,C2L2=65,C2V2=209
     const C3L=50,C3V=120,C3L2=50,C3V2=120,C3L3=50,C3V3=149
 
+    // numberOfLines={1} em todo Text dos cards — sem quebra de linha
+
     const r1 = (l1: string, v1: any) => {
       const a = ok(v1); if (!a) return null
-      return <View style={s.elemRowB}><View style={[bl,{width:C1L}]}><Text>{l1}</Text></View><View style={[bvL,{width:C1V}]}><Text>{a}</Text></View></View>
+      return (
+        <View style={s.elemRowB}>
+          <View style={[bl,{width:C1L}]}><Text wrap={false}>{l1}</Text></View>
+          <View style={[bvL,{width:C1V}]}><Text wrap={false}>{a}</Text></View>
+        </View>
+      )
     }
     const r2 = (l1: string, v1: any, l2: string, v2: any) => {
       const a=ok(v1),b=ok(v2); if(!a&&!b) return null
       if(!b) return r1(l1,a); if(!a) return r1(l2,b)
-      return <View style={s.elemRowB}><View style={[bl,{width:C2L}]}><Text>{l1}</Text></View><View style={[bv,{width:C2V,...sep}]}><Text>{a}</Text></View><View style={[bl,{width:C2L2,...sep}]}><Text>{l2}</Text></View><View style={[bvL,{width:C2V2}]}><Text>{b}</Text></View></View>
+      return (
+        <View style={s.elemRowB}>
+          <View style={[bl,{width:C2L}]}><Text wrap={false}>{l1}</Text></View>
+          <View style={[bv,{width:C2V,...sep}]}><Text wrap={false}>{a}</Text></View>
+          <View style={[bl,{width:C2L2,...sep}]}><Text wrap={false}>{l2}</Text></View>
+          <View style={[bvL,{width:C2V2}]}><Text wrap={false}>{b}</Text></View>
+        </View>
+      )
     }
     const r3 = (l1: string, v1: any, l2: string, v2: any, l3: string, v3: any) => {
       const a=ok(v1),b=ok(v2),c=ok(v3); if(!a&&!b&&!c) return null
       if(!c) return r2(l1,a,l2,b); if(!b&&!a) return r1(l3,c)
       if(!a) return r2(l2,b,l3,c); if(!b) return r2(l1,a,l3,c)
-      return <View style={s.elemRowB}><View style={[bl,{width:C3L}]}><Text>{l1}</Text></View><View style={[bv,{width:C3V,...sep}]}><Text>{a}</Text></View><View style={[bl,{width:C3L2,...sep}]}><Text>{l2}</Text></View><View style={[bv,{width:C3V2,...sep}]}><Text>{b}</Text></View><View style={[bl,{width:C3L3,...sep}]}><Text>{l3}</Text></View><View style={[bvL,{width:C3V3}]}><Text>{c}</Text></View></View>
+      return (
+        <View style={s.elemRowB}>
+          <View style={[bl,{width:C3L}]}><Text wrap={false}>{l1}</Text></View>
+          <View style={[bv,{width:C3V,...sep}]}><Text wrap={false}>{a}</Text></View>
+          <View style={[bl,{width:C3L2,...sep}]}><Text wrap={false}>{l2}</Text></View>
+          <View style={[bv,{width:C3V2,...sep}]}><Text wrap={false}>{b}</Text></View>
+          <View style={[bl,{width:C3L3,...sep}]}><Text wrap={false}>{l3}</Text></View>
+          <View style={[bvL,{width:C3V3}]}><Text wrap={false}>{c}</Text></View>
+        </View>
+      )
     }
 
     const linhas = [
       r3('Tipo', el.tipo, 'Data', el.data ? fd(el.data) : '', 'Empreendimento', el.empreendimento),
       r1('Logradouro', el.logradouro || el.endereco),
-      r3('Bairro', el.bairro, 'Cidade · UF', cidadeUF, 'Distância', el.distanciaAvaliando || el.distancia),
+      r3('Bairro', el.bairro, 'Cidade/UF', cidadeUF, 'Distância', el.distanciaAvaliando || el.distancia),
       r2('Coordenadas', el.coordenadas, 'Fonte', el.fonte),
       r3('Conservação', el.estadoConservacao, 'Idade', el.idadeAparente > 0 ? `${el.idadeAparente} anos` : (el.idade ? `${el.idade} anos` : ''), 'Andar', el.andar > 0 ? String(el.andar) : ''),
       el.areaTerreno > 0 ? r2('Área terreno', `${Number(el.areaTerreno).toLocaleString('pt-BR')} m²`, 'Área construída', el.areaConstruida > 0 ? `${Number(el.areaConstruida).toLocaleString('pt-BR')} m²` : '') : null,
@@ -402,7 +425,14 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
       r3('Valor oferta', vOf, 'Valor líquido', vLiq !== vOf ? vLiq : '', 'V.U./m²', vuOf),
       r3('F. Oferta', ok(el.fatorOferta), 'Nota local', ok(el.fatorLocalBruto || el.notaLocal || el.fatorLocal), 'F. Andar', ok(el.fatorAndarBruto || el.fatorAndar)),
       r3('Tipo oferta', el.tipoOferta, 'Status', el.status, 'Telefone', el.telefone),
-      el.link ? <View key="link" style={s.elemRowB}><View style={[bl,{width:C1L}]}><Text>Link</Text></View><View style={[bvL,{width:C1V}]}><Text style={{fontSize:6.3,color:AZUL2}}>{String(el.link).slice(0,165)}</Text></View></View> : null,
+      el.link ? (
+        <View key="link" style={s.elemRowB}>
+          <View style={[bl,{width:C1L}]}><Text>Link</Text></View>
+          <View style={[bvL,{width:C1V}]}>
+            <Text style={{fontSize:6.3,color:AZUL2}}>{String(el.link).slice(0,110)}</Text>
+          </View>
+        </View>
+      ) : null,
       r1('Obs.', el.observacoes),
     ].filter(Boolean)
 
