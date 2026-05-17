@@ -138,10 +138,9 @@ const s = StyleSheet.create({
     marginTop: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
   },
-  secBadge: { backgroundColor: AZUL2, paddingVertical: 1.5, paddingHorizontal: 5, borderRadius: 2 },
-  secTitle: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: BRANCO, textTransform: 'uppercase', letterSpacing: 0.5 },
+  secBadge: { backgroundColor: AZUL2, paddingVertical: 1.5, paddingHorizontal: 5, marginRight: 6 },
+  secTitle: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: BRANCO, letterSpacing: 0.5 },
   // Título central
   titleBand: {
     backgroundColor: AZUL2,
@@ -265,8 +264,8 @@ const s = StyleSheet.create({
   precTdRes: { width: 80, fontSize: 6.5, color: TEXTO, textAlign: 'center', paddingVertical: 3 },
   precTdResOk: { width: 80, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: AZUL, textAlign: 'center', paddingVertical: 3, backgroundColor: '#dbeafe' },
   precResRow: { flexDirection: 'row', backgroundColor: AZUL2 },
-  precResLbl: { flex: 1, fontSize: 7, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'right', paddingVertical: 3, paddingHorizontal: 6 },
-  precResVal: { width: 50+80, fontSize: 9, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 2 },
+  precResLbl: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'right', paddingVertical: 3, paddingHorizontal: 6 },
+  precResVal: { width: 130, fontSize: 9, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center', paddingVertical: 2 },
 })
 
 // ─── Componentes auxiliares ───────────────────────────────────────────────────
@@ -980,7 +979,10 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
               )
             })}
             <View style={s.precResRow}>
-              <Text style={s.precResLbl}>Grau de precisão obtido</Text>
+              <View style={{ flex: 1, flexDirection: 'row' }}>
+                <Text style={{ width: 50, fontSize: 7, fontFamily: 'Helvetica-Bold', color: BRANCO, paddingVertical: 3 }}> </Text>
+                <Text style={[s.precResLbl, { flex: 1 }]}>Grau de precisão obtido</Text>
+              </View>
               <Text style={s.precResVal}>{capaGrauPrec !== '-' ? `Precisão ${capaGrauPrec}` : '-'}</Text>
             </View>
           </View>
