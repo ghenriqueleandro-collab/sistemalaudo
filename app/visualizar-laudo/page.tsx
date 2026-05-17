@@ -691,11 +691,12 @@ function VisualizarLaudoContent() {
     : dados.metodoAvaliacao                  || '-'
 
   const capaGrauFund = (() => {
+    const gv2 = (i: any) => i.pontos || (i.grau === 'III' ? 3 : i.grau === 'II' ? 2 : i.grau === 'I' ? 1 : 0)
     if (dados.metodoAvaliacao === 'evolutivo') {
-      const soma = (dados.fundamentacaoEvolutivo || []).reduce((s: number, i: any) => s + (i.pontos || 0), 0)
+      const soma = (dados.fundamentacaoEvolutivo || []).reduce((s: number, i: any) => s + gv2(i), 0)
       if (soma >= 8) return 'III'; if (soma >= 5) return 'II'; if (soma >= 3) return 'I'; return '-'
     }
-    const soma = (dados.fundamentacao || []).reduce((s: number, i: any) => s + (i.pontos || 0), 0)
+    const soma = (dados.fundamentacao || []).reduce((s: number, i: any) => s + gv2(i), 0)
     if (soma >= 10) return 'III'; if (soma >= 6) return 'II'; if (soma >= 4) return 'I'; return '-'
   })()
 
@@ -1388,97 +1389,117 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                       ))}
                     </div>
 
-                    {/* 11.1 — Tabela detalhada de Fundamentação */}
-                    {temCddm && (() => {
+                    {/* 11.1 — Tabela detalhada de Fundamentação (sempre visível) */}
+                    {(() => {
                       const fund = (dados.fundamentacao || []) as any[]
                       const itensPadrao = [
                         { id: '01', desc: 'Caracterização do imóvel avaliando', g3: 'Completa quanto a todos os fatores analisados', g2: 'Completa quanto aos fatores utilizados no tratamento', g1: 'Adoção de situação paradigma' },
-                        { id: '02', desc: 'Quantidade mínima de dados de mercado, efetivamente utilizados', g3: '12', g2: '5', g1: '3' },
-                        { id: '03', desc: 'Identificação dos dados de mercado', g3: 'Apresentação de informações relativas a todas as características dos dados analisados, com foto e características observadas pelo autor do laudo', g2: 'Apresentação de informações relativas a todas as características dos dados analisados', g1: 'Apresentação de informações relativas a todas as características dos dados correspondentes aos fatores utilizados' },
+                        { id: '02', desc: 'Quantidade mínima de dados de mercado efetivamente utilizados', g3: '12', g2: '5', g1: '3' },
+                        { id: '03', desc: 'Identificação dos dados de mercado', g3: 'Informações de todas as características com foto e características observadas pelo autor do laudo', g2: 'Informações relativas a todas as características dos dados analisados', g1: 'Informações relativas às características dos fatores utilizados' },
                         { id: '04', desc: 'Intervalo admissível de ajuste para o conjunto de fatores', g3: '0,80 a 1,25', g2: '0,50 a 2,00', g1: '0,40 a 2,50' },
                       ]
-                      const cellGrau = (active: boolean, isLast = false): React.CSSProperties => ({
-                        padding: '3px 4px', fontSize: '7px', textAlign: 'center', verticalAlign: 'middle',
-                        borderRight: isLast ? 'none' : '0.5px solid #C9D3E6',
-                        background: active ? '#dbeafe' : '#fff',
-                        color: active ? '#17325C' : '#1e293b',
-                        fontWeight: active ? 700 : 400,
-                        lineHeight: 1.3,
-                      })
+                      const somaPts = fund.reduce((acc: number, f: any) => acc + (f?.pontos || 0), 0)
+                      const grauFinal = somaPts >= 10 ? 'III' : somaPts >= 6 ? 'II' : somaPts >= 4 ? 'I' : '-'
+                      const thBase: React.CSSProperties = { fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px 4px', borderRight: '0.5px solid #475e9b' }
+                      const tdBase: React.CSSProperties = { fontSize: '7px', padding: '3px 4px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', lineHeight: 1.3, verticalAlign: 'middle' }
+                      const tdActive: React.CSSProperties = { ...tdBase, background: '#dbeafe', color: '#1a3564', fontWeight: 700 }
+                      const tdPts: React.CSSProperties = { width: '7%', fontSize: '8px', fontWeight: 700, color: '#1a3564', textAlign: 'center', padding: '3px 4px', background: '#EAF0FB', borderRight: 'none' }
                       return (
                         <>
                           <SecHeader num="11.1" titulo="Grau de Fundamentação — Tratamento por Fatores" />
-                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '7px', marginTop: '4px' }}>
                             <thead>
-                              <tr style={{ background: '#17325C' }}>
-                                <th style={{ width: '5%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #475e9b' }}>Item</th>
-                                <th style={{ width: '25%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'left', padding: '3px 5px', borderRight: '0.5px solid #475e9b' }}>Descrição</th>
-                                <th style={{ width: '23.3%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #475e9b' }}>Grau III</th>
-                                <th style={{ width: '23.3%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #475e9b' }}>Grau II</th>
-                                <th style={{ width: '23.3%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px' }}>Grau I</th>
+                              <tr style={{ background: '#1a3564' }}>
+                                <th style={{ ...thBase, width: '4%' }}>Item</th>
+                                <th style={{ ...thBase, width: '22%', textAlign: 'left', padding: '3px 5px' }}>Descrição</th>
+                                <th style={{ ...thBase, width: '21%' }}>Grau III</th>
+                                <th style={{ ...thBase, width: '21%' }}>Grau II</th>
+                                <th style={{ ...thBase, width: '21%' }}>Grau I</th>
+                                <th style={{ ...thBase, width: '7%', borderRight: 'none' }}>Pontos obtidos</th>
                               </tr>
                             </thead>
                             <tbody>
                               {itensPadrao.map((it, idx) => {
                                 const grauAtual = fund[idx]?.grau || ''
+                                const pts = fund[idx]?.pontos ?? '-'
                                 return (
                                   <tr key={it.id} style={{ borderTop: '0.5px solid #C9D3E6' }}>
-                                    <td style={{ fontSize: '7px', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #C9D3E6' }}>{it.id}</td>
-                                    <td style={{ fontSize: '7px', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}>{it.desc}</td>
-                                    <td style={cellGrau(grauAtual === 'III')}>{it.g3}</td>
-                                    <td style={cellGrau(grauAtual === 'II')}>{it.g2}</td>
-                                    <td style={cellGrau(grauAtual === 'I', true)}>{it.g1}</td>
+                                    <td style={{ ...tdBase, width: '4%' }}>{it.id}</td>
+                                    <td style={{ ...tdBase, textAlign: 'left', padding: '3px 5px' }}>{it.desc}</td>
+                                    <td style={grauAtual === 'III' ? tdActive : tdBase}>{it.g3}</td>
+                                    <td style={grauAtual === 'II' ? tdActive : tdBase}>{it.g2}</td>
+                                    <td style={grauAtual === 'I' ? { ...tdActive, borderRight: '0.5px solid #C9D3E6' } : { ...tdBase }}>{it.g1}</td>
+                                    <td style={tdPts}>{pts}</td>
                                   </tr>
                                 )
                               })}
+                              {/* Pontos mínimos + itens obrigatórios */}
+                              <tr style={{ borderTop: '0.5px solid #C9D3E6', background: '#EAF0FB' }}>
+                                <td colSpan={1} style={{ fontSize: '7px', fontWeight: 700, color: '#1a3564', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}>Pontos mínimos</td>
+                                <td style={{ fontSize: '7px', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}> </td>
+                                <td style={{ ...tdBase, fontWeight: 700, color: '#1a3564', background: '#EAF0FB' }}>10</td>
+                                <td style={{ ...tdBase, fontWeight: 700, color: '#1a3564', background: '#EAF0FB' }}>6</td>
+                                <td style={{ ...tdBase, fontWeight: 700, color: '#1a3564', background: '#EAF0FB' }}>4</td>
+                                <td style={{ ...tdPts }}>—</td>
+                              </tr>
+                              <tr style={{ borderTop: '0.5px solid #C9D3E6', background: '#EAF0FB' }}>
+                                <td colSpan={1} style={{ fontSize: '7px', fontWeight: 700, color: '#1a3564', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}>Itens obrigatórios</td>
+                                <td style={{ fontSize: '7px', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}> </td>
+                                <td style={{ fontSize: '6.5px', padding: '3px 4px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', lineHeight: 1.3 }}>2 e 4 no grau III, demais mín. grau II</td>
+                                <td style={{ fontSize: '6.5px', padding: '3px 4px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', lineHeight: 1.3 }}>2 e 4 mín. grau II, demais mín. grau I</td>
+                                <td style={{ fontSize: '6.5px', padding: '3px 4px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', lineHeight: 1.3 }}>Todos mín. grau I</td>
+                                <td style={{ ...tdPts }}>—</td>
+                              </tr>
+                              {/* Somatória */}
+                              <tr style={{ background: '#1a3564', borderTop: '0.5px solid #475e9b' }}>
+                                <td colSpan={5} style={{ fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'right', padding: '3px 8px', borderRight: '0.5px solid #475e9b' }}>Somatória de pontos</td>
+                                <td style={{ fontSize: '10px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '2px 4px' }}>{somaPts}</td>
+                              </tr>
+                              {/* Grau obtido */}
+                              <tr style={{ background: '#2347C6', borderTop: '0.5px solid #3a57d0' }}>
+                                <td colSpan={5} style={{ fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'right', padding: '3px 8px', borderRight: '0.5px solid #3a57d0' }}>Grau de fundamentação obtido</td>
+                                <td style={{ fontSize: '11px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '2px 4px' }}>{grauFinal}</td>
+                              </tr>
                             </tbody>
                           </table>
-                          <div style={{ marginTop: 3, fontSize: '7px', fontStyle: 'italic', color: '#475569' }}>
-                            No caso de utilização de menos de cinco dados de mercado, o intervalo admissível de ajuste é de 0,80 a 1,25.
+                          <div style={{ marginTop: '3px', fontSize: '7px', fontStyle: 'italic', color: '#475569' }}>
+                            Para menos de 5 dados de mercado, o intervalo admissível de ajuste é de 0,80 a 1,25. (ABNT NBR 14653-2:2011)
                           </div>
 
-                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
-                            <tbody>
-                              <tr style={{ background: '#EAF0FB' }}>
-                                <td style={{ width: '20%', fontSize: '7px', fontWeight: 700, color: '#17325C', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}>Graus</td>
-                                <td style={{ width: '26.6%', fontSize: '7px', fontWeight: 700, color: '#17325C', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #C9D3E6' }}>III</td>
-                                <td style={{ width: '26.6%', fontSize: '7px', fontWeight: 700, color: '#17325C', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #C9D3E6' }}>II</td>
-                                <td style={{ width: '26.6%', fontSize: '7px', fontWeight: 700, color: '#17325C', textAlign: 'center', padding: '3px' }}>I</td>
-                              </tr>
-                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
-                                <td style={{ fontSize: '7px', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}>Pontos Mínimos</td>
-                                <td style={{ fontSize: '7px', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #C9D3E6' }}>10</td>
-                                <td style={{ fontSize: '7px', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #C9D3E6' }}>6</td>
-                                <td style={{ fontSize: '7px', textAlign: 'center', padding: '3px' }}>4</td>
-                              </tr>
-                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
-                                <td style={{ fontSize: '7px', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}>Itens obrigatórios</td>
-                                <td style={{ fontSize: '6.5px', padding: '3px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', lineHeight: 1.3 }}>Itens 2 e 4 no grau III, com os demais, no mín., grau II</td>
-                                <td style={{ fontSize: '6.5px', padding: '3px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', lineHeight: 1.3 }}>Itens 2 e 4, no mín., grau II e demais, no mín., grau I</td>
-                                <td style={{ fontSize: '6.5px', padding: '3px', textAlign: 'center', lineHeight: 1.3 }}>Todos, no mín., no grau I</td>
-                              </tr>
-                            </tbody>
-                          </table>
-
                           <SecHeader num="11.2" titulo="Grau de Precisão — Tratamento por Fatores" />
-                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '7px', marginTop: '4px' }}>
                             <thead>
-                              <tr style={{ background: '#17325C' }}>
-                                <th style={{ width: '40%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'left', padding: '3px 5px', borderRight: '0.5px solid #475e9b' }}>Descrição</th>
-                                <th style={{ width: '20%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #475e9b' }}>Grau III</th>
-                                <th style={{ width: '20%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px', borderRight: '0.5px solid #475e9b' }}>Grau II</th>
-                                <th style={{ width: '20%', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px' }}>Grau I</th>
+                              <tr style={{ background: '#1a3564' }}>
+                                <th style={{ ...thBase, width: '8%' }}>Grau</th>
+                                <th style={{ ...thBase, textAlign: 'left', padding: '3px 5px' }}>Amplitude do intervalo de confiança de 80% em torno da estimativa de tendência central</th>
+                                <th style={{ ...thBase, width: '14%', borderRight: 'none' }}>Resultado obtido</th>
                               </tr>
                             </thead>
                             <tbody>
-                              <tr style={{ borderTop: '0.5px solid #C9D3E6' }}>
-                                <td style={{ fontSize: '7px', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}>Amplitude do intervalo de confiança de 80% em torno da estimativa de tendência central</td>
-                                <td style={cellGrau(capaGrauPrec === 'III')}>≤ 30%</td>
-                                <td style={cellGrau(capaGrauPrec === 'II')}>≤ 40%</td>
-                                <td style={cellGrau(capaGrauPrec === 'I', true)}>≤ 50%</td>
+                              {([
+                                { grau: 'III', limite: '≤ 30%' },
+                                { grau: 'II',  limite: '≤ 40%' },
+                                { grau: 'I',   limite: '≤ 50%' },
+                              ] as const).map(({ grau, limite }) => {
+                                const isOk = capaGrauPrec === grau
+                                const ic = cddm ? `${cddm.intervaloConfianca.toFixed(2).replace('.', ',')}%` : '-'
+                                return (
+                                  <tr key={grau} style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                    <td style={{ fontWeight: 700, color: '#1a3564', textAlign: 'center', padding: '3px 4px', borderRight: '0.5px solid #C9D3E6' }}>{grau}</td>
+                                    <td style={{ padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}>{limite}</td>
+                                    <td style={isOk ? { ...tdActive, borderRight: 'none' } : { ...tdBase, borderRight: 'none' }}>{isOk ? `${ic} ✓` : '—'}</td>
+                                  </tr>
+                                )
+                              })}
+                              <tr style={{ background: '#2347C6', borderTop: '0.5px solid #3a57d0' }}>
+                                <td colSpan={2} style={{ fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'right', padding: '3px 8px', borderRight: '0.5px solid #3a57d0' }}>Grau de precisão obtido</td>
+                                <td style={{ fontSize: '9px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '2px 4px' }}>{capaGrauPrec !== '-' ? `Precisão ${capaGrauPrec}` : '-'}</td>
                               </tr>
                             </tbody>
                           </table>
+                          <div style={{ marginTop: '3px', fontSize: '7px', fontStyle: 'italic', color: '#475569' }}>
+                            * Quando a amplitude ultrapassar 50%, não há classificação quanto à precisão e é necessária justificativa. (ABNT NBR 14653-2:2011 — item 13.4)
+                          </div>
                         </>
                       )
                     })()}
@@ -2108,9 +2129,12 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               // ─── Valor numérico do grau ──────────────────────────────────
               const gv = (g?: string) => g === 'III' ? 3 : g === 'II' ? 2 : g === 'I' ? 1 : 0
 
-              const somaFund   = fund.reduce   ((s: number, i: any) => s + (i?.pontos || 0), 0)
-              const somaInf    = fundInf.reduce((s: number, i: any) => s + (i?.pontos || 0), 0)
-              const somaEvo    = fundEvo.reduce((s: number, i: any) => s + (i?.pontos || 0), 0)
+              // Usa pontos salvo; se for 0 mas grau estiver preenchido, deriva do grau
+              const pts = (i: any) => i?.pontos || gv(i?.grau)
+
+              const somaFund   = fund.reduce   ((s: number, i: any) => s + pts(i), 0)
+              const somaInf    = fundInf.reduce((s: number, i: any) => s + pts(i), 0)
+              const somaEvo    = fundEvo.reduce((s: number, i: any) => s + pts(i), 0)
 
               // ─── Lógica de exibição por combinação método + tratamento ───
               const exibirFatores    = !(metodo === 'evolutivo' && tratamento === 'inferencia_estatistica')
