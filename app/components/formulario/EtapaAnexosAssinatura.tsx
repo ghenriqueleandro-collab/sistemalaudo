@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, memo } from 'react'
 
 
 
@@ -21,7 +21,6 @@ type Props = {
     campo: 'documentacaoPdf' | 'calculoPdf'
   ) => void
   handleLocalizacaoComparativos: (e: React.ChangeEvent<HTMLInputElement>) => void
-  onRemoverAnexo: (campo: 'documentacaoPdf' | 'calculoPdf' | 'localizacaoComparativos') => void
   handleFotos: (e: React.ChangeEvent<HTMLInputElement>) => void
   fotos: FotoItem[]
   handleLegenda: (index: number, valor: string) => void
@@ -29,13 +28,79 @@ type Props = {
   onReordenarFotos: (origem: number, destino: number) => void
 }
 
+
+// ── FotoCard: estado local de legenda evita perda de foco ao digitar ─────────
+const FotoCard = memo(function FotoCard({
+  foto, index, dragIndex,
+  onDragStart, onDrop, onDragEnd,
+  onAmpliar, onBaixar, onRemover, onLegendaChange,
+}: {
+  foto: { preview: string; legenda: string }
+  index: number
+  dragIndex: number | null
+  onDragStart: () => void
+  onDrop: () => void
+  onDragEnd: () => void
+  onAmpliar: () => void
+  onBaixar: () => void
+  onRemover: () => void
+  onLegendaChange: (index: number, valor: string) => void
+}) {
+  const [legenda, setLegenda] = React.useState(foto.legenda || '')
+
+  // Sincroniza se a prop mudar externamente (ex: reordenação de fotos)
+  React.useEffect(() => { setLegenda(foto.legenda || '') }, [foto.legenda])
+
+  return (
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      className="group rounded-2xl border border-slate-200 overflow-hidden bg-white hover:border-slate-300 transition-colors cursor-move"
+    >
+      <div className="relative cursor-zoom-in" style={{ aspectRatio: '4/3' }} onClick={onAmpliar}>
+        <img src={foto.preview} alt={`Foto ${index + 1}`} className="w-full h-full object-cover" />
+        <span className="absolute top-2 left-2 bg-black/45 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+          {String(index + 1).padStart(2, '0')}
+        </span>
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center">
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/55 text-white text-xs font-medium px-3 py-1 rounded-full">Ampliar</span>
+        </div>
+      </div>
+      <div className="p-3 space-y-2">
+        <input
+          type="text"
+          value={legenda}
+          onChange={(e) => setLegenda(e.target.value)}
+          onBlur={() => onLegendaChange(index, legenda)}
+          placeholder="Legenda da foto"
+          className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 outline-none focus:border-blue-300 focus:bg-white"
+        />
+        <div className="flex gap-1.5">
+          <button type="button" onClick={onBaixar}
+            className="flex-1 flex items-center justify-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1.5 text-[11px] font-medium text-blue-700 hover:bg-blue-100 transition-colors">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>Baixar</button>
+          <button type="button" onClick={onRemover}
+            className="flex-1 flex items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1.5 text-[11px] font-medium text-rose-700 hover:bg-rose-100 transition-colors">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>
+            </svg>Excluir</button>
+        </div>
+      </div>
+    </div>
+  )
+})
+
 export default function EtapaAnexosAssinatura({
   form,
   handleChange,
   formatarDataBR,
   handlePdfUpload,
   handleLocalizacaoComparativos,
-  onRemoverAnexo,
   handleFotos,
   fotos,
   handleLegenda,
@@ -214,14 +279,6 @@ useEffect(() => {
             onChange={(e) => handlePdfUpload(e, 'documentacaoPdf')}
             className="w-full border p-2 rounded"
           />
-          {form.documentacaoPdf && (
-            <div className="mt-1.5 flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-              <span>✓</span>
-              <span className="font-medium">Arquivo enviado</span>
-              <button type="button" onClick={() => onRemoverAnexo('documentacaoPdf')}
-                className="ml-auto text-xs text-slate-500 hover:text-red-600">Remover</button>
-            </div>
-          )}
         </div>
 
         <div>
@@ -234,12 +291,6 @@ useEffect(() => {
             onChange={handleLocalizacaoComparativos}
             className="w-full border p-2 rounded"
           />
-          {form.localizacaoComparativos && (
-            <div className="mt-1.5 flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-              <span>✓</span>
-              <span className="font-medium">Imagem enviada</span>
-            </div>
-          )}
         </div>
 
         <div>
@@ -250,14 +301,6 @@ useEffect(() => {
             onChange={(e) => handlePdfUpload(e, 'calculoPdf')}
             className="w-full border p-2 rounded"
           />
-          {form.calculoPdf && (
-            <div className="mt-1.5 flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-              <span>✓</span>
-              <span className="font-medium">Arquivo enviado</span>
-              <button type="button" onClick={() => onRemoverAnexo('calculoPdf')}
-                className="ml-auto text-xs text-slate-500 hover:text-red-600">Remover</button>
-            </div>
-          )}
         </div>
 
         <div className="space-y-4">
@@ -285,78 +328,23 @@ useEffect(() => {
                 className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3"
               >
                 {fotos.map((foto, index) => (
-                  <div
-                    key={`foto-${index}-${foto.legenda || ''}`}
-                    draggable
+                  <FotoCard
+                    key={index}
+                    foto={foto}
+                    index={index}
+                    dragIndex={dragIndex}
                     onDragStart={() => setDragIndex(index)}
-                    onDragOver={(e) => e.preventDefault()}
                     onDrop={() => {
                       if (dragIndex === null || dragIndex === index) return
                       onReordenarFotos(dragIndex, index)
                       setDragIndex(null)
                     }}
                     onDragEnd={() => setDragIndex(null)}
-                    className="group rounded-2xl border border-slate-200 overflow-hidden bg-white hover:border-slate-300 transition-colors cursor-move"
-                  >
-                    {/* Thumbnail */}
-                    <div
-                      className="relative cursor-zoom-in"
-                      style={{ aspectRatio: '4/3' }}
-                      onClick={() => setFotoAmpliada({ preview: foto.preview, legenda: foto.legenda, index })}
-                    >
-                      <img
-                        src={foto.preview}
-                        alt={`Foto ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                      {/* Número */}
-                      <span className="absolute top-2 left-2 bg-black/45 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-                      {/* Overlay ampliar */}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center">
-                        <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/55 text-white text-xs font-medium px-3 py-1 rounded-full">
-                          Ampliar
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Legenda + ações */}
-                    <div className="p-3 space-y-2">
-                      <input
-                        type="text"
-                        value={foto.legenda || ''}
-                        onChange={(e) => handleLegenda(index, e.target.value)}
-                        placeholder="Legenda da foto"
-                        className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 outline-none focus:border-blue-300 focus:bg-white"
-                      />
-                      <div className="flex gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => baixarFoto(foto.preview, foto.legenda, index)}
-                          className="flex-1 flex items-center justify-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1.5 text-[11px] font-medium text-blue-700 hover:bg-blue-100 transition-colors"
-                        >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                            <polyline points="7 10 12 15 17 10"/>
-                            <line x1="12" y1="15" x2="12" y2="3"/>
-                          </svg>
-                          Baixar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onRemoverFoto(index)}
-                          className="flex-1 flex items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1.5 text-[11px] font-medium text-rose-700 hover:bg-rose-100 transition-colors"
-                        >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <polyline points="3 6 5 6 21 6"/>
-                            <path d="M19 6l-1 14H6L5 6"/>
-                          </svg>
-                          Excluir
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                    onAmpliar={() => setFotoAmpliada({ preview: foto.preview, legenda: foto.legenda, index })}
+                    onBaixar={() => baixarFoto(foto.preview, foto.legenda, index)}
+                    onRemover={() => onRemoverFoto(index)}
+                    onLegendaChange={handleLegenda}
+                  />
                 ))}
               </div>
             </div>
