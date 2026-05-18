@@ -265,6 +265,7 @@ export default function NovoLaudoPage() {
         setForm((prev) => ({
           ...prev,
           ...laudoSalvo,
+          tipoLaudo: 'detalhado' as const,  // laudos abertos no form detalhado são sempre detalhados
           croquis: croquisResolvidos,
           documentacaoPdf: docPdf,
           calculoPdf: calcPdf,
@@ -725,6 +726,7 @@ export default function NovoLaudoPage() {
 
       const payload = {
         ...form,
+        tipoLaudo: 'detalhado' as const,  // forçado — laudo detalhado nunca salva como simplificado
         id: laudoUuid,
         croquis: croquisComRef,
         documentacaoPdf: docPdf,

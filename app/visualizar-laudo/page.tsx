@@ -557,6 +557,7 @@ function VisualizarLaudoContent() {
 
           setDados({
             ...parsed,
+            tipoLaudo: (parsed.tipoLaudo as 'detalhado' | 'simplificado') || 'detalhado',
             fotos: fotosResolvidas,
             croquis: croquisResolvidos,
             documentacaoPdf: docPdf,
