@@ -26,6 +26,7 @@ type Props = {
   handleLegenda: (index: number, valor: string) => void
   onRemoverFoto: (index: number) => void
   onReordenarFotos: (origem: number, destino: number) => void
+  onRemoverAnexo?: (campo: 'documentacaoPdf' | 'calculoPdf' | 'localizacaoComparativos') => void
 }
 
 
@@ -106,6 +107,7 @@ export default function EtapaAnexosAssinatura({
   handleLegenda,
   onRemoverFoto,
   onReordenarFotos,
+  onRemoverAnexo,
 }: Props) {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
