@@ -534,8 +534,15 @@ export default function NovoLaudoPage() {
     return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
   }
 
-  const exibirTabelaFatoresTerreno = form.metodoAvaliacao === 'comparativo' && form.tratamentoDados === 'tratamento_por_fatores'
-  const exibirTabelaInferencia = form.metodoAvaliacao === 'comparativo' && form.tratamentoDados === 'inferencia_estatistica'
+  // Tabela Fatores Terreno: comparativo+fatores OU evolutivo+fatores (para avaliação do terreno)
+  const exibirTabelaFatoresTerreno =
+    form.tratamentoDados === 'tratamento_por_fatores' &&
+    (form.metodoAvaliacao === 'comparativo' || form.metodoAvaliacao === 'evolutivo')
+  // Tabela Inferência: comparativo+inferência OU evolutivo+inferência (para avaliação do terreno)
+  const exibirTabelaInferencia =
+    form.tratamentoDados === 'inferencia_estatistica' &&
+    (form.metodoAvaliacao === 'comparativo' || form.metodoAvaliacao === 'evolutivo')
+  // Tabela Método Evolutivo: sempre que o método for evolutivo
   const exibirTabelaMetodoEvolutivo = form.metodoAvaliacao === 'evolutivo'
 
   const somaFundamentacao = fundamentacao.reduce((acc, f) => {
