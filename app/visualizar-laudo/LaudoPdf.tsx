@@ -76,8 +76,6 @@ export type DadosLaudo = {
   valorTerreno: string
   valorBenfeitorias: string
   fatorComercializacao: string
-  modoValorImovel?: 'separado' | 'total'
-  valorTotal?: string
   valorLiquidezForcada?: string
   garantiaClassificacao?: string
   garantiaObservacoes?: string
@@ -112,32 +110,19 @@ function fm(valor: number) {
 
 function cn(valor: string) {
   if (!valor) return 0
-  // Remove R$, espaços, depois remove pontos de milhar (ponto seguido de 3 dígitos)
-  // e converte vírgula decimal em ponto
-  const limpo = valor
-    .replace(/[R$\s]/g, '')
-    .replace(/\.(?=\d{3}[,\.])/g, '')  // remove pontos de milhar
-    .replace(/\.(?=\d{3}$)/g, '')       // remove ponto de milhar no final
-    .replace(',', '.')
-    .replace(/[^\d.-]/g, '')
-  return Number(limpo) || 0
+  return Number(valor.replace(/\s/g, '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0
 }
 
 function formatarArea(valor?: string): string {
   if (!valor) return ''
   const numStr = valor.replace(/m²/g, '').replace(/ /g, '').trim()
-  const limpo = numStr
-    .replace(/\.(?=\d{3}[,.])/g, '')
-    .replace(/\.(?=\d{3}$)/g, '')
-    .replace(',', '.')
-  const num = parseFloat(limpo)
+  const num = parseFloat(numStr.replace(',', '.'))
   if (isNaN(num)) return valor
   return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' m²'
 }
 
 function arredondar(valor: number) {
-  // Arredonda para 2 casas decimais, sem perder centavos
-  return Math.round(valor * 100) / 100
+  return Math.round(valor / 100) * 100
 }
 
 // Extrai a cidade do campo endereço (formato: "Rua – Bairro – Cidade – Estado – CEP ...")
@@ -492,14 +477,8 @@ export function LaudoPdf({
   const prodOutros = (dados.outrosFatoresImovel || []).reduce(
     (t, i) => t * (cn(i.valor) || 1), 1
   )
-  const somaAdicionais = ((dados as any).valoresAdicionais || []).reduce(
-    (acc: number, v: { descricao: string; valor: string }) => acc + cn(v.valor), 0
-  )
-  const valorTotalN = cn(dados.valorTotal || '')
-  const modoTotal = dados.modoValorImovel === 'total'
-  const baseCalculo = modoTotal && valorTotalN > 0 ? valorTotalN : (valorTerrenoN + valorBenfeitoriasN)
-  const subtotal = baseCalculo * fatorComerc
-  const valorFinal = subtotal * prodOutros + somaAdicionais
+  const subtotal = (valorTerrenoN + valorBenfeitoriasN) * fatorComerc
+  const valorFinal = subtotal * prodOutros
   const valorArredondado = arredondar(valorFinal)
   const valorExtenso = numeroPorExtenso(valorArredondado)
   const vlf = cn(dados.valorLiquidezForcada || '')
@@ -517,19 +496,22 @@ export function LaudoPdf({
     : dados.metodoAvaliacao                 || '-'
 
   const capaGrauFund = (() => {
+    const gp = (g?: string) => g === 'III' ? 3 : g === 'II' ? 2 : g === 'I' ? 1 : 0
+    const pts = (arr: { grau?: string; pontos?: number }[]) =>
+      arr.reduce((s, i) => s + (i.grau ? gp(i.grau) : (i.pontos || 0)), 0)
     if (dados.metodoAvaliacao === 'evolutivo') {
-      const soma = (dados.fundamentacaoEvolutivo || []).reduce((s: number, i: any) => s + (i.pontos || 0), 0)
+      const soma = pts(dados.fundamentacaoEvolutivo || [])
       if (soma >= 8) return 'III'; if (soma >= 5) return 'II'; if (soma >= 3) return 'I'; return '-'
     }
-    const soma = (dados.fundamentacao || []).reduce((s: number, i: any) => s + (i.pontos || 0), 0)
+    const soma = pts(dados.fundamentacao || [])
     if (soma >= 10) return 'III'; if (soma >= 6) return 'II'; if (soma >= 4) return 'I'; return '-'
   })()
 
   const capaGrauPrec = (() => {
     const prec = dados.precisao || []
     if (prec.length === 0) return '-'
-    if (prec.length === 1) return (prec[0] as any).grau || '-'
-    const soma = prec.reduce((s: number, i: any) => s + (i.pontos || 0), 0)
+    if (prec.length === 1) return prec[0].grau || '-'
+    const soma = prec.reduce((s, i) => s + (i.pontos || 0), 0)
     if (soma >= 8) return 'III'; if (soma >= 5) return 'II'; if (soma >= 3) return 'I'; return '-'
   })()
 
@@ -1121,15 +1103,9 @@ export function LaudoPdf({
             SEÇÃO 11 — VALOR DO IMÓVEL
         ──────────────────────────────────────────────────── */}
         <H2 id="s-11">11. VALOR DO IMÓVEL</H2>
-        {modoTotal ? (
-          <P>a. <Text style={s.bold}>Valor do Imóvel:</Text> {fm(valorTotalN)}</P>
-        ) : (
-          <>
-            <P>a. <Text style={s.bold}>Valor do Terreno:</Text> {fm(valorTerrenoN)}</P>
-            <P>b. <Text style={s.bold}>Valor das Benfeitorias:</Text> {fm(valorBenfeitoriasN)}</P>
-          </>
-        )}
-        <P>{modoTotal ? 'b.' : 'c.'} <Text style={s.bold}>Fator de Comercialização:</Text> {dados.fatorComercializacao || '1,00'}</P>
+        <P>a. <Text style={s.bold}>Valor do Terreno:</Text> {fm(valorTerrenoN)}</P>
+        <P>b. <Text style={s.bold}>Valor das Benfeitorias:</Text> {fm(valorBenfeitoriasN)}</P>
+        <P>c. <Text style={s.bold}>Fator de Comercialização:</Text> {dados.fatorComercializacao || '1,00'}</P>
         {(() => {
           const fatoresValidos = (dados.outrosFatoresImovel || []).filter(
             f => f.descricao?.trim() || f.valor?.trim()
@@ -1140,22 +1116,6 @@ export function LaudoPdf({
               {fatoresValidos.map((f, idx) => (
                 <P key={idx}>• <Text style={s.bold}>{f.descricao}:</Text> {f.valor}</P>
               ))}
-            </View>
-          ) : null
-        })()}
-        {(() => {
-          const adicionaisValidos = ((dados as any).valoresAdicionais || []).filter(
-            (v: any) => v.descricao?.trim() || v.valor?.trim()
-          )
-          return adicionaisValidos.length > 0 ? (
-            <View>
-              <H3>Valores adicionais</H3>
-              {adicionaisValidos.map((v: any, idx: number) => (
-                <P key={idx}>• <Text style={s.bold}>{v.descricao}:</Text> {fm(cn(v.valor))}</P>
-              ))}
-              {adicionaisValidos.length > 1 && (
-                <P><Text style={s.bold}>Total adicionais:</Text> {fm(somaAdicionais)}</P>
-              )}
             </View>
           ) : null
         })()}
@@ -1190,9 +1150,15 @@ export function LaudoPdf({
 
           const gv = (g?: string) => g === 'III' ? 3 : g === 'II' ? 2 : g === 'I' ? 1 : 0
 
-          const somaFund = fund.reduce((s: number, i: any) => s + (i.pontos || 0), 0)
-          const somaEvo  = fundEvo.reduce((s: number, i: any) => s + (i.pontos || 0), 0)
-          const somaInf  = fundInf.reduce((s: number, i: any) => s + (i.pontos || 0), 0)
+          // Normaliza pontos pelo grau (corrige laudos antigos com pontos fixos = 2)
+          const gpts = (g?: string) => g === 'III' ? 3 : g === 'II' ? 2 : g === 'I' ? 1 : 0
+          const normPts = (arr: typeof fund) => arr.map(i => ({ ...i, pontos: i.grau ? gpts(i.grau) : (i.pontos || 0) }))
+          const fundN    = normPts(fund)
+          const fundEvoN = normPts(fundEvo)
+          const fundInfN = normPts(fundInf)
+          const somaFund = fundN.reduce((s, i) => s + (i.pontos || 0), 0)
+          const somaEvo  = fundEvoN.reduce((s, i) => s + (i.pontos || 0), 0)
+          const somaInf  = fundInfN.reduce((s, i) => s + (i.pontos || 0), 0)
 
           // Enquadramento — Fatores
           const encFatores = (() => {

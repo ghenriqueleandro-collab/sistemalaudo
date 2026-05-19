@@ -467,20 +467,25 @@ export default function NovoLaudoPage() {
     setValoresAdicionais(valoresAdicionais.filter((_, i) => i !== index))
   }
 
+  // Converte grau em pontos: III=3, II=2, I=1
+  function grauParaPontos(grau: 'III' | 'II' | 'I') {
+    return grau === 'III' ? 3 : grau === 'II' ? 2 : 1
+  }
+
   function selecionarGrauFundamentacao(index: number, grau: 'III' | 'II' | 'I') {
-    setFundamentacao((prev) => prev.map((f, i) => i === index ? { ...f, grau } : f))
+    setFundamentacao((prev) => prev.map((f, i) => i === index ? { ...f, grau, pontos: grauParaPontos(grau) } : f))
   }
 
   function selecionarGrauFundamentacaoInferencia(index: number, grau: 'III' | 'II' | 'I') {
-    setFundamentacaoInferencia((prev) => prev.map((f, i) => i === index ? { ...f, grau } : f))
+    setFundamentacaoInferencia((prev) => prev.map((f, i) => i === index ? { ...f, grau, pontos: grauParaPontos(grau) } : f))
   }
 
   function selecionarGrauFundamentacaoEvolutivo(index: number, grau: 'III' | 'II' | 'I') {
-    setFundamentacaoEvolutivo((prev) => prev.map((f, i) => i === index ? { ...f, grau } : f))
+    setFundamentacaoEvolutivo((prev) => prev.map((f, i) => i === index ? { ...f, grau, pontos: grauParaPontos(grau) } : f))
   }
 
   function selecionarGrauPrecisao(index: number, grau: 'III' | 'II' | 'I') {
-    setPrecisao((prev) => prev.map((p, i) => i === index ? { ...p, grau } : p))
+    setPrecisao((prev) => prev.map((p, i) => i === index ? { ...p, grau, pontos: grauParaPontos(grau) } : p))
   }
 
   function formatarDataBR(data: string) {
@@ -534,7 +539,7 @@ export default function NovoLaudoPage() {
   const exibirTabelaMetodoEvolutivo = form.metodoAvaliacao === 'evolutivo'
 
   const somaFundamentacao = fundamentacao.reduce((acc, f) => {
-    const map: Record<string, number> = { III: 1, II: 2, I: 3 }
+    const map: Record<string, number> = { III: 3, II: 2, I: 1 }
     return acc + (map[f.grau] || 0)
   }, 0)
 
