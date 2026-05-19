@@ -557,7 +557,22 @@ function VisualizarLaudoContent() {
 
           setDados({
             ...parsed,
-            tipoLaudo: (parsed.tipoLaudo as 'detalhado' | 'simplificado') || 'detalhado',
+            // Determina tipoLaudo: usa o campo salvo, mas se houver indicadores de laudo
+            // detalhado (croquis, acabamentos, responsavelCpf), força 'detalhado'
+            // mesmo que o campo salvo diga 'simplificado' (bug de laudos antigos)
+            tipoLaudo: (() => {
+              const salvo = parsed.tipoLaudo as string
+              if (salvo === 'detalhado') return 'detalhado'
+              // Indicadores de laudo detalhado
+              const ehDetalhado =
+                (parsed.croquis && parsed.croquis.length > 0) ||
+                (parsed.acabamentos && parsed.acabamentos.length > 0) ||
+                (parsed.responsavelCpf && parsed.responsavelCpf.trim() !== '') ||
+                (parsed.fundamentacao && parsed.fundamentacao.length > 0) ||
+                (parsed.resumoMercado && parsed.resumoMercado.length > 0)
+              if (ehDetalhado) return 'detalhado'
+              return (salvo as 'detalhado' | 'simplificado') || 'detalhado'
+            })(),
             fotos: fotosResolvidas,
             croquis: croquisResolvidos,
             documentacaoPdf: docPdf,
