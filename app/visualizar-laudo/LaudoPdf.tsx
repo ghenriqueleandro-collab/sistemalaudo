@@ -1162,29 +1162,29 @@ export function LaudoPdf({
 
           // Enquadramento — Fatores
           const encFatores = (() => {
-            const g2 = gv(fund[1]?.grau), g4 = gv(fund[3]?.grau)
-            const outros = [fund[0], fund[2]]
+            const g2 = gv(fundN[1]?.grau), g4 = gv(fundN[3]?.grau)
+            const outros = [fundN[0], fundN[2]]
             if (somaFund >= 10 && g2 >= 3 && g4 >= 3 && outros.every(i => gv(i?.grau) >= 2)) return 'III'
             if (somaFund >= 6  && g2 >= 2 && g4 >= 2 && outros.every(i => gv(i?.grau) >= 1)) return 'II'
-            if (somaFund >= 4  && fund.every(i => gv(i?.grau) >= 1)) return 'I'
+            if (somaFund >= 4  && fundN.every(i => gv(i?.grau) >= 1)) return 'I'
             return ''
           })()
 
           // Enquadramento — Evolutivo
           const encEvolutivo = (() => {
-            if (somaEvo >= 8 && fundEvo.every(i => gv(i?.grau) >= 2)) return 'III'
-            if (somaEvo >= 5 && gv(fundEvo[0]?.grau) >= 2 && gv(fundEvo[1]?.grau) >= 2) return 'II'
-            if (somaEvo >= 3 && fundEvo.every(i => gv(i?.grau) >= 1)) return 'I'
+            if (somaEvo >= 8 && fundEvoN.every(i => gv(i?.grau) >= 2)) return 'III'
+            if (somaEvo >= 5 && gv(fundEvoN[0]?.grau) >= 2 && gv(fundEvoN[1]?.grau) >= 2) return 'II'
+            if (somaEvo >= 3 && fundEvoN.every(i => gv(i?.grau) >= 1)) return 'I'
             return ''
           })()
 
           // Enquadramento — Inferência
           const encInferencia = (() => {
-            const man = [fundInf[1], fundInf[3], fundInf[4], fundInf[5]]
-            const oth = [fundInf[0], fundInf[2]]
+            const man = [fundInfN[1], fundInfN[3], fundInfN[4], fundInfN[5]]
+            const oth = [fundInfN[0], fundInfN[2]]
             if (somaInf >= 16 && man.every(i => gv(i?.grau) >= 3) && oth.every(i => gv(i?.grau) >= 2)) return 'III'
             if (somaInf >= 10 && man.every(i => gv(i?.grau) >= 2) && oth.every(i => gv(i?.grau) >= 1)) return 'II'
-            if (somaInf >= 6  && fundInf.every(i => gv(i?.grau) >= 1)) return 'I'
+            if (somaInf >= 6  && fundInfN.every(i => gv(i?.grau) >= 1)) return 'I'
             return ''
           })()
 
@@ -1395,7 +1395,7 @@ export function LaudoPdf({
                       <TabelaFundPdf
                         titulo="Grau de fundamentação — tratamento por fatores (Avaliação do terreno)"
                         linhas={linhasFund}
-                        dadosGrau={fund}
+                        dadosGrau={fundN}
                         soma={somaFund}
                         obs="Para menos de 5 dados de mercado, o intervalo deverá ser 0,8 a 1,25."
                       />
@@ -1408,7 +1408,7 @@ export function LaudoPdf({
                       <TabelaFundPdf
                         titulo="Grau de fundamentação — Método Evolutivo"
                         linhas={linhasEvo}
-                        dadosGrau={fundEvo}
+                        dadosGrau={fundEvoN}
                         soma={somaEvo}
                       />
                       <EnquadramentoEvolutivo enc={encEvolutivo} />
@@ -1420,7 +1420,7 @@ export function LaudoPdf({
                       <TabelaFundPdf
                         titulo="Grau de fundamentação — Modelos de Regressão Linear"
                         linhas={linhasInf}
-                        dadosGrau={fundInf}
+                        dadosGrau={fundInfN}
                         soma={somaInf}
                       />
                       <EnquadramentoInferencia enc={encInferencia} />
