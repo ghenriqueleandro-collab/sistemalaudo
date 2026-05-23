@@ -4,16 +4,16 @@ import React, { useEffect, useState, Suspense } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import AppShell from '../components/AppShell'
+import AppShell from '../../components/AppShell'
 import dynamic from 'next/dynamic'
 import { obterLaudoAtual, buscarLaudo } from '@/lib/laudos-storage'
 
-const PdfViewer = dynamic(() => import('../components/PdfViewer'), {
+const PdfViewer = dynamic(() => import('../../components/PdfViewer'), {
   ssr: false,
 })
 
 const AnexoPdfPaginado = dynamic(
-  () => import('../components/AnexoPdfPaginado'),
+  () => import('../../components/AnexoPdfPaginado'),
   { ssr: false }
 )
 
@@ -436,7 +436,7 @@ function VisualizarLaudoContent() {
     try {
       const [{ pdf }, { LaudoPdf }] = await Promise.all([
         import('@react-pdf/renderer'),
-        import('./LaudoPdf'),
+        import('../../components/LaudoPdf'),
       ])
       const logoUrl = window.location.origin + '/logo-lesath.png'
 
@@ -477,7 +477,7 @@ function VisualizarLaudoContent() {
     try {
       const [{ pdf }, { default: LaudoPdfSimplificado }] = await Promise.all([
         import('@react-pdf/renderer'),
-        import('../components/LaudoPdfSimplificado'),
+        import('../../components/LaudoPdfSimplificado'),
       ])
       const blob = await pdf(
         React.createElement(LaudoPdfSimplificado, { dados }) as any
@@ -1906,6 +1906,13 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
             </div>
             </>
           </div>
+        </div>
+      </div>
+    </section>
+  </AppShell>
+  )
+}
+
 export default function VisualizarLaudoPage() {
   return (
     <Suspense fallback={null}>
