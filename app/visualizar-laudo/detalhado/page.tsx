@@ -780,9 +780,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               <Link href="/meus-laudos" className="border px-3 py-2 rounded-xl">Meus laudos</Link>
               <Link
                 href={
-                  dados?.tipoLaudo === 'simplificado'
-                    ? (laudoId ? `/laudo/simplificado?id=${laudoId}` : '/laudo/simplificado')
-                    : (laudoId ? `/novo-laudo?id=${laudoId}` : '/novo-laudo')
+                  laudoId ? `/novo-laudo?id=${laudoId}` : '/novo-laudo'
                 }
                 className="bg-blue-50 px-3 py-2 rounded-xl text-blue-700"
               >
@@ -790,7 +788,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               </Link>
               <button
                 type="button"
-                onClick={dados?.tipoLaudo === 'simplificado' ? baixarLaudoPdfSimplificado : baixarLaudoPdf}
+                onClick={baixarLaudoPdf}
                 disabled={baixandoPdf}
                 className="rounded-xl bg-emerald-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
