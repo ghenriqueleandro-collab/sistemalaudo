@@ -836,10 +836,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               .value-box-light .vb-ext   { font-size: 9px; color: #5a7090; margin-top: 2px; }
             `}</style>
 
-            {/* ══════════════════════════════════════════════
-                LAYOUT SIMPLIFICADO
-            ══════════════════════════════════════════════ */}
-            {dados.tipoLaudo !== 'simplificado' && (
+            {/* Laudo detalhado */}
             <>
             <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
               {/* Cabeçalho geométrico — faixas diagonais via skewX, igual ao layout aprovado */}
