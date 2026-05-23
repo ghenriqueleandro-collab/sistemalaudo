@@ -436,7 +436,7 @@ function VisualizarLaudoContent() {
     try {
       const [{ pdf }, { LaudoPdf }] = await Promise.all([
         import('@react-pdf/renderer'),
-        import('../../components/LaudoPdf'),
+        import('../LaudoPdf'),
       ])
       const logoUrl = window.location.origin + '/logo-lesath.png'
 
