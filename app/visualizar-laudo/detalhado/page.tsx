@@ -793,7 +793,6 @@ Valor de Liquidação Forçada: Valor de comercialização compulsória do bem, 
 Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em condições normais de mercado, na data de referência.`)
 
   return (
-  return (
     <AppShell>
       <section className="mx-auto max-w-7xl px-6 pt-10">
         <div className="max-w-[230mm] mx-auto p-4 md:p-6 print:p-0">
