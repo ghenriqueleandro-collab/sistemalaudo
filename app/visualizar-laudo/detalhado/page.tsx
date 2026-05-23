@@ -471,32 +471,6 @@ function VisualizarLaudoContent() {
     }
   }
 
-  async function baixarLaudoPdfSimplificado() {
-    if (!dados) return
-    setBaixandoPdf(true)
-    try {
-      const [{ pdf }, { default: LaudoPdfSimplificado }] = await Promise.all([
-        import('@react-pdf/renderer'),
-        import('../../components/LaudoPdfSimplificado'),
-      ])
-      const blob = await pdf(
-        React.createElement(LaudoPdfSimplificado, { dados }) as any
-      ).toBlob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `laudo-simplificado-${dados.matricula || 'avaliacao'}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error(error)
-      alert('Erro ao gerar o PDF simplificado.')
-    } finally {
-      setBaixandoPdf(false)
-    }
-  }
 
   useEffect(() => {
     async function carregarLaudo() {
@@ -806,7 +780,9 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               <Link href="/meus-laudos" className="border px-3 py-2 rounded-xl">Meus laudos</Link>
               <Link
                 href={
-                  laudoId ? `/novo-laudo?id=${laudoId}` : '/novo-laudo'
+                  dados?.tipoLaudo === 'simplificado'
+                    ? (laudoId ? `/laudo/simplificado?id=${laudoId}` : '/laudo/simplificado')
+                    : (laudoId ? `/novo-laudo?id=${laudoId}` : '/novo-laudo')
                 }
                 className="bg-blue-50 px-3 py-2 rounded-xl text-blue-700"
               >
@@ -814,7 +790,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               </Link>
               <button
                 type="button"
-                onClick={baixarLaudoPdf}
+                onClick={dados?.tipoLaudo === 'simplificado' ? baixarLaudoPdfSimplificado : baixarLaudoPdf}
                 disabled={baixandoPdf}
                 className="rounded-xl bg-emerald-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -860,7 +836,10 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               .value-box-light .vb-ext   { font-size: 9px; color: #5a7090; margin-top: 2px; }
             `}</style>
 
-            {/* ── Conteúdo do laudo detalhado ── */}
+            {/* ══════════════════════════════════════════════
+                LAYOUT SIMPLIFICADO
+            ══════════════════════════════════════════════ */}
+            {dados.tipoLaudo !== 'simplificado' && (
             <>
             <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
               {/* Cabeçalho geométrico — faixas diagonais via skewX, igual ao layout aprovado */}
@@ -1907,9 +1886,8 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
             </>
           </div>
         </div>
-      </div>
-    </section>
-  </AppShell>
+      </section>
+    </AppShell>
   )
 }
 

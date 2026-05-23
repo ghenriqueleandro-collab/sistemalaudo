@@ -430,46 +430,6 @@ function VisualizarLaudoContent() {
   const [calculoNumPages, setCalculoNumPages] = useState(0)
   const [baixandoPdf, setBaixandoPdf] = useState(false)
 
-  async function baixarLaudoPdf() {
-    if (!dados) return
-    setBaixandoPdf(true)
-    try {
-      const [{ pdf }, { LaudoPdf }] = await Promise.all([
-        import('@react-pdf/renderer'),
-        import('../../components/LaudoPdf'),
-      ])
-      const logoUrl = window.location.origin + '/logo-lesath.png'
-
-      // Pré-renderiza PDFs anexados como imagens para embed no PDF gerado
-      const [documentacaoPdfPaginas, calculoPdfPaginas] = await Promise.all([
-        dados.documentacaoPdf ? pdfPagesToImages(dados.documentacaoPdf) : Promise.resolve([]),
-        dados.calculoPdf      ? pdfPagesToImages(dados.calculoPdf)      : Promise.resolve([]),
-      ])
-
-      const dadosComPaginas = {
-        ...dados,
-        documentacaoPdfPaginas,
-        calculoPdfPaginas,
-      }
-
-      const blob = await pdf(
-        React.createElement(LaudoPdf, { dados: dadosComPaginas, logoUrl }) as any
-      ).toBlob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `laudo-${dados.matricula || 'avaliacao'}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error(error)
-      alert('Erro ao gerar o PDF do laudo.')
-    } finally {
-      setBaixandoPdf(false)
-    }
-  }
 
   async function baixarLaudoPdfSimplificado() {
     if (!dados) return
@@ -860,11 +820,8 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               .value-box-light .vb-ext   { font-size: 9px; color: #5a7090; margin-top: 2px; }
             `}</style>
 
-            {/* ══════════════════════════════════════════════
-                LAYOUT SIMPLIFICADO
-            ══════════════════════════════════════════════ */}
-            {/* ── Conteúdo do laudo simplificado ── */}
-{(() => {
+            {/* Laudo simplificado */}
+            {(() => {
               const SecHeader = ({ num, titulo }: { num: string; titulo: string }) => (
                 <div style={{ background: '#17325C', padding: '4px 10px', margin: '10px 0 0' }}>
                   <span style={{ fontSize: '9px', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -1537,6 +1494,9 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               )
             })()}
 
+            {/* ══════════════════════════════════════════════
+                LAYOUT DETALHADO (apenas para laudos detalhados)
+            ══════════════════════════════════════════════ */}
           </div>
         </div>
       </section>
