@@ -669,12 +669,12 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                   <View key={`h-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
                     <Text style={[td,{flex:0.6}]}>{i+1}</Text>
                     <Text style={[td,{flex:1.1}]}>{fm(el.valorUnitarioOferta || 0)}</Text>
-                    <Text style={[td,{flex:0.8}]}>{(el.fatorLocal||1).toFixed(4)}</Text>
-                    <Text style={[td,{flex:0.8}]}>{(el.fatorPadrao||1).toFixed(4)}</Text>
-                    <Text style={[td,{flex:0.8}]}>{(el.fatorFOC||1).toFixed(4)}</Text>
-                    <Text style={[td,{flex:0.8}]}>{(el.fatorAndar||1).toFixed(4)}</Text>
-                    <Text style={[td,{flex:0.8}]}>{(el.fatorVaga||1).toFixed(4)}</Text>
-                    <Text style={[td,{flex:0.8}]}>{(el.fatorArea||1).toFixed(4)}</Text>
+                    <Text style={[td,{flex:0.8}]}>{(el.fatorLocal||1).toFixed(4).replace('.', ',')}</Text>
+                    <Text style={[td,{flex:0.8}]}>{(el.fatorPadrao||1).toFixed(4).replace('.', ',')}</Text>
+                    <Text style={[td,{flex:0.8}]}>{(el.fatorFOC||1).toFixed(4).replace('.', ',')}</Text>
+                    <Text style={[td,{flex:0.8}]}>{(el.fatorAndar||1).toFixed(4).replace('.', ',')}</Text>
+                    <Text style={[td,{flex:0.8}]}>{(el.fatorVaga||1).toFixed(4).replace('.', ',')}</Text>
+                    <Text style={[td,{flex:0.8}]}>{(el.fatorArea||1).toFixed(4).replace('.', ',')}</Text>
                     <Text style={[el.saneado ? s.homogTdLast : {...s.homogTdOut,borderRightWidth:0},{flex:1.2}]}>{fm(el.vuHomog || 0)}</Text>
                   </View>
                 )
@@ -817,10 +817,10 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                     <View key={i} style={isLast ? s.homogRow : s.homogRowB}>
                       <Text style={[s.homogTd,{flex:0.5}]}>{i+1}</Text>
                       <Text style={[s.homogTd,{flex:1.2}]}>{fm(vuOrig)}</Text>
-                      <Text style={[s.homogTd,{flex:1}]}>{fLoc.toFixed(4)}</Text>
-                      <Text style={[s.homogTd,{flex:1}]}>{fTopo.toFixed(4)}</Text>
-                      <Text style={[s.homogTd,{flex:1}]}>{fVis.toFixed(4)}</Text>
-                      <Text style={[s.homogTd,{flex:1}]}>{fAcum.toFixed(4)}</Text>
+                      <Text style={[s.homogTd,{flex:1}]}>{fLoc.toFixed(4).replace('.', ',')}</Text>
+                      <Text style={[s.homogTd,{flex:1}]}>{fTopo.toFixed(4).replace('.', ',')}</Text>
+                      <Text style={[s.homogTd,{flex:1}]}>{fVis.toFixed(4).replace('.', ',')}</Text>
+                      <Text style={[s.homogTd,{flex:1}]}>{fAcum.toFixed(4).replace('.', ',')}</Text>
                       <Text style={[s.homogTdLast,{flex:1.3,fontFamily:'Helvetica-Bold',color:AZUL}]}>{fm(vuH)}</Text>
                     </View>
                   )
@@ -891,17 +891,17 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                           <Text style={[s.homogTd,{flex:1.3,fontSize:5.5,textAlign:'left',paddingLeft:3}]}>{b.descricao||`Benf. ${idx+1}`}</Text>
                           <Text style={[s.homogTd,{flex:1.3,fontSize:5.5,textAlign:'left'}]}>{b.padrao||'—'}</Text>
                           <Text style={td(0.6)}>{cubV>0?fm(cubV):'—'}</Text>
-                          <Text style={td(0.6)}>{b.Pc?.toFixed(3)||'—'}</Text>
+                          <Text style={td(0.6)}>{b.Pc?.toFixed(3).replace('.', ',')||'—'}</Text>
                           <Text style={td(0.6)}>{acV>0?acV.toLocaleString('pt-BR'):'—'}</Text>
                           <Text style={td(0.6)}>{b.Ir||'—'}</Text>
-                          <Text style={td(0.6)}>{b.R!=null?(b.R*100).toFixed(0)+'%':'—'}</Text>
+                          <Text style={td(0.6)}>{b.R!=null?(b.R*100).toFixed(0).replace('.', ',')+'%':'—'}</Text>
                           <Text style={td(0.6)}>{ieV>0?String(ieV):'—'}</Text>
-                          <Text style={td(0.6)}>{b.pctVida!=null?b.pctVida.toFixed(1)+'%':'—'}</Text>
-                          <Text style={td(0.6)}>{b.Ka?.toFixed(3)||'—'}</Text>
+                          <Text style={td(0.6)}>{b.pctVida!=null?b.pctVida.toFixed(1).replace('.', ',')+'%':'—'}</Text>
+                          <Text style={td(0.6)}>{b.Ka?.toFixed(3).replace('.', ',')||'—'}</Text>
                           <Text style={td(0.6)}>{b.estadoConservacao||'—'}</Text>
-                          <Text style={td(0.6)}>{b.Ec!=null?(b.Ec*100).toFixed(2)+'%':'—'}</Text>
-                          <Text style={td(0.6)}>{b.K?.toFixed(3)||'—'}</Text>
-                          <Text style={td(0.6)}>{b.Foc?.toFixed(4)||'—'}</Text>
+                          <Text style={td(0.6)}>{b.Ec!=null?(b.Ec*100).toFixed(2).replace('.', ',')+'%':'—'}</Text>
+                          <Text style={td(0.6)}>{b.K?.toFixed(3).replace('.', ',')||'—'}</Text>
+                          <Text style={td(0.6)}>{b.Foc?.toFixed(4).replace('.', ',')||'—'}</Text>
                           <Text style={[s.homogTdLast,{flex:1.1,fontSize:5.5,fontFamily:'Helvetica-Bold',color:AZUL}]}>{fm(b.valor||0)}</Text>
                         </View>
                       )

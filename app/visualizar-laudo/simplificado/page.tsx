@@ -1201,12 +1201,12 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                                 <tr key={`h-${i}`}>
                                   <td style={cellStyle}>{i + 1}</td>
                                   <td style={cellStyle}>{formatarMoeda(el.valorUnitarioOferta || 0)}</td>
-                                  <td style={cellStyle}>{(el.fatorLocal || 1).toFixed(4)}</td>
-                                  <td style={cellStyle}>{(el.fatorPadrao || 1).toFixed(4)}</td>
-                                  <td style={cellStyle}>{(el.fatorFOC || 1).toFixed(4)}</td>
-                                  <td style={cellStyle}>{(el.fatorAndar || 1).toFixed(4)}</td>
-                                  <td style={cellStyle}>{(el.fatorVaga || 1).toFixed(4)}</td>
-                                  <td style={cellStyle}>{(el.fatorArea || 1).toFixed(4)}</td>
+                                  <td style={cellStyle}>{(el.fatorLocal || 1).toFixed(4).replace('.', ',')}</td>
+                                  <td style={cellStyle}>{(el.fatorPadrao || 1).toFixed(4).replace('.', ',')}</td>
+                                  <td style={cellStyle}>{(el.fatorFOC || 1).toFixed(4).replace('.', ',')}</td>
+                                  <td style={cellStyle}>{(el.fatorAndar || 1).toFixed(4).replace('.', ',')}</td>
+                                  <td style={cellStyle}>{(el.fatorVaga || 1).toFixed(4).replace('.', ',')}</td>
+                                  <td style={cellStyle}>{(el.fatorArea || 1).toFixed(4).replace('.', ',')}</td>
                                   <td style={{ ...cellStyle, borderRight: 'none', fontWeight: 700, color: isSan ? '#17325C' : '#9ca3af' }}>
                                     {formatarMoeda(el.vuHomog || 0)}
                                   </td>
@@ -1380,10 +1380,10 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                                   <tr key={i}>
                                     <td style={tdS}>{i+1}</td>
                                     <td style={tdS}>{formatarMoeda(vuOrig)}</td>
-                                    <td style={tdS}>{fLoc.toFixed(4)}</td>
-                                    <td style={tdS}>{fTopo.toFixed(4)}</td>
-                                    <td style={tdS}>{fVis.toFixed(4)}</td>
-                                    <td style={tdS}>{fAcum.toFixed(4)}</td>
+                                    <td style={tdS}>{fLoc.toFixed(4).replace('.', ',')}</td>
+                                    <td style={tdS}>{fTopo.toFixed(4).replace('.', ',')}</td>
+                                    <td style={tdS}>{fVis.toFixed(4).replace('.', ',')}</td>
+                                    <td style={tdS}>{fAcum.toFixed(4).replace('.', ',')}</td>
                                     <td style={{ ...tdS, borderRight: 'none', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(vuH)}</td>
                                   </tr>
                                 )
@@ -1457,17 +1457,17 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                                           <td style={{ ...tdB, textAlign: 'left', maxWidth: 120 }}>{b.descricao || `Benfeitoria ${i+1}`}</td>
                                           <td style={{ ...tdB, textAlign: 'left' }}>{b.padrao || '—'}</td>
                                           <td style={tdB}>{cubVal > 0 ? formatarMoeda(cubVal) : '—'}</td>
-                                          <td style={tdB}>{b.Pc?.toFixed(3) || '—'}</td>
+                                          <td style={tdB}>{b.Pc?.toFixed(3).replace('.', ',') || '—'}</td>
                                           <td style={tdB}>{acVal > 0 ? acVal.toLocaleString('pt-BR') : '—'}</td>
                                           <td style={tdB}>{b.Ir || '—'}</td>
-                                          <td style={tdB}>{b.R != null ? (b.R*100).toFixed(0)+'%' : '—'}</td>
+                                          <td style={tdB}>{b.R != null ? (b.R*100).toFixed(0).replace('.', ',')+'%' : '—'}</td>
                                           <td style={tdB}>{ieVal > 0 ? ieVal : '—'}</td>
-                                          <td style={tdB}>{b.pctVida != null ? b.pctVida.toFixed(1)+'%' : '—'}</td>
-                                          <td style={tdB}>{b.Ka?.toFixed(3) || '—'}</td>
+                                          <td style={tdB}>{b.pctVida != null ? b.pctVida.toFixed(1).replace('.', ',')+'%' : '—'}</td>
+                                          <td style={tdB}>{b.Ka?.toFixed(3).replace('.', ',') || '—'}</td>
                                           <td style={tdB}>{b.estadoConservacao || '—'}</td>
-                                          <td style={tdB}>{b.Ec != null ? (b.Ec*100).toFixed(2)+'%' : '—'}</td>
-                                          <td style={tdB}>{b.K?.toFixed(3) || '—'}</td>
-                                          <td style={tdB}>{b.Foc?.toFixed(4) || '—'}</td>
+                                          <td style={tdB}>{b.Ec != null ? (b.Ec*100).toFixed(2).replace('.', ',')+'%' : '—'}</td>
+                                          <td style={tdB}>{b.K?.toFixed(3).replace('.', ',') || '—'}</td>
+                                          <td style={tdB}>{b.Foc?.toFixed(4).replace('.', ',') || '—'}</td>
                                           <td style={{ ...tdB, fontWeight: 700, color: '#17325C', borderRight: 'none' }}>{formatarMoeda(b.valor || 0)}</td>
                                         </tr>
                                       )
