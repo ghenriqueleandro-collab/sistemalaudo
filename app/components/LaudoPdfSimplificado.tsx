@@ -810,7 +810,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                   const atNum = pnEv(el.areaTerreno)
                   const voNum = pnEv(el.valorOferta)
                   const vuOrig = atNum > 0 ? voNum / atNum : 0
-                  const vuH = vuOrig * fAcum
+                  const vuH = Math.round(vuOrig * fAcum * 100) / 100
                   const isLast = i === elems.length - 1
                   return (
                     <View key={i} style={isLast ? s.homogRow : s.homogRowB}>

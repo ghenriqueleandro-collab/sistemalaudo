@@ -1373,7 +1373,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                                 const atNum = pnEv(el.areaTerreno)
                                 const voNum = pnEv(el.valorOferta)
                                 const vuOrig = atNum > 0 ? voNum / atNum : 0
-                                const vuH = vuOrig * fAcum
+                                const vuH = Math.round(vuOrig * fAcum * 100) / 100
                                 const tdS: React.CSSProperties = { padding: '2.5px 3px', fontSize: '7px', border: '0.5px solid #C9D3E6', textAlign: 'center' }
                                 return (
                                   <tr key={i}>
