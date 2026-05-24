@@ -26,6 +26,28 @@ function formatarDistanciaAuto(metros: number): string {
   return `${(metros / 1000).toFixed(2).replace('.', ',')} km`
 }
 
+// ─── Geocodificação reversa via Nominatim (mesma API do avaliando) ────────
+async function geocodeReverso(lat: number, lon: number): Promise<{
+  logradouro: string; bairro: string; cidade: string; uf: string
+} | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=pt-BR`,
+      { headers: { 'User-Agent': 'LesathEngenharia/1.0 (gestao.lesathengenharia.com.br)' } }
+    )
+    if (!res.ok) return null
+    const d = await res.json()
+    const a = d.address || {}
+    const rua = [a.road, a.house_number].filter(Boolean).join(', ')
+    const bairro = a.suburb || a.neighbourhood || a.quarter || ''
+    const cidade = a.city || a.town || a.village || a.municipality || ''
+    const uf = (a.state_code || '').replace('BR-', '') || a.state || ''
+    return { logradouro: rua, bairro, cidade, uf }
+  } catch {
+    return null
+  }
+}
+
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -948,12 +970,21 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
               <label className="block text-xs font-medium text-slate-500 mb-1.5">Coordenadas</label>
               <input value={elem.coordenadas}
                 onChange={e => updateElem(abaAtiva, 'coordenadas', e.target.value)}
-                onBlur={e => {
+                onBlur={async e => {
                   const coordElem = parseCoord(e.target.value)
                   const coordAv   = parseCoord(form.coordenadasImovel || '')
                   if (coordElem && coordAv) {
                     const metros = haversineMetros(coordAv[0], coordAv[1], coordElem[0], coordElem[1])
                     updateElem(abaAtiva, 'distanciaAvaliando', formatarDistanciaAuto(metros))
+                  }
+                  if (coordElem) {
+                    const end = await geocodeReverso(coordElem[0], coordElem[1])
+                    if (end) {
+                      if (end.logradouro) updateElem(abaAtiva, 'logradouro', end.logradouro)
+                      if (end.bairro)     updateElem(abaAtiva, 'bairro',     end.bairro)
+                      if (end.cidade)     updateElem(abaAtiva, 'cidade',     end.cidade)
+                      if (end.uf)         updateElem(abaAtiva, 'uf',         end.uf)
+                    }
                   }
                 }}
                 placeholder="-23.55, -46.63" className={cls} />
