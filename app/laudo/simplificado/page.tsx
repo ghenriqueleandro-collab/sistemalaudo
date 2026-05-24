@@ -781,9 +781,7 @@ export default function LaudoSimplificadoPage() {
               type="button"
               onClick={() => {
                 const id = laudoUuid
-                if (!id) { alert('Aguarde o laudo ser carregado antes de visualizar.'); return }
-                const url = `/visualizar-laudo?id=${encodeURIComponent(id)}`
-                // Salva em background sem await (mantém gesto do usuário para window.open)
+                const url = id ? `/visualizar-laudo?id=${encodeURIComponent(id)}` : '/visualizar-laudo'
                 executarSave(true).catch(console.error)
                 window.open(url, '_blank', 'noopener,noreferrer')
               }}
@@ -908,12 +906,7 @@ export default function LaudoSimplificadoPage() {
       <NavegacaoEtapasSimpl
         etapaAtual={etapaAtual}
         setEtapaAtual={setEtapaAtual}
-        onVisualizar={() => {
-          const id = laudoUuid
-          if (!id) { alert('Aguarde o laudo ser carregado.'); return }
-          executarSave(true).catch(console.error)
-          window.open(`/visualizar-laudo?id=${encodeURIComponent(id)}`, '_blank', 'noopener,noreferrer')
-        }}
+        laudoUuid={laudoUuid}
       />
 
     </AppShell>
