@@ -231,7 +231,7 @@ function benfInicial(id: number): BenfeitoriaCUB {
 
 // ─── Card do elemento ativo (Evolutivo) ────────────────────────────────────────
 function CardElemEv({
-  e, r, abaAtiva, updateElem, removeElem, inp, lbl, fmt, fmtM, totalElems
+  e, r, abaAtiva, updateElem, removeElem, inp, lbl, fmt, fmtM, totalElems, coordenadasAvaliando
 }: {
   e: ElementoEv
   r: any
@@ -243,6 +243,7 @@ function CardElemEv({
   fmt: (v: number, dec?: number) => string
   fmtM: (v: number) => string
   totalElems: number
+  coordenadasAvaliando?: string
 }) {
   const up = (c: keyof ElementoEv) => (ev: React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>) => updateElem(abaAtiva, c, ev.target.value)
   const vu = r?.vu ?? 0
@@ -274,7 +275,7 @@ function CardElemEv({
                     <div>
                       <label className={lbl}>
                         Distância
-                        {form?.coordenadasImovel && <span className="ml-1 text-blue-400 font-normal">(auto via coordenada)</span>}
+                        {coordenadasAvaliando && <span className="ml-1 text-blue-400 font-normal">(auto via coordenada)</span>}
                       </label>
                       <input className={inp} value={e.distancia}
                         onChange={up('distancia')}
@@ -289,7 +290,7 @@ function CardElemEv({
                         onChange={up('coordenadas')}
                         onBlur={ev => {
                           const coordEl = parseCoord(ev.target.value)
-                          const coordAv = parseCoord(form?.coordenadasImovel || '')
+                          const coordAv = parseCoord(coordenadasAvaliando || '')
                           if (coordEl && coordAv) {
                             const metros = haversineMetros(coordAv[0], coordAv[1], coordEl[0], coordEl[1])
                             updateElem(abaAtiva, 'distancia', formatarDistanciaAuto(metros))
@@ -698,6 +699,7 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
       lbl={lbl}
       fmt={fmt}
       fmtM={fmtM}
+      coordenadasAvaliando={form?.coordenadasImovel}
       totalElems={elementos.length}
     />
   ) : null
