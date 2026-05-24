@@ -1333,10 +1333,11 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
 
                     {/* Seção de cálculo evolutivo */}
                     {isEvolutivo && evSnap && evSnap.resultado && (() => {
+                      const pnEv = (s: any) => { if (!s && s !== 0) return 0; const n = parseFloat(String(s).replace(/[R$\s]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.')); return isNaN(n) ? 0 : n }
                       const res = evSnap.resultado
                       const elems = evSnap.elementos || []
                       const benfs = (evSnap.benfeitorias || []) as any[]
-                      const area = evSnap.avaliando?.area || 0
+                      const area = pnEv(evSnap.avaliando?.area)
                       const vuMed = res.media || 0
                       const tdC: React.CSSProperties = { padding: '3px 5px', fontSize: '7.5px', border: '0.5px solid #C9D3E6', textAlign: 'center' }
                       const tdCHl: React.CSSProperties = { ...tdC, background: '#EAF0FB', fontWeight: 700, color: '#17325C' }
@@ -1350,48 +1351,51 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                               <tr style={{ background: '#2347C6' }}>
                                 <th style={thS}>Elem.</th>
                                 <th style={thS}>V.U. (R$/m²)</th>
-                                <th style={thS}>F. Área</th>
                                 <th style={thS}>F. Local</th>
                                 <th style={thS}>F. Topografia</th>
                                 <th style={thS}>F. Visibilidade</th>
                                 <th style={thS}>F. Acumulado</th>
-                                <th style={{ ...thS, borderRight: 'none' }}>V.U. Homog.</th>
+                                <th style={{ ...thS, borderRight: 'none' }}>V.U. Homog. (R$/m²)</th>
                               </tr>
                             </thead>
                             <tbody>
                               {elems.map((el: any, i: number) => {
-                                const fAcum = (el.fatorArea||1)*(el.notaLocal||1)*(el.notaTopo||1)*(el.notaVis||1)
-                                const vuOrig = el.valorOferta > 0 && el.areaTerreno > 0 ? el.valorOferta/el.areaTerreno : (el.valorUnitarioOferta||0)
+                                const fLoc  = pnEv(el.fatorLocal)        || 1
+                                const fTopo = pnEv(el.fatorTopografia)   || 1
+                                const fVis  = pnEv(el.fatorVisibilidade) || 1
+                                const fAcum = fLoc * fTopo * fVis
+                                const atNum = pnEv(el.areaTerreno)
+                                const voNum = pnEv(el.valorOferta)
+                                const vuOrig = atNum > 0 ? voNum / atNum : 0
                                 const vuH = vuOrig * fAcum
                                 const tdS: React.CSSProperties = { padding: '2.5px 3px', fontSize: '7px', border: '0.5px solid #C9D3E6', textAlign: 'center' }
                                 return (
                                   <tr key={i}>
                                     <td style={tdS}>{i+1}</td>
                                     <td style={tdS}>{formatarMoeda(vuOrig)}</td>
-                                    <td style={tdS}>{(el.fatorArea||1).toFixed(4)}</td>
-                                    <td style={tdS}>{(el.notaLocal||1).toFixed(4)}</td>
-                                    <td style={tdS}>{(el.notaTopo||1).toFixed(4)}</td>
-                                    <td style={tdS}>{(el.notaVis||1).toFixed(4)}</td>
+                                    <td style={tdS}>{fLoc.toFixed(4)}</td>
+                                    <td style={tdS}>{fTopo.toFixed(4)}</td>
+                                    <td style={tdS}>{fVis.toFixed(4)}</td>
                                     <td style={tdS}>{fAcum.toFixed(4)}</td>
                                     <td style={{ ...tdS, borderRight: 'none', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(vuH)}</td>
                                   </tr>
                                 )
                               })}
                               <tr style={{ background: '#EAF0FB' }}>
-                                <td colSpan={7} style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', textAlign: 'right', border: '0.5px solid #C9D3E6' }}>Média das amostras</td>
+                                <td colSpan={6} style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', textAlign: 'right', border: '0.5px solid #C9D3E6' }}>Média das amostras</td>
                                 <td style={{ padding: '3px 5px', fontSize: '7.5px', fontWeight: 700, color: '#17325C', textAlign: 'center', border: '0.5px solid #C9D3E6' }}>{formatarMoeda(vuMed)}</td>
                               </tr>
                             </tbody>
                           </table>
                           {/* Estatísticas */}
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 5, margin: '6px 0' }}>
-                            {[
-                              ['Desvio padrão', res.desvio != null ? res.desvio.toFixed(2).replace('.',',') : '—'],
+                            {([
+                              ['Desvio padrão', res.desvio != null ? formatarMoeda(res.desvio) : '—'],
                               ['Coef. variação', res.desvio != null && vuMed > 0 ? ((res.desvio/vuMed)*100).toFixed(2).replace('.',',')+'%' : '—'],
                               ['Grau de precisão', res.grauPrecisao || '—'],
                               ['IC 80%', res.intervaloConfianca != null ? res.intervaloConfianca.toFixed(2).replace('.',',')+'%' : '—'],
-                            ].map(([l,v]) => (
-                              <div key={l as string} style={{ background: '#EAF0FB', border: '0.5px solid #C9D3E6', borderRadius: 3, padding: '5px', textAlign: 'center' }}>
+                            ] as [string,string][]).map(([l,v]) => (
+                              <div key={l} style={{ background: '#EAF0FB', border: '0.5px solid #C9D3E6', borderRadius: 3, padding: '5px', textAlign: 'center' }}>
                                 <div style={{ fontSize: '7px', color: '#5a7090', marginBottom: 2 }}>{l}</div>
                                 <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{v}</div>
                               </div>
@@ -1401,63 +1405,92 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                           <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginBottom: 4 }}>
                             <thead>
                               <tr style={{ background: '#1a3564' }}>
-                                <th style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', borderRight: '0.5px solid #475e9b' }}>Intervalo</th>
+                                <th style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'left', borderRight: '0.5px solid #475e9b' }}>Intervalo</th>
                                 <th style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>V.U. (R$/m²)</th>
                                 <th style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center' }}>Valor total (R$)</th>
                               </tr>
                             </thead>
                             <tbody>
-                              <tr><td style={tdC}>Mínimo</td><td style={tdC}>{formatarMoeda(res.minimo||0)}</td><td style={tdC}>{formatarMoeda((res.minimo||0)*area)}</td></tr>
-                              <tr><td style={tdCHl}>Médio (adotado)</td><td style={tdCHl}>{formatarMoeda(vuMed)}</td><td style={tdCHl}>{formatarMoeda(vuMed*area)}</td></tr>
-                              <tr><td style={tdC}>Máximo</td><td style={tdC}>{formatarMoeda(res.maximo||0)}</td><td style={tdC}>{formatarMoeda((res.maximo||0)*area)}</td></tr>
-                              <tr><td style={tdC}>Limite −30%</td><td style={tdC}>{formatarMoeda(res.lim30inf||0)}</td><td style={tdC}>{formatarMoeda((res.lim30inf||0)*area)}</td></tr>
-                              <tr><td style={tdC}>Limite +30%</td><td style={tdC}>{formatarMoeda(res.lim30sup||0)}</td><td style={tdC}>{formatarMoeda((res.lim30sup||0)*area)}</td></tr>
+                              {([
+                                ['Mínimo',          res.minimo||0,    false],
+                                ['Médio (adotado)',  vuMed,            true],
+                                ['Máximo',          res.maximo||0,    false],
+                                ['Limite −30%',     res.lim30inf||0,  false],
+                                ['Limite +30%',     res.lim30sup||0,  false],
+                              ] as [string,number,boolean][]).map(([lbl,vu,hl]) => (
+                                <tr key={lbl} style={hl ? { background: '#EAF0FB' } : {}}>
+                                  <td style={{ ...tdC, textAlign: 'left', fontWeight: hl?700:400, color: hl?'#17325C':'#1e293b' }}>{lbl}</td>
+                                  <td style={{ ...tdC, fontWeight: hl?700:400, color: hl?'#17325C':'#1e293b' }}>{formatarMoeda(vu)}</td>
+                                  <td style={{ ...tdC, fontWeight: hl?700:400, color: hl?'#17325C':'#1e293b' }}>{formatarMoeda(vu * area)}</td>
+                                </tr>
+                              ))}
                             </tbody>
                           </table>
-                          {/* 9.2 VEIU — CUB R8N depreciado */}
+                          {/* 8.2 VEIU */}
                           {benfs.length > 0 && (
                             <>
-                              <SecHeader num="8.2" titulo="Valor das edificações — CUB R8N depreciado (VEIU)" />
+                              <SecHeader num="8.2" titulo="Valor das Edificações — CUB R8N Depreciado (VEIU)" />
                               <div style={{ overflowX: 'auto', marginTop: 4 }}>
                                 <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '7px' }}>
                                   <thead>
                                     <tr style={{ background: '#2347C6' }}>
-                                      {['Descrição','Padrão','Pc','Ac (m²)','Ir','R','Ie','%v','Ka','Estado','Ec','K','Foc','Vb (R$)'].map((h,i,a) => (
-                                        <th key={h} style={{ padding: '3px 4px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: i===0||i===1?'left':'center', borderRight: i<a.length-1?'0.5px solid #475e9b':'none', whiteSpace: 'nowrap' }}>{h}</th>
+                                      {(['Descrição','Padrão','CUB R8N','Pc','Ac (m²)','Ir','R','Ie','%v','Ka','Estado','Ec','K','Foc','Vb (R$)'] as string[]).map((h,i,a) => (
+                                        <th key={h} style={{ padding: '3px 4px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: i<2?'left':'center', borderRight: i<a.length-1?'0.5px solid #475e9b':'none', whiteSpace: 'nowrap' }}>{h}</th>
                                       ))}
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {benfs.map((b: any, i: number) => {
+                                      const cubVal = pnEv(b.cub)
+                                      const acVal  = pnEv(b.area)
+                                      const ieVal  = pnEv(b.idadeReal)
                                       const tdB: React.CSSProperties = { padding: '2.5px 4px', fontSize: '6.5px', border: '0.5px solid #C9D3E6', textAlign: 'center', whiteSpace: 'nowrap' }
                                       return (
                                         <tr key={i} style={{ background: i%2===0?'#fff':'#f8fafc' }}>
-                                          <td style={{ ...tdB, textAlign: 'left', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.descricao||b.tipo||`Benfeitoria ${i+1}`}</td>
-                                          <td style={{ ...tdB, textAlign: 'left' }}>{b.padrao||'—'}</td>
-                                          <td style={tdB}>{b.Pc?.toFixed(3)||'—'}</td>
-                                          <td style={tdB}>{b.Ac?.toLocaleString('pt-BR')||'—'}</td>
-                                          <td style={tdB}>{b.Ir||'—'}</td>
-                                          <td style={tdB}>{b.R!=null?b.R+'%':'—'}</td>
-                                          <td style={tdB}>{b.Ie||'—'}</td>
-                                          <td style={tdB}>{b.percentualVida!=null?(b.percentualVida*100).toFixed(1)+'%':'—'}</td>
-                                          <td style={tdB}>{b.Ka?.toFixed(3)||'—'}</td>
-                                          <td style={tdB}>{b.estado||'—'}</td>
-                                          <td style={tdB}>{b.Ec?.toFixed(2)+'%'||'—'}</td>
-                                          <td style={tdB}>{b.K?.toFixed(3)||'—'}</td>
-                                          <td style={tdB}>{b.Foc?.toFixed(4)||'—'}</td>
-                                          <td style={{ ...tdB, fontWeight: 700, color: '#17325C', borderRight: 'none' }}>{formatarMoeda(b.Vb||0)}</td>
+                                          <td style={{ ...tdB, textAlign: 'left', maxWidth: 120 }}>{b.descricao || `Benfeitoria ${i+1}`}</td>
+                                          <td style={{ ...tdB, textAlign: 'left' }}>{b.padrao || '—'}</td>
+                                          <td style={tdB}>{cubVal > 0 ? formatarMoeda(cubVal) : '—'}</td>
+                                          <td style={tdB}>{b.Pc?.toFixed(3) || '—'}</td>
+                                          <td style={tdB}>{acVal > 0 ? acVal.toLocaleString('pt-BR') : '—'}</td>
+                                          <td style={tdB}>{b.Ir || '—'}</td>
+                                          <td style={tdB}>{b.R != null ? (b.R*100).toFixed(0)+'%' : '—'}</td>
+                                          <td style={tdB}>{ieVal > 0 ? ieVal : '—'}</td>
+                                          <td style={tdB}>{b.pctVida != null ? b.pctVida.toFixed(1)+'%' : '—'}</td>
+                                          <td style={tdB}>{b.Ka?.toFixed(3) || '—'}</td>
+                                          <td style={tdB}>{b.estadoConservacao || '—'}</td>
+                                          <td style={tdB}>{b.Ec != null ? (b.Ec*100).toFixed(2)+'%' : '—'}</td>
+                                          <td style={tdB}>{b.K?.toFixed(3) || '—'}</td>
+                                          <td style={tdB}>{b.Foc?.toFixed(4) || '—'}</td>
+                                          <td style={{ ...tdB, fontWeight: 700, color: '#17325C', borderRight: 'none' }}>{formatarMoeda(b.valor || 0)}</td>
                                         </tr>
                                       )
                                     })}
                                     <tr style={{ background: '#1a3564' }}>
-                                      <td colSpan={13} style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'right', border: '0.5px solid #333' }}>Total das edificações</td>
-                                      <td style={{ padding: '3px 5px', fontSize: '7.5px', fontWeight: 700, color: '#fff', textAlign: 'center', border: '0.5px solid #333' }}>{formatarMoeda(evSnap.valorBenfeitorias||0)}</td>
+                                      <td colSpan={14} style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'right', border: '0.5px solid #333' }}>Total das edificações</td>
+                                      <td style={{ padding: '3px 5px', fontSize: '7.5px', fontWeight: 700, color: '#fff', textAlign: 'center', border: '0.5px solid #333' }}>{formatarMoeda(evSnap.valorBenfeitorias || 0)}</td>
                                     </tr>
                                   </tbody>
                                 </table>
                               </div>
                             </>
                           )}
+                          {/* Decomposição do valor final */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, margin: '6px 0' }}>
+                            <div style={{ border: '0.5px solid #C9D3E6', borderRadius: 3, padding: '8px', textAlign: 'center' }}>
+                              <div style={{ fontSize: '7px', color: '#5a7090', marginBottom: 3 }}>Valor do terreno</div>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(evSnap.valorTerreno || 0)}</div>
+                              <div style={{ fontSize: '7px', color: '#94a3b8', marginTop: 2 }}>{area.toLocaleString('pt-BR')} m² × {formatarMoeda(vuMed)}/m²</div>
+                            </div>
+                            <div style={{ border: '0.5px solid #C9D3E6', borderRadius: 3, padding: '8px', textAlign: 'center' }}>
+                              <div style={{ fontSize: '7px', color: '#5a7090', marginBottom: 3 }}>Valor das edificações</div>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(evSnap.valorBenfeitorias || 0)}</div>
+                              <div style={{ fontSize: '7px', color: '#94a3b8', marginTop: 2 }}>VEIU — CUB R8N depreciado</div>
+                            </div>
+                            <div style={{ border: '0.5px solid #C9D3E6', borderRadius: 3, padding: '8px', textAlign: 'center' }}>
+                              <div style={{ fontSize: '7px', color: '#5a7090', marginBottom: 3 }}>Fator de comercialização</div>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{Number(dados.fatorComercializacao || '1').toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                            </div>
+                          </div>
                         </>
                       )
                     })()}
