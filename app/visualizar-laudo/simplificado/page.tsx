@@ -780,19 +780,12 @@ export default function LaudoSimplificadoPage() {
             <button
               type="button"
               onClick={() => {
-                // Abre a janela de forma síncrona (evita bloqueio de popup)
-                // e navega após o save via laudoAtual definido no Redis
                 const id = laudoUuid
-                const url = id ? `/visualizar-laudo?id=${encodeURIComponent(id)}` : '/visualizar-laudo'
-                const win = window.open(url, '_blank')
-                // Salva em background — a aba já aberta vai carregar os dados
+                if (!id) { alert('Aguarde o laudo ser carregado antes de visualizar.'); return }
+                const url = `/visualizar-laudo?id=${encodeURIComponent(id)}`
+                // Salva em background sem await (mantém gesto do usuário para window.open)
                 executarSave(true).catch(console.error)
-                if (!win) {
-                  // Fallback se popup foi bloqueado
-                  executarSave(true).then(() => {
-                    window.location.href = url
-                  }).catch(console.error)
-                }
+                window.open(url, '_blank', 'noopener,noreferrer')
               }}
               className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 transition"
             >
