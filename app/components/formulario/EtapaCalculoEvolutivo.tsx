@@ -1,6 +1,26 @@
 'use client'
 import React, { useState, useMemo, useEffect } from 'react'
 
+// ─── Haversine: distância em linha reta ───────────────────────────────────
+function parseCoord(s: string): [number, number] | null {
+  if (!s) return null
+  const p = s.split(',').map(x => parseFloat(x.trim().replace(',', '.')))
+  if (p.length < 2 || isNaN(p[0]) || isNaN(p[1])) return null
+  if (p[0] < -90 || p[0] > 90 || p[1] < -180 || p[1] > 180) return null
+  return [p[0], p[1]]
+}
+function haversineMetros(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000, toRad = (d: number) => d * Math.PI / 180
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1)
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2
+  return 2*R*Math.asin(Math.sqrt(a))
+}
+function formatarDistanciaAuto(metros: number): string {
+  if (metros < 1000) return `${Math.round(metros)} m`
+  return `${(metros/1000).toFixed(2).replace('.', ',')} km`
+}
+
+
 // ─── Tabelas (idênticas ao EtapaCalculoCDDM) ─────────────────────────────────
 const FOC_DEPR: Record<string, number> = {
   A:0, B:0.0032, C:0.0252, D:0.0809, E:0.1810, F:0.3320, G:0.5260, H:0.7520, I:1.0000,
@@ -252,16 +272,31 @@ function CardElemEv({
                     </div>
                     <div className="col-span-2"><label className={lbl}>Logradouro</label><input className={inp} value={e.logradouro} onChange={up('logradouro')}/></div>
                     <div>
-                      <label className={lbl}>Distância (km)</label>
+                      <label className={lbl}>
+                        Distância
+                        {form?.coordenadasImovel && <span className="ml-1 text-blue-400 font-normal">(auto via coordenada)</span>}
+                      </label>
                       <input className={inp} value={e.distancia}
                         onChange={up('distancia')}
-                        onBlur={ev=>updateElem(abaAtiva,'distancia',fmtBR(ev.target.value,3))}
-                        placeholder="0,000"/>
+                        placeholder="Ex: 850 m"/>
                     </div>
                     <div><label className={lbl}>Bairro</label><input className={inp} value={e.bairro} onChange={up('bairro')}/></div>
                     <div><label className={lbl}>Cidade</label><input className={inp} value={e.cidade} onChange={up('cidade')}/></div>
                     <div><label className={lbl}>UF</label><input className={inp} value={e.uf} onChange={up('uf')}/></div>
-                    <div className="col-span-2"><label className={lbl}>Coordenadas geográficas</label><input className={inp} value={e.coordenadas} onChange={up('coordenadas')}/></div>
+                    <div className="col-span-2">
+                      <label className={lbl}>Coordenadas geográficas</label>
+                      <input className={inp} value={e.coordenadas}
+                        onChange={up('coordenadas')}
+                        onBlur={ev => {
+                          const coordEl = parseCoord(ev.target.value)
+                          const coordAv = parseCoord(form?.coordenadasImovel || '')
+                          if (coordEl && coordAv) {
+                            const metros = haversineMetros(coordAv[0], coordAv[1], coordEl[0], coordEl[1])
+                            updateElem(abaAtiva, 'distancia', formatarDistanciaAuto(metros))
+                          }
+                        }}
+                        placeholder="-23.55, -46.63"/>
+                    </div>
                     <div><label className={lbl}>Fonte</label><input className={inp} value={e.fonte} onChange={up('fonte')}/></div>
                   </div>
 

@@ -2,6 +2,31 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 
+// ─── Haversine: distância em linha reta entre duas coordenadas ─────────────
+function parseCoord(s: string): [number, number] | null {
+  if (!s) return null
+  const partes = s.split(',').map(p => parseFloat(p.trim().replace(',', '.')))
+  if (partes.length < 2 || isNaN(partes[0]) || isNaN(partes[1])) return null
+  const [lat, lon] = partes
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null
+  return [lat, lon]
+}
+
+function haversineMetros(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(a))
+}
+
+function formatarDistanciaAuto(metros: number): string {
+  if (metros < 1000) return `${Math.round(metros)} m`
+  return `${(metros / 1000).toFixed(2).replace('.', ',')} km`
+}
+
+
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 type FOCLetra = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | ''
@@ -890,9 +915,12 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
               <input type="date" value={elem.data} onChange={e => updateElem(abaAtiva, 'data', e.target.value)} className={cls} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1.5">Distância do avaliando</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1.5">
+                Distância do avaliando
+                {form.coordenadasImovel && <span className="ml-1 text-blue-400 font-normal normal-case">(auto via coordenada)</span>}
+              </label>
               <input value={elem.distanciaAvaliando} onChange={e => updateElem(abaAtiva, 'distanciaAvaliando', e.target.value)}
-                placeholder="Ex: 1,2 km" className={cls} />
+                placeholder="Ex: 850 m" className={cls} />
             </div>
           </div>
 
@@ -918,7 +946,16 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1.5">Coordenadas</label>
-              <input value={elem.coordenadas} onChange={e => updateElem(abaAtiva, 'coordenadas', e.target.value)}
+              <input value={elem.coordenadas}
+                onChange={e => updateElem(abaAtiva, 'coordenadas', e.target.value)}
+                onBlur={e => {
+                  const coordElem = parseCoord(e.target.value)
+                  const coordAv   = parseCoord(form.coordenadasImovel || '')
+                  if (coordElem && coordAv) {
+                    const metros = haversineMetros(coordAv[0], coordAv[1], coordElem[0], coordElem[1])
+                    updateElem(abaAtiva, 'distanciaAvaliando', formatarDistanciaAuto(metros))
+                  }
+                }}
                 placeholder="-23.55, -46.63" className={cls} />
             </div>
           </div>
