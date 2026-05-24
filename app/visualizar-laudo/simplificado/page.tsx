@@ -1482,7 +1482,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     {/* 9/10 — Valor final */}
                     <SecHeader num={isEvolutivo ? '9' : '9'} titulo="Valor Final da Avaliação" />
                     {isEvolutivo && evSnap && evSnap.resultado ? (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, margin: '6px 0' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 6, margin: '6px 0' }}>
                         <div style={{ border: '0.5px solid #C9D3E6', borderRadius: 3, padding: '8px', textAlign: 'center' }}>
                           <div style={{ fontSize: '7px', color: '#5a7090', marginBottom: 3 }}>Valor do terreno</div>
                           <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(evSnap.valorTerreno||0)}</div>
@@ -1492,10 +1492,6 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                           <div style={{ fontSize: '7px', color: '#5a7090', marginBottom: 3 }}>Valor das edificações</div>
                           <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(evSnap.valorBenfeitorias||0)}</div>
                           <div style={{ fontSize: '7px', color: '#94a3b8', marginTop: 2 }}>VEIU — CUB R8N depreciado</div>
-                        </div>
-                        <div style={{ border: '0.5px solid #C9D3E6', borderRadius: 3, padding: '8px', textAlign: 'center' }}>
-                          <div style={{ fontSize: '7px', color: '#5a7090', marginBottom: 3 }}>Fator comercialização</div>
-                          <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{Number(dados.fatorComercializacao||1).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
                         </div>
                       </div>
                     ) : temCddm && cddm ? (
