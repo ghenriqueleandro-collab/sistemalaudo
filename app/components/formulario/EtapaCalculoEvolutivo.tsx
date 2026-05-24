@@ -432,13 +432,13 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
     if (Array.isArray(saved) && saved.length > 0) {
       return saved.map((b: any, i: number) => {
         const base: BenfeitoriaCUB = { ...benfInicial(i + 1), ...b }
-        // SEMPRE pré-preenche pc/ir/r da tabela Antigo ao inicializar
-        // Isso garante que snapshots salvos com tabela errada (Novo) sejam corrigidos
+        // Pré-preenche pc/ir/r da tabela SOMENTE se ainda não foram definidos pelo usuário.
+        // Campos já salvos (editados manualmente) são preservados.
         if (base.padrao) {
           const t = getPadrao(base.padrao)
-          base.pc = t.Pc.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
-          base.ir = String(t.Ir)
-          base.r  = t.R.toLocaleString('pt-BR',  { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+          if (!base.pc) base.pc = t.Pc.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+          if (!base.ir) base.ir = String(t.Ir)
+          if (!base.r)  base.r  = t.R.toLocaleString('pt-BR',  { minimumFractionDigits: 4, maximumFractionDigits: 4 })
         }
         return base
       })
