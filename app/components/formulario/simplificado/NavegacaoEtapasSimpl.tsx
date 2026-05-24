@@ -17,11 +17,16 @@ export default function NavegacaoEtapasSimpl({
   const etapaAnterior = indiceAtual > 0 ? ETAPAS_SIMPL[indiceAtual - 1] : null
   const proximaEtapa = indiceAtual < ETAPAS_SIMPL.length - 1 ? ETAPAS_SIMPL[indiceAtual + 1] : null
 
+  // Vai direto para /visualizar-laudo/simplificado — sem roteador intermediário
   function abrirVisualizacao() {
-    // Síncrono — sem await, sem bloqueio de popup
-    const idUrl = new URLSearchParams(window.location.search).get('id')
+    const idUrl = typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('id')
+      : null
     const id = laudoUuid || idUrl
-    const url = id ? `/visualizar-laudo?id=${encodeURIComponent(id)}` : '/visualizar-laudo'
+    // Bypass do roteador: vai direto para a página simplificada
+    const url = id
+      ? `/visualizar-laudo/simplificado?id=${encodeURIComponent(id)}`
+      : '/visualizar-laudo/simplificado'
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
@@ -40,13 +45,13 @@ export default function NavegacaoEtapasSimpl({
 
         <div className="flex items-center gap-3 ml-auto">
 
-          {/* Visualizar laudo — visível em todas as etapas */}
+          {/* Visualizar laudo — em todas as etapas */}
           <button
             type="button"
             onClick={abrirVisualizacao}
             className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
           >
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" strokeLinecap="round" strokeLinejoin="round"/>
               <circle cx="8" cy="8" r="2"/>
             </svg>
