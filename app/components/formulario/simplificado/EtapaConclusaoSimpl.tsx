@@ -3,15 +3,15 @@
 import { useMemo } from 'react'
 
 type Props = {
-  form: any
-  handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void
+  form?: any
+  handleChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void
   valorFinalImovel: number
   formatarMoeda: (valor: number) => string
 }
 
 export default function EtapaConclusaoSimpl({
-  form,
-  handleChange,
+  form = {},
+  handleChange = () => {},
   valorFinalImovel,
   formatarMoeda,
 }: Props) {
