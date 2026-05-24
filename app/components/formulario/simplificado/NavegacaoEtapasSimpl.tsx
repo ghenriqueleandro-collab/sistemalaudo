@@ -5,11 +5,13 @@ import { ETAPAS_SIMPL, EtapaIdSimpl } from './etapas-simplificado'
 type NavegacaoEtapasSimplProps = {
   etapaAtual: EtapaIdSimpl
   setEtapaAtual: (etapa: EtapaIdSimpl) => void
+  onVisualizar?: () => void
 }
 
 export default function NavegacaoEtapasSimpl({
   etapaAtual,
   setEtapaAtual,
+  onVisualizar,
 }: NavegacaoEtapasSimplProps) {
   const indiceAtual = ETAPAS_SIMPL.findIndex((etapa) => etapa.id === etapaAtual)
   const etapaAnterior = indiceAtual > 0 ? ETAPAS_SIMPL[indiceAtual - 1] : null
@@ -55,11 +57,12 @@ export default function NavegacaoEtapasSimpl({
           ) : (
             <button
               type="button"
+              onClick={onVisualizar}
               className="flex items-center gap-1.5 px-5 py-2 text-sm font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition"
             >
-              Concluir laudo
+              Visualizar laudo
               <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M3 8l3.5 3.5L13 5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M6 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
           )}

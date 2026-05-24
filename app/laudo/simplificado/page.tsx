@@ -777,12 +777,20 @@ export default function LaudoSimplificadoPage() {
             >
               Novo laudo em branco
             </button>
-            <Link
-              href={laudoUuid ? `/visualizar-laudo?id=${encodeURIComponent(laudoUuid)}` : '/visualizar-laudo'}
+            <button
+              type="button"
+              onClick={() => {
+                const id = laudoUuid
+                if (!id) { alert('Aguarde o laudo ser carregado antes de visualizar.'); return }
+                const url = `/visualizar-laudo?id=${encodeURIComponent(id)}`
+                // Salva em background sem await (mantém gesto do usuário para window.open)
+                executarSave(true).catch(console.error)
+                window.open(url, '_blank', 'noopener,noreferrer')
+              }}
               className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 transition"
             >
               Visualizar laudo
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -863,6 +871,8 @@ export default function LaudoSimplificadoPage() {
 
           {etapaAtual === '12' && (
             <EtapaConclusaoSimpl
+              form={form}
+              handleChange={handleChange}
               valorFinalImovel={valorFinalImovel}
               formatarMoeda={formatarMoeda}
             />
@@ -898,6 +908,12 @@ export default function LaudoSimplificadoPage() {
       <NavegacaoEtapasSimpl
         etapaAtual={etapaAtual}
         setEtapaAtual={setEtapaAtual}
+        onVisualizar={() => {
+          const id = laudoUuid
+          if (!id) { alert('Aguarde o laudo ser carregado.'); return }
+          executarSave(true).catch(console.error)
+          window.open(`/visualizar-laudo?id=${encodeURIComponent(id)}`, '_blank', 'noopener,noreferrer')
+        }}
       />
 
     </AppShell>
