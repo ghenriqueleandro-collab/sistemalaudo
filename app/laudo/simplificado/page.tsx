@@ -777,18 +777,18 @@ export default function LaudoSimplificadoPage() {
             >
               Novo laudo em branco
             </button>
-            <button
-              type="button"
+            <a
+              href={laudoUuid ? `/visualizar-laudo/simplificado?id=${encodeURIComponent(laudoUuid)}` : '/visualizar-laudo/simplificado'}
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={() => {
-                const id = laudoUuid
-                const url = id ? `/visualizar-laudo?id=${encodeURIComponent(id)}` : '/visualizar-laudo'
+                // Dispara o save em background — a visualização faz retry de 5×1s
                 executarSave(true).catch(console.error)
-                window.open(url, '_blank', 'noopener,noreferrer')
               }}
               className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 transition"
             >
               Visualizar laudo
-            </button>
+            </a>
           </div>
         </div>
 
@@ -906,7 +906,6 @@ export default function LaudoSimplificadoPage() {
       <NavegacaoEtapasSimpl
         etapaAtual={etapaAtual}
         setEtapaAtual={setEtapaAtual}
-        laudoUuid={laudoUuid}
       />
 
     </AppShell>
