@@ -910,20 +910,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                       <Text style={{flex:1.1,fontSize:6.5,fontFamily:'Helvetica-Bold',color:BRANCO,textAlign:'center',paddingVertical:3}}>{fm(evSnap.valorBenfeitorias||0)}</Text>
                     </View>
                   </View>
-                  {/* Decomposição do valor */}
-                  <View style={{flexDirection:'row',marginTop:5,marginBottom:4}}>
-                    {([
-                      {l:'Valor do terreno',     v:fm(evSnap.valorTerreno||0),      s:`${area.toLocaleString('pt-BR')} m² × ${fm(vuMed)}/m²`},
-                      {l:'Valor das edificações', v:fm(evSnap.valorBenfeitorias||0), s:'VEIU — CUB R8N depreciado'},
-                      {l:'Fator comercialização', v:(() => { const fc = pnEv(dados.fatorComercializacao); return fc>0?fc.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'1,00' })(), s:''},
-                    ] as {l:string;v:string;s:string}[]).map(({l,v,s}) => (
-                      <View key={l} style={{flex:1,borderWidth:0.5,borderColor:CINZA,marginRight:4,padding:6,alignItems:'center',backgroundColor:AZULLT}}>
-                        <Text style={{fontSize:6.5,color:'#5a7090',marginBottom:3,textAlign:'center'}}>{l}</Text>
-                        <Text style={{fontSize:9,fontFamily:'Helvetica-Bold',color:AZUL}}>{v}</Text>
-                        {s?<Text style={{fontSize:5.5,color:'#94a3b8',marginTop:2,textAlign:'center'}}>{s}</Text>:null}
-                      </View>
-                    ))}
-                  </View>
+
                 </>
               )}
             </>
