@@ -624,24 +624,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
 
         {/* ── 8. PESQUISA IMOBILIÁRIA (renumerado de 9 para 8) ─────────────── */}
         <SecHeader num="7" titulo="Pesquisa Imobiliária" />
-        <View style={s.table}>
-          <View style={s.row}>
-            <View style={[s.cellHead,{flex:2,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Período</Text></View>
-            <View style={[s.cellHead,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Tipo</Text></View>
-            <View style={[s.cellHead,{flex:0.8,borderRightWidth:0.5,borderColor:CINZA}]}><Text>Qtd.</Text></View>
-            <View style={[s.cellHead,{flex:2}]}><Text>Metodologia</Text></View>
-          </View>
-          <View style={s.rowLast}>
-            <View style={[s.cellVal,{flex:2,borderRightWidth:0.5,borderColor:CINZA}]}>
-              <Text>{dados.periodoPesquisaInicio&&dados.periodoPesquisaFim?`${fd(dados.periodoPesquisaInicio)} a ${fd(dados.periodoPesquisaFim)}`:'–'}</Text>
-            </View>
-            <View style={[s.cellVal,{flex:1.5,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{dados.tipoInformacoesObtidas||'–'}</Text></View>
-            <View style={[s.cellVal,{flex:0.8,borderRightWidth:0.5,borderColor:CINZA,textAlign:'center'}]}>
-              <Text>{(temCddm ? elementosCddm.length : Number(dados.quantidadeElementos||0)) || '–'}</Text>
-            </View>
-            <View style={[s.cellVal,{flex:2}]}><Text>{metLabel(dados.metodoAvaliacao)}</Text></View>
-          </View>
-        </View>
+
 
         {/* ── Cards de elementos ───────────────────────────────────────────── */}
         {temElementos && elementosExibir.map((el: any, i: number) => renderElemento(el, i))}

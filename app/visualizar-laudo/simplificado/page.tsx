@@ -1063,30 +1063,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
 
                     {/* 9 — Pesquisa imobiliária */}
                     <SecHeader num="8" titulo="Pesquisa Imobiliária" />
-                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px', marginBottom: '6px' }}>
-                      <thead>
-                        <tr>
-                          <TH style={{ width: '30%' }}>Período</TH>
-                          <TH style={{ width: '22%' }}>Tipo</TH>
-                          <TH style={{ width: '14%', textAlign: 'center' }}>Qtd.</TH>
-                          <TH>Metodologia</TH>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <TDV>
-                            {dados.periodoPesquisaInicio && dados.periodoPesquisaFim
-                              ? `${formatarData(dados.periodoPesquisaInicio)} a ${formatarData(dados.periodoPesquisaFim)}`
-                              : '—'}
-                          </TDV>
-                          <TDV>{dados.tipoInformacoesObtidas || '—'}</TDV>
-                          <td style={{ border: '0.5px solid #C9D3E6', padding: '3.5px 6px', fontSize: '8px', textAlign: 'center' }}>
-                            {(temCddm ? elementosCddm.length : Number(dados.quantidadeElementos || 0)) || '—'}
-                          </td>
-                          <TDV>{metLabel}</TDV>
-                        </tr>
-                      </tbody>
-                    </table>
+
 
                     {/* Cards de elemento — blocos temáticos, até 3 colunas, campos vazios omitidos */}
                     {temElementos && elementosExibir.map((el: any, i: number) => {
