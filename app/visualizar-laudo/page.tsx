@@ -28,15 +28,19 @@ function VisualizarRoteador() {
         }
         const gp = (g?: string) => g === 'III' ? 3 : g === 'II' ? 2 : g === 'I' ? 1 : 0
         const pts = (arr: any[]) => arr.reduce((s: number, i: any) => s + (i.grau ? gp(i.grau) : (i.pontos || 0)), 0)
+        // Indicadores EXCLUSIVOS do laudo detalhado (não existem no simplificado)
         const ehDetalhado =
+          parsed.tipoLaudo === 'detalhado' ||
           (parsed.croquis && parsed.croquis.length > 0) ||
           (parsed.acabamentos && parsed.acabamentos.length > 0) ||
           (parsed.responsavelCpf && parsed.responsavelCpf.trim() !== '') ||
-          (parsed.fundamentacao && parsed.fundamentacao.length > 0) ||
           (parsed.resumoMercado && parsed.resumoMercado.length > 0)
-        const tipo: string = parsed.tipoLaudo === 'detalhado' || ehDetalhado
-          ? 'detalhado'
-          : 'simplificado'
+        // tipoLaudo='simplificado' explícito tem prioridade sobre os indicadores
+        const tipo: string = parsed.tipoLaudo === 'simplificado'
+          ? 'simplificado'
+          : ehDetalhado
+            ? 'detalhado'
+            : 'simplificado'
         const idParam = laudoId ? `?id=${encodeURIComponent(laudoId)}` : ''
         router.replace(`/visualizar-laudo/${tipo}${idParam}`)
       } catch (e) {
