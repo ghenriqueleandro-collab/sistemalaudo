@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { ETAPAS_SIMPL, EtapaIdSimpl } from './etapas-simplificado'
 
 type NavegacaoEtapasSimplProps = {
@@ -18,17 +17,9 @@ export default function NavegacaoEtapasSimpl({
   const etapaAnterior = indiceAtual > 0 ? ETAPAS_SIMPL[indiceAtual - 1] : null
   const proximaEtapa = indiceAtual < ETAPAS_SIMPL.length - 1 ? ETAPAS_SIMPL[indiceAtual + 1] : null
 
-  const [idUrl, setIdUrl] = useState('')
-  useEffect(() => {
-    setIdUrl(new URLSearchParams(window.location.search).get('id') || '')
-  }, [])
-
-  const id = laudoUuid || idUrl
-  const vizUrl = id
-    ? `/visualizar-laudo/simplificado?id=${encodeURIComponent(id)}`
+  const vizUrl = laudoUuid
+    ? `/visualizar-laudo/simplificado?id=${encodeURIComponent(laudoUuid)}`
     : '/visualizar-laudo/simplificado'
-
-  const btnVizClass = 'flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition'
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 shadow-[0_-4px_24px_-8px_rgba(15,23,42,0.08)]">
@@ -45,12 +36,11 @@ export default function NavegacaoEtapasSimpl({
 
         <div className="flex items-center gap-3 ml-auto">
 
-          {/* Link nativo — abre nova aba sem JavaScript */}
           <a
             href={vizUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={btnVizClass}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" strokeLinecap="round" strokeLinejoin="round"/>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 
 type Props = {
   form?: any
@@ -15,42 +15,35 @@ export default function EtapaConclusaoSimpl({
   valorFinalImovel,
   formatarMoeda,
 }: Props) {
-  // O usuário digita o FATOR (ex: 0,70) — o valor é calculado automaticamente
   const valorArredondado = Math.round(valorFinalImovel / 100) * 100
 
-  // Estado local do fator — controlado independentemente para evitar perda de foco
-  const [fatorLocal, setFatorLocal] = useState<string>(() => {
-    // Restaurar fator salvo: se valorLiquidezForcada existe, recalcula o fator
-    const vlf = form.valorLiquidezForcada
-    if (vlf && valorArredondado > 0) {
-      const n = parseFloat(String(vlf).replace(/[R$\s]/g, '').replace(/\.(?=\d{3})/g, '').replace(',', '.'))
-      if (!isNaN(n) && n > 0) return (n / valorArredondado).toFixed(2).replace('.', ',')
-    }
-    return ''
-  })
+  // Estado local do fator — sem useEffect/useCallback que criam loops
+  const [fatorLocal, setFatorLocal] = useState('')
 
-  // Fator como número (0,70 → 0.70)
   const fatorNum = parseFloat(fatorLocal.replace(',', '.')) || 0
+  const fatorValido = fatorNum > 0 && fatorNum < 1
+  const vlf = fatorValido ? valorArredondado * fatorNum : 0
 
-  // Valor de liquidez calculado automaticamente
-  const vlf = fatorNum > 0 && fatorNum <= 1 ? valorArredondado * fatorNum : 0
+  function handleFatorChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const valor = e.target.value
+    setFatorLocal(valor)
 
-  // Propaga o valor de liquidez calculado para o form pai ao mudar o fator
-  const propagarVlf = useCallback((vlf: number) => {
+    // Propaga o valor calculado para o form pai diretamente no onChange
+    const num = parseFloat(valor.replace(',', '.'))
+    const vlfCalculado = !isNaN(num) && num > 0 && num < 1
+      ? Math.round(valorArredondado * num * 100) / 100
+      : 0
+
     const fakeEvent = {
       target: {
         name: 'valorLiquidezForcada',
-        value: vlf > 0 ? vlf.toFixed(2).replace('.', ',') : '',
+        value: vlfCalculado > 0
+          ? vlfCalculado.toFixed(2).replace('.', ',')
+          : '',
       },
     } as React.ChangeEvent<HTMLInputElement>
     handleChange(fakeEvent)
-  }, [handleChange])
-
-  useEffect(() => {
-    propagarVlf(vlf)
-  }, [vlf, propagarVlf])
-
-  const fatorValido = fatorNum > 0 && fatorNum < 1
+  }
 
   return (
     <div className="space-y-6">
@@ -75,18 +68,18 @@ export default function EtapaConclusaoSimpl({
             Fator de liquidez forçada
           </label>
           <p className="text-xs text-slate-400 mb-3">
-            Digite o fator entre 0 e 1 (ex: <strong>0,70</strong> = 70% do valor de avaliação). O valor de liquidez é calculado automaticamente.
+            Digite o fator entre 0 e 1 (ex: <strong>0,70</strong> = 70% do valor de avaliação).
+            O valor de liquidez é calculado automaticamente.
           </p>
           <input
             type="text"
             value={fatorLocal}
-            onChange={(e) => setFatorLocal(e.target.value)}
+            onChange={handleFatorChange}
             placeholder="Ex.: 0,70"
             className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
           />
         </div>
 
-        {/* Resultado automático */}
         {fatorValido && (
           <div className="grid grid-cols-3 gap-3 pt-1">
             <div className="rounded-lg bg-[#EAF0FB] border border-[#C9D3E6] p-3 text-center">
