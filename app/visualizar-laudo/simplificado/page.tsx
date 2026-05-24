@@ -777,12 +777,17 @@ export default function LaudoSimplificadoPage() {
             >
               Novo laudo em branco
             </button>
-            <Link
-              href={laudoUuid ? `/visualizar-laudo?id=${encodeURIComponent(laudoUuid)}` : '/visualizar-laudo'}
+            <button
+              type="button"
+              onClick={async () => {
+                await executarSave(true)
+                const id = laudoUuid
+                window.open(id ? `/visualizar-laudo?id=${encodeURIComponent(id)}` : '/visualizar-laudo', '_blank')
+              }}
               className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 transition"
             >
               Visualizar laudo
-            </Link>
+            </button>
           </div>
         </div>
 
