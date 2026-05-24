@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { ETAPAS_SIMPL, EtapaIdSimpl } from './etapas-simplificado'
 
 type NavegacaoEtapasSimplProps = {
@@ -17,8 +18,16 @@ export default function NavegacaoEtapasSimpl({
   const etapaAnterior = indiceAtual > 0 ? ETAPAS_SIMPL[indiceAtual - 1] : null
   const proximaEtapa = indiceAtual < ETAPAS_SIMPL.length - 1 ? ETAPAS_SIMPL[indiceAtual + 1] : null
 
-  const vizUrl = laudoUuid
-    ? `/visualizar-laudo/simplificado?id=${encodeURIComponent(laudoUuid)}`
+  // Lê o ID do sessionStorage (definido pelo laudo-simplificado-page quando salva)
+  const [idSessao, setIdSessao] = useState('')
+  useEffect(() => {
+    const idUrl = new URLSearchParams(window.location.search).get('id') || ''
+    const idSession = sessionStorage.getItem('lesath:laudoSimplId') || ''
+    setIdSessao(laudoUuid || idSession || idUrl)
+  }, [laudoUuid])
+
+  const vizUrl = idSessao
+    ? `/visualizar-laudo/simplificado?id=${encodeURIComponent(idSessao)}`
     : '/visualizar-laudo/simplificado'
 
   return (
@@ -35,7 +44,6 @@ export default function NavegacaoEtapasSimpl({
         </div>
 
         <div className="flex items-center gap-3 ml-auto">
-
           <a
             href={vizUrl}
             target="_blank"

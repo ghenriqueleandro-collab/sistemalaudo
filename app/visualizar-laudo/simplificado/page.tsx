@@ -192,14 +192,23 @@ export default function LaudoSimplificadoPage() {
         if (!laudoSalvo) {
           setEditandoLaudoExistente(false)
           setLaudoId('')
-          setLaudoUuid(crypto.randomUUID())
+          const novoId = crypto.randomUUID()
+          setLaudoUuid(novoId)
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('lesath:laudoSimplId', novoId)
+          }
           setFormPronto(true)
           return
         }
 
         setEditandoLaudoExistente(true)
         setLaudoId(String(laudoSalvo.matricula || laudoSalvo.id || '').trim())
-        if (laudoSalvo.id) setLaudoUuid(laudoSalvo.id)
+        if (laudoSalvo.id) {
+          setLaudoUuid(laudoSalvo.id)
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('lesath:laudoSimplId', laudoSalvo.id)
+          }
+        }
 
         setFatoresSelecionados(laudoSalvo.fatoresSelecionados || [])
         setFundamentacao(laudoSalvo.fundamentacao || [
@@ -712,6 +721,10 @@ export default function LaudoSimplificadoPage() {
       await definirLaudoAtual(idSalvo)
       setAutoSaveStatus('saved')
       setTimeout(() => setAutoSaveStatus('idle'), 3000)
+      // Guarda o ID no sessionStorage para que NavegacaoEtapasSimpl possa acessar
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('lesath:laudoSimplId', idSalvo)
+      }
     } catch (error) {
       console.error('Erro ao salvar laudo:', error)
       setAutoSaveStatus('error')
