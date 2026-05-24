@@ -946,6 +946,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                             </table>
                           </td>
                         </tr>
+                        {dados.coordenadasImovel && <tr><TDL>Coordenadas</TDL><TDV>{dados.coordenadasImovel}</TDV></tr>}
                       </tbody>
                     </table>
 
@@ -1058,13 +1059,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                   <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
                     <DocHeader />
 
-                    {/* 8 — Localização */}
-                    <SecHeader num="8" titulo="Localização" />
-                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
-                      <tbody>
-                        {dados.coordenadasImovel && <tr><TDL>Coordenadas</TDL><TDV>{dados.coordenadasImovel}</TDV></tr>}
-                      </tbody>
-                    </table>
+                    
 
                     {/* 9 — Pesquisa imobiliária */}
                     <SecHeader num="8" titulo="Pesquisa Imobiliária" />

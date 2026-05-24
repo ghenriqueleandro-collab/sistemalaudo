@@ -503,7 +503,6 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
           <Row label="Solicitante" value={dados.solicitante} />
           <Row label="Proponente"  value={dados.proprietario} />
           <Row label="Logradouro"  value={logradouro} />
-          {dados.coordenadasImovel && <Row label="Coordenadas" value={dados.coordenadasImovel} />}
           <View style={s.rowLast}>
             <View style={[s.cellLbl,{flex:0.7,borderRightWidth:0.5,borderColor:CINZA}]}><Text>CEP</Text></View>
             <View style={[s.cellVal,{flex:1.2,borderRightWidth:0.5,borderColor:CINZA}]}><Text>{cep||'–'}</Text></View>
@@ -514,6 +513,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
             <View style={[s.cellLbl,{flex:0.4,borderRightWidth:0.5,borderColor:CINZA}]}><Text>UF</Text></View>
             <View style={[s.cellVal,{flex:0.7}]}><Text>{uf||'–'}</Text></View>
           </View>
+          {dados.coordenadasImovel ? <Row label="Coordenadas" value={dados.coordenadasImovel} /> : null}
         </View>
 
         {fotoFachada && <Image src={fotoFachada.preview} style={s.foto} />}
