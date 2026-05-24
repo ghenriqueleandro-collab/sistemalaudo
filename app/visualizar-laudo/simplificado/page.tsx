@@ -893,7 +893,8 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 tStudent: number; intervaloConfianca: number; limiteInferior: number; limiteSuperior: number
                 limiteInf30: number; limiteSup30: number; grauPrecisao: string; valorImovel: number; outliersDescartados: number
               } | undefined
-              const ev = (dados as any).dadosCalculoEvolutivo as { elementos: any[] } | undefined
+              const ev = (dados as any).dadosCalculoEvolutivo as any | undefined
+              const evSnap = ev
               const elementosCddm = cddm?.elementos || []
               const elementosEv = ev?.elementos || []
               // Elementos a mostrar: CDDM para comparativo, evolutivo para método evolutivo
