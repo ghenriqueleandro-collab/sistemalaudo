@@ -1277,15 +1277,210 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                           </div>
                         )}
 
+                        {/* Estatísticas e tabela de valores — Comparativo */}
+                        {cddm && (() => {
+                          const elSan = elementosCddm.filter((e: any) => e.saneado)
+                          const vuMedio = cddm.mediaSaneada
+                          const vuMin = cddm.limiteInferior
+                          const vuMax = cddm.limiteSuperior
+                          const vuLim30i = cddm.limiteInf30
+                          const vuLim30s = cddm.limiteSup30
+                          const area = cddm.avaliando.area
+                          const tdC: React.CSSProperties = { padding: '3px 5px', fontSize: '7.5px', border: '0.5px solid #C9D3E6', textAlign: 'center' }
+                          const tdCHl: React.CSSProperties = { ...tdC, background: '#EAF0FB', fontWeight: 700, color: '#17325C' }
+                          return (
+                            <>
+                              {/* Estatísticas */}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 5, margin: '6px 0' }}>
+                                {[
+                                  ['Desvio padrão', formatarMoeda(cddm.desvioPadrao)],
+                                  ['Coef. variação', cddm.coefVariacao.toFixed(2).replace('.',',')+'%'],
+                                  ['Grau de precisão', cddm.grauPrecisao || '—'],
+                                  ['IC 80%', cddm.intervaloConfianca.toFixed(2).replace('.',',')+'%'],
+                                ].map(([l,v]) => (
+                                  <div key={l as string} style={{ background: '#EAF0FB', border: '0.5px solid #C9D3E6', borderRadius: 3, padding: '5px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '7px', color: '#5a7090', marginBottom: 2 }}>{l}</div>
+                                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{v}</div>
+                                  </div>
+                                ))}
+                              </div>
+                              {/* Tabela de valores */}
+                              <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginBottom: 4 }}>
+                                <thead>
+                                  <tr style={{ background: '#1a3564' }}>
+                                    <th style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', borderRight: '0.5px solid #475e9b' }}>Intervalo</th>
+                                    <th style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>V.U. (R$/m²)</th>
+                                    <th style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center' }}>Valor total (R$)</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr><td style={tdC}>Mínimo</td><td style={tdC}>{formatarMoeda(vuMin)}</td><td style={tdC}>{formatarMoeda(vuMin * area)}</td></tr>
+                                  <tr><td style={tdCHl}>Médio (adotado)</td><td style={tdCHl}>{formatarMoeda(vuMedio)}</td><td style={tdCHl}>{formatarMoeda(vuMedio * area)}</td></tr>
+                                  <tr><td style={tdC}>Máximo</td><td style={tdC}>{formatarMoeda(vuMax)}</td><td style={tdC}>{formatarMoeda(vuMax * area)}</td></tr>
+                                  <tr><td style={tdC}>Limite −30%</td><td style={tdC}>{formatarMoeda(vuLim30i)}</td><td style={tdC}>{formatarMoeda(vuLim30i * area)}</td></tr>
+                                  <tr><td style={tdC}>Limite +30%</td><td style={tdC}>{formatarMoeda(vuLim30s)}</td><td style={tdC}>{formatarMoeda(vuLim30s * area)}</td></tr>
+                                </tbody>
+                              </table>
+                            </>
+                          )
+                        })()}
                         <div style={{ marginTop: 4, marginBottom: 2, fontSize: '7px', fontStyle: 'italic', color: '#475569' }}>
                           * Quando a amplitude do intervalo de confiança ultrapassar 50% não há classificação do resultado quanto à precisão e é necessária justificativa com base no diagnóstico do mercado. (ABNT 14653-2 - 2011 - Item 13.4)
                         </div>
                       </>
                     )}
 
-                    {/* 10 — Valor final */}
-                    <SecHeader num="9" titulo="Valor Final da Avaliação" />
-                    {temCddm && cddm && (
+                    {/* Seção de cálculo evolutivo */}
+                    {isEvolutivo && evSnap && evSnap.resultado && (() => {
+                      const res = evSnap.resultado
+                      const elems = evSnap.elementos || []
+                      const benfs = (evSnap.benfeitorias || []) as any[]
+                      const area = evSnap.avaliando?.area || 0
+                      const vuMed = res.media || 0
+                      const tdC: React.CSSProperties = { padding: '3px 5px', fontSize: '7.5px', border: '0.5px solid #C9D3E6', textAlign: 'center' }
+                      const tdCHl: React.CSSProperties = { ...tdC, background: '#EAF0FB', fontWeight: 700, color: '#17325C' }
+                      const thS: React.CSSProperties = { padding: '3px 4px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }
+                      return (
+                        <>
+                          {/* 8.1 Homogeneização do terreno */}
+                          <SecHeader num="8.1" titulo="Homogeneização — terreno" />
+                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: 4 }}>
+                            <thead>
+                              <tr style={{ background: '#2347C6' }}>
+                                <th style={thS}>Elem.</th>
+                                <th style={thS}>V.U. (R$/m²)</th>
+                                <th style={thS}>F. Área</th>
+                                <th style={thS}>F. Local</th>
+                                <th style={thS}>F. Topografia</th>
+                                <th style={thS}>F. Visibilidade</th>
+                                <th style={thS}>F. Acumulado</th>
+                                <th style={{ ...thS, borderRight: 'none' }}>V.U. Homog.</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {elems.map((el: any, i: number) => {
+                                const fAcum = (el.fatorArea||1)*(el.notaLocal||1)*(el.notaTopo||1)*(el.notaVis||1)
+                                const vuOrig = el.valorOferta > 0 && el.areaTerreno > 0 ? el.valorOferta/el.areaTerreno : (el.valorUnitarioOferta||0)
+                                const vuH = vuOrig * fAcum
+                                const tdS: React.CSSProperties = { padding: '2.5px 3px', fontSize: '7px', border: '0.5px solid #C9D3E6', textAlign: 'center' }
+                                return (
+                                  <tr key={i}>
+                                    <td style={tdS}>{i+1}</td>
+                                    <td style={tdS}>{formatarMoeda(vuOrig)}</td>
+                                    <td style={tdS}>{(el.fatorArea||1).toFixed(4)}</td>
+                                    <td style={tdS}>{(el.notaLocal||1).toFixed(4)}</td>
+                                    <td style={tdS}>{(el.notaTopo||1).toFixed(4)}</td>
+                                    <td style={tdS}>{(el.notaVis||1).toFixed(4)}</td>
+                                    <td style={tdS}>{fAcum.toFixed(4)}</td>
+                                    <td style={{ ...tdS, borderRight: 'none', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(vuH)}</td>
+                                  </tr>
+                                )
+                              })}
+                              <tr style={{ background: '#EAF0FB' }}>
+                                <td colSpan={7} style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', textAlign: 'right', border: '0.5px solid #C9D3E6' }}>Média das amostras</td>
+                                <td style={{ padding: '3px 5px', fontSize: '7.5px', fontWeight: 700, color: '#17325C', textAlign: 'center', border: '0.5px solid #C9D3E6' }}>{formatarMoeda(vuMed)}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                          {/* Estatísticas */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 5, margin: '6px 0' }}>
+                            {[
+                              ['Desvio padrão', res.desvio != null ? res.desvio.toFixed(2).replace('.',',') : '—'],
+                              ['Coef. variação', res.desvio != null && vuMed > 0 ? ((res.desvio/vuMed)*100).toFixed(2).replace('.',',')+'%' : '—'],
+                              ['Grau de precisão', res.grauPrecisao || '—'],
+                              ['IC 80%', res.intervaloConfianca != null ? res.intervaloConfianca.toFixed(2).replace('.',',')+'%' : '—'],
+                            ].map(([l,v]) => (
+                              <div key={l as string} style={{ background: '#EAF0FB', border: '0.5px solid #C9D3E6', borderRadius: 3, padding: '5px', textAlign: 'center' }}>
+                                <div style={{ fontSize: '7px', color: '#5a7090', marginBottom: 2 }}>{l}</div>
+                                <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{v}</div>
+                              </div>
+                            ))}
+                          </div>
+                          {/* Tabela de valores */}
+                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginBottom: 4 }}>
+                            <thead>
+                              <tr style={{ background: '#1a3564' }}>
+                                <th style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', borderRight: '0.5px solid #475e9b' }}>Intervalo</th>
+                                <th style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>V.U. (R$/m²)</th>
+                                <th style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center' }}>Valor total (R$)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr><td style={tdC}>Mínimo</td><td style={tdC}>{formatarMoeda(res.minimo||0)}</td><td style={tdC}>{formatarMoeda((res.minimo||0)*area)}</td></tr>
+                              <tr><td style={tdCHl}>Médio (adotado)</td><td style={tdCHl}>{formatarMoeda(vuMed)}</td><td style={tdCHl}>{formatarMoeda(vuMed*area)}</td></tr>
+                              <tr><td style={tdC}>Máximo</td><td style={tdC}>{formatarMoeda(res.maximo||0)}</td><td style={tdC}>{formatarMoeda((res.maximo||0)*area)}</td></tr>
+                              <tr><td style={tdC}>Limite −30%</td><td style={tdC}>{formatarMoeda(res.lim30inf||0)}</td><td style={tdC}>{formatarMoeda((res.lim30inf||0)*area)}</td></tr>
+                              <tr><td style={tdC}>Limite +30%</td><td style={tdC}>{formatarMoeda(res.lim30sup||0)}</td><td style={tdC}>{formatarMoeda((res.lim30sup||0)*area)}</td></tr>
+                            </tbody>
+                          </table>
+                          {/* 9.2 VEIU — CUB R8N depreciado */}
+                          {benfs.length > 0 && (
+                            <>
+                              <SecHeader num="8.2" titulo="Valor das edificações — CUB R8N depreciado (VEIU)" />
+                              <div style={{ overflowX: 'auto', marginTop: 4 }}>
+                                <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '7px' }}>
+                                  <thead>
+                                    <tr style={{ background: '#2347C6' }}>
+                                      {['Descrição','Padrão','Pc','Ac (m²)','Ir','R','Ie','%v','Ka','Estado','Ec','K','Foc','Vb (R$)'].map((h,i,a) => (
+                                        <th key={h} style={{ padding: '3px 4px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: i===0||i===1?'left':'center', borderRight: i<a.length-1?'0.5px solid #475e9b':'none', whiteSpace: 'nowrap' }}>{h}</th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {benfs.map((b: any, i: number) => {
+                                      const tdB: React.CSSProperties = { padding: '2.5px 4px', fontSize: '6.5px', border: '0.5px solid #C9D3E6', textAlign: 'center', whiteSpace: 'nowrap' }
+                                      return (
+                                        <tr key={i} style={{ background: i%2===0?'#fff':'#f8fafc' }}>
+                                          <td style={{ ...tdB, textAlign: 'left', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.descricao||b.tipo||`Benfeitoria ${i+1}`}</td>
+                                          <td style={{ ...tdB, textAlign: 'left' }}>{b.padrao||'—'}</td>
+                                          <td style={tdB}>{b.Pc?.toFixed(3)||'—'}</td>
+                                          <td style={tdB}>{b.Ac?.toLocaleString('pt-BR')||'—'}</td>
+                                          <td style={tdB}>{b.Ir||'—'}</td>
+                                          <td style={tdB}>{b.R!=null?b.R+'%':'—'}</td>
+                                          <td style={tdB}>{b.Ie||'—'}</td>
+                                          <td style={tdB}>{b.percentualVida!=null?(b.percentualVida*100).toFixed(1)+'%':'—'}</td>
+                                          <td style={tdB}>{b.Ka?.toFixed(3)||'—'}</td>
+                                          <td style={tdB}>{b.estado||'—'}</td>
+                                          <td style={tdB}>{b.Ec?.toFixed(2)+'%'||'—'}</td>
+                                          <td style={tdB}>{b.K?.toFixed(3)||'—'}</td>
+                                          <td style={tdB}>{b.Foc?.toFixed(4)||'—'}</td>
+                                          <td style={{ ...tdB, fontWeight: 700, color: '#17325C', borderRight: 'none' }}>{formatarMoeda(b.Vb||0)}</td>
+                                        </tr>
+                                      )
+                                    })}
+                                    <tr style={{ background: '#1a3564' }}>
+                                      <td colSpan={13} style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'right', border: '0.5px solid #333' }}>Total das edificações</td>
+                                      <td style={{ padding: '3px 5px', fontSize: '7.5px', fontWeight: 700, color: '#fff', textAlign: 'center', border: '0.5px solid #333' }}>{formatarMoeda(evSnap.valorBenfeitorias||0)}</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            </>
+                          )}
+                        </>
+                      )
+                    })()}
+
+                    {/* 9/10 — Valor final */}
+                    <SecHeader num={isEvolutivo ? '9' : '9'} titulo="Valor Final da Avaliação" />
+                    {isEvolutivo && evSnap && evSnap.resultado ? (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, margin: '6px 0' }}>
+                        <div style={{ border: '0.5px solid #C9D3E6', borderRadius: 3, padding: '8px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '7px', color: '#5a7090', marginBottom: 3 }}>Valor do terreno</div>
+                          <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(evSnap.valorTerreno||0)}</div>
+                          <div style={{ fontSize: '7px', color: '#94a3b8', marginTop: 2 }}>{(evSnap.avaliando?.area||0).toLocaleString('pt-BR')} m² × {formatarMoeda(evSnap.resultado?.media||0)}/m²</div>
+                        </div>
+                        <div style={{ border: '0.5px solid #C9D3E6', borderRadius: 3, padding: '8px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '7px', color: '#5a7090', marginBottom: 3 }}>Valor das edificações</div>
+                          <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(evSnap.valorBenfeitorias||0)}</div>
+                          <div style={{ fontSize: '7px', color: '#94a3b8', marginTop: 2 }}>VEIU — CUB R8N depreciado</div>
+                        </div>
+                        <div style={{ border: '0.5px solid #C9D3E6', borderRadius: 3, padding: '8px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '7px', color: '#5a7090', marginBottom: 3 }}>Fator comercialização</div>
+                          <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{Number(dados.fatorComercializacao||1).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+                        </div>
+                      </div>
+                    ) : temCddm && cddm ? (
                       <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px', marginBottom: '4px' }}>
                         <thead>
                           <tr>
@@ -1302,7 +1497,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                           </tr>
                         </tbody>
                       </table>
-                    )}
+                    ) : null}
                     <div style={{ display: 'flex', gap: '6px', margin: '6px 0 4px' }}>
                       <div style={{ flex: 1, background: '#17325C', padding: '8px 10px', borderRadius: '3px' }}>
                         <div style={{ fontSize: '7.5px', color: '#8FA4C7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>VALOR DA AVALIAÇÃO</div>
