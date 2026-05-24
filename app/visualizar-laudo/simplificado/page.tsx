@@ -712,6 +712,15 @@ export default function LaudoSimplificadoPage() {
       await definirLaudoAtual(idSalvo)
       setAutoSaveStatus('saved')
       setTimeout(() => setAutoSaveStatus('idle'), 3000)
+      // Atualizar a URL com o ID do laudo sem recarregar a página
+      // Isso permite que a NavegacaoEtapasSimpl encontre o ID via window.location.search
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href)
+        if (!url.searchParams.get('id')) {
+          url.searchParams.set('id', idSalvo)
+          window.history.replaceState({}, '', url.toString())
+        }
+      }
     } catch (error) {
       console.error('Erro ao salvar laudo:', error)
       setAutoSaveStatus('error')
