@@ -1367,9 +1367,12 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                             </thead>
                             <tbody>
                               {elems.map((el: any, i: number) => {
-                                const fLoc  = pnEv(el.fatorLocal)        || 1
-                                const fTopo = pnEv(el.fatorTopografia)   || 1
-                                const fVis  = pnEv(el.fatorVisibilidade) || 1
+                                const nLocalAv = pnEv(evSnap.avaliando?.notaLocal) || 100
+                                const nTopoAv  = pnEv(evSnap.avaliando?.notaTopo)  || 100
+                                const nVisAv   = pnEv(evSnap.avaliando?.notaVis)   || 100
+                                const fLoc  = (pnEv(el.fatorLocal)       || 100) > 0 ? nLocalAv / (pnEv(el.fatorLocal)       || 100) : 1
+                                const fTopo = (pnEv(el.fatorTopografia)  || 100) > 0 ? nTopoAv  / (pnEv(el.fatorTopografia)  || 100) : 1
+                                const fVis  = (pnEv(el.fatorVisibilidade)|| 100) > 0 ? nVisAv   / (pnEv(el.fatorVisibilidade)|| 100) : 1
                                 const fAcum = fLoc * fTopo * fVis
                                 const atNum = pnEv(el.areaTerreno)
                                 const voNum = pnEv(el.valorOferta)
