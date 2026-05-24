@@ -12,7 +12,8 @@ function fd(data?: string) {
   return `${dia}/${mes}/${ano}`
 }
 function fm(valor: number) {
-  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  const v = Math.round(valor * 100) / 100
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 function cn(valor?: string) {
   if (!valor) return 0

@@ -326,7 +326,8 @@ function converterNumero(valor: string) {
 }
 
 function formatarMoeda(valor: number) {
-  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  const v = Math.round(valor * 100) / 100
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
 // Garante que medidas de área sempre mostrem 2 casas decimais (ex: 900 m² → 900,00 m²)
