@@ -5,11 +5,13 @@ import { ETAPAS_SIMPL, EtapaIdSimpl } from './etapas-simplificado'
 type NavegacaoEtapasSimplProps = {
   etapaAtual: EtapaIdSimpl
   setEtapaAtual: (etapa: EtapaIdSimpl) => void
+  laudoUuid?: string
 }
 
 export default function NavegacaoEtapasSimpl({
   etapaAtual,
   setEtapaAtual,
+  laudoUuid: _laudoUuid,
 }: NavegacaoEtapasSimplProps) {
   const indiceAtual = ETAPAS_SIMPL.findIndex((etapa) => etapa.id === etapaAtual)
   const etapaAnterior = indiceAtual > 0 ? ETAPAS_SIMPL[indiceAtual - 1] : null
