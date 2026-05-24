@@ -779,6 +779,8 @@ export default function LaudoSimplificadoPage() {
             </button>
             <Link
               href={laudoUuid ? `/visualizar-laudo?id=${encodeURIComponent(laudoUuid)}` : '/visualizar-laudo'}
+              target="_blank"
+              rel="noopener noreferrer"
               className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 transition"
             >
               Visualizar laudo
