@@ -192,23 +192,14 @@ export default function LaudoSimplificadoPage() {
         if (!laudoSalvo) {
           setEditandoLaudoExistente(false)
           setLaudoId('')
-          const novoId = crypto.randomUUID()
-          setLaudoUuid(novoId)
-          if (typeof window !== 'undefined') {
-            sessionStorage.setItem('lesath:laudoSimplId', novoId)
-          }
+          setLaudoUuid(crypto.randomUUID())
           setFormPronto(true)
           return
         }
 
         setEditandoLaudoExistente(true)
         setLaudoId(String(laudoSalvo.matricula || laudoSalvo.id || '').trim())
-        if (laudoSalvo.id) {
-          setLaudoUuid(laudoSalvo.id)
-          if (typeof window !== 'undefined') {
-            sessionStorage.setItem('lesath:laudoSimplId', laudoSalvo.id)
-          }
-        }
+        if (laudoSalvo.id) setLaudoUuid(laudoSalvo.id)
 
         setFatoresSelecionados(laudoSalvo.fatoresSelecionados || [])
         setFundamentacao(laudoSalvo.fundamentacao || [
@@ -721,10 +712,6 @@ export default function LaudoSimplificadoPage() {
       await definirLaudoAtual(idSalvo)
       setAutoSaveStatus('saved')
       setTimeout(() => setAutoSaveStatus('idle'), 3000)
-      // Guarda o ID no sessionStorage para que NavegacaoEtapasSimpl possa acessar
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('lesath:laudoSimplId', idSalvo)
-      }
     } catch (error) {
       console.error('Erro ao salvar laudo:', error)
       setAutoSaveStatus('error')
@@ -791,11 +778,7 @@ export default function LaudoSimplificadoPage() {
               Novo laudo em branco
             </button>
             <Link
-              href={laudoUuid
-                ? `/visualizar-laudo/simplificado?id=${encodeURIComponent(laudoUuid)}`
-                : '/visualizar-laudo/simplificado'}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={laudoUuid ? `/visualizar-laudo?id=${encodeURIComponent(laudoUuid)}` : '/visualizar-laudo'}
               className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 transition"
             >
               Visualizar laudo
@@ -917,7 +900,6 @@ export default function LaudoSimplificadoPage() {
       <NavegacaoEtapasSimpl
         etapaAtual={etapaAtual}
         setEtapaAtual={setEtapaAtual}
-        laudoUuid={laudoUuid}
       />
 
     </AppShell>

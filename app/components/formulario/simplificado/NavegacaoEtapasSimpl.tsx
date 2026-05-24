@@ -1,34 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { ETAPAS_SIMPL, EtapaIdSimpl } from './etapas-simplificado'
 
 type NavegacaoEtapasSimplProps = {
   etapaAtual: EtapaIdSimpl
   setEtapaAtual: (etapa: EtapaIdSimpl) => void
-  laudoUuid?: string
 }
 
 export default function NavegacaoEtapasSimpl({
   etapaAtual,
   setEtapaAtual,
-  laudoUuid,
 }: NavegacaoEtapasSimplProps) {
   const indiceAtual = ETAPAS_SIMPL.findIndex((etapa) => etapa.id === etapaAtual)
   const etapaAnterior = indiceAtual > 0 ? ETAPAS_SIMPL[indiceAtual - 1] : null
   const proximaEtapa = indiceAtual < ETAPAS_SIMPL.length - 1 ? ETAPAS_SIMPL[indiceAtual + 1] : null
-
-  // Lê o ID do sessionStorage (definido pelo laudo-simplificado-page quando salva)
-  const [idSessao, setIdSessao] = useState('')
-  useEffect(() => {
-    const idUrl = new URLSearchParams(window.location.search).get('id') || ''
-    const idSession = sessionStorage.getItem('lesath:laudoSimplId') || ''
-    setIdSessao(laudoUuid || idSession || idUrl)
-  }, [laudoUuid])
-
-  const vizUrl = idSessao
-    ? `/visualizar-laudo/simplificado?id=${encodeURIComponent(idSessao)}`
-    : '/visualizar-laudo/simplificado'
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 shadow-[0_-4px_24px_-8px_rgba(15,23,42,0.08)]">
@@ -44,19 +29,6 @@ export default function NavegacaoEtapasSimpl({
         </div>
 
         <div className="flex items-center gap-3 ml-auto">
-          <a
-            href={vizUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
-          >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" strokeLinecap="round" strokeLinejoin="round"/>
-              <circle cx="8" cy="8" r="2"/>
-            </svg>
-            Visualizar laudo
-          </a>
-
           <button
             type="button"
             onClick={() => etapaAnterior && setEtapaAtual(etapaAnterior.id)}
@@ -81,17 +53,15 @@ export default function NavegacaoEtapasSimpl({
               </svg>
             </button>
           ) : (
-            <a
-              href={vizUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
               className="flex items-center gap-1.5 px-5 py-2 text-sm font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition"
             >
-              Concluir e visualizar
+              Concluir laudo
               <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M3 8l3.5 3.5L13 5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-            </a>
+            </button>
           )}
         </div>
       </div>
