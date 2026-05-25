@@ -95,6 +95,7 @@ export default function AgendamentosPage() {
 
   const [laudos, setLaudos] = useState<LaudoAgendamento[]>([])
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
+  const [empresas, setEmpresas] = useState<{ id: string; nome: string }[]>([])
   const [carregando, setCarregando] = useState(true)
   const [laudoSelecionado, setLaudoSelecionado] = useState<LaudoAgendamento | null>(null)
   const [mostrarModalNovoLaudo, setMostrarModalNovoLaudo] = useState(false)
@@ -114,6 +115,7 @@ export default function AgendamentosPage() {
     endereco: '',
     proprietario: '',
     solicitante: '',
+    empresaClienteId: '',
     tipo: '',
     finalidade: '',
     areaConstruidaTotal: '',
@@ -228,6 +230,7 @@ export default function AgendamentosPage() {
         ...novoLaudo,
         status: 'em_preenchimento',
         statusVistoria: 'aguardando_agendamento',
+        statusAcompanhamento: 'levantamento_documentos',
         criadoPorNome: criadoPor,
         criadoEm: agora,
         atualizadoEm: agora,
@@ -252,6 +255,7 @@ export default function AgendamentosPage() {
         fracaoIdeal: '',
         fatoresCDDMAtivos: { local: true, padrao: true, foc: true, andar: true, vaga: true },
         coordenadasImovel: '', endereco: '', proprietario: '', solicitante: '',
+        empresaClienteId: '',
         tipo: '', finalidade: '', areaConstruidaTotal: '', areaConstruidaAverbada: '',
         areaTerrenoTotal: '', areaTerrenoAverbada: '', matricula: '', iptu: '',
         referencia1: '', distancia1: '', referencia2: '', distancia2: '',
@@ -273,9 +277,10 @@ export default function AgendamentosPage() {
   async function carregarDados() {
     setCarregando(true)
     try {
-      const [resLaudos, resUsuarios] = await Promise.all([
+      const [resLaudos, resUsuarios, resEmpresas] = await Promise.all([
         fetch('/api/laudos', { cache: 'no-store' }),
         fetch('/api/usuarios', { cache: 'no-store' }),
+        fetch('/api/empresas', { cache: 'no-store' }),
       ])
       const dadosLaudos = await resLaudos.json()
       const dadosUsuarios = await resUsuarios.json()
@@ -468,8 +473,23 @@ export default function AgendamentosPage() {
                     placeholder="Endereço" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
                   <input value={novoLaudo.proprietario} onChange={(e) => setNovoLaudoField('proprietario', e.target.value)}
                     placeholder="Proprietário" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
-                  <input value={novoLaudo.solicitante} onChange={(e) => setNovoLaudoField('solicitante', e.target.value)}
-                    placeholder="Solicitante" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
+                  <select
+                    value={novoLaudo.empresaClienteId}
+                    onChange={(e) => {
+                      const emp = empresas.find((em) => em.id === e.target.value)
+                      setNovoLaudo((prev) => ({
+                        ...prev,
+                        empresaClienteId: emp?.id || '',
+                        solicitante: emp?.nome || '',
+                      }))
+                    }}
+                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400"
+                  >
+                    <option value="">Empresa / Solicitante</option>
+                    {empresas.map((emp) => (
+                      <option key={emp.id} value={emp.id}>{emp.nome}</option>
+                    ))}
+                  </select>
                   <select value={novoLaudo.tipo} onChange={(e) => setNovoLaudoField('tipo', e.target.value)}
                     className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400">
                     <option value="">Tipo do imóvel</option>

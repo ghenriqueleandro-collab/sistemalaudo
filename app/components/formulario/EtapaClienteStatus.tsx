@@ -2,10 +2,12 @@
  * SALVAR EM: src/app/components/formulario/EtapaClienteStatus.tsx
  *
  * Primeira etapa do formulário (detalhado e simplificado).
- * Exibe: empresa solicitante (readonly), seleção de status e observação para o cliente.
+ * Exibe: dropdown de empresa/solicitante (buscado da API), seleção de status e observação.
  */
 
 'use client'
+
+import { useEffect, useState } from 'react'
 
 import type { StatusAcompanhamento } from '../../../lib/laudos-storage'
 
@@ -61,6 +63,11 @@ const STATUS_OPCOES: {
   },
 ]
 
+type Empresa = {
+  id: string
+  nome: string
+}
+
 type Props = {
   form: any
   handleChange: (
@@ -70,6 +77,15 @@ type Props = {
 }
 
 export default function EtapaClienteStatus({ form, handleChange, setForm }: Props) {
+  const [empresas, setEmpresas] = useState<Empresa[]>([])
+
+  useEffect(() => {
+    fetch('/api/empresas', { cache: 'no-store' })
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setEmpresas(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [])
+
   const statusAtual: StatusAcompanhamento =
     form?.statusAcompanhamento || 'levantamento_documentos'
 
@@ -90,15 +106,28 @@ export default function EtapaClienteStatus({ form, handleChange, setForm }: Prop
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Solicitante / Interessado
+              Empresa / Solicitante
             </label>
-            <input
-              type="text"
-              value={form?.solicitante || ''}
-              readOnly
-              tabIndex={-1}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600 outline-none cursor-default"
-            />
+            <select
+              value={form?.empresaClienteId || ''}
+              onChange={(e) => {
+                const emp = empresas.find((em) => em.id === e.target.value)
+                setForm((prev: any) => ({
+                  ...prev,
+                  empresaClienteId: emp?.id || '',
+                  solicitante: emp?.nome || '',
+                }))
+              }}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-400 transition"
+            >
+              <option value="">Selecione a empresa</option>
+              {empresas.map((emp) => (
+                <option key={emp.id} value={emp.id}>{emp.nome}</option>
+              ))}
+            </select>
+            {form?.solicitante && (
+              <p className="mt-1 text-xs text-slate-400">{form.solicitante}</p>
+            )}
           </div>
 
           <div>
