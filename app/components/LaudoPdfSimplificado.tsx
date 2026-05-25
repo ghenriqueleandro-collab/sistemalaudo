@@ -960,17 +960,23 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
         </View>
 
         {/* 11.1 — Tabela de fundamentação */}
-        <SecHeader num={`${secGraus}.1`} titulo="Grau de Fundamentação — Tratamento por Fatores" />
+        <SecHeader num={`${secGraus}.1`} titulo={isEvolutivo ? 'Grau de Fundamentação — Método Evolutivo' : 'Grau de Fundamentação — Tratamento por Fatores'} />
         {(()=>{
-          const fund = (dados.fundamentacao || []) as any[]
-          const itensPadrao = [
+          const fund = (isEvolutivo ? dados.fundamentacaoEvolutivo : dados.fundamentacao || []) as any[]
+          const itensPadrao = isEvolutivo ? [
+            { id: '01', desc: 'Estimativa do valor do terreno', g3: 'Grau III no método comparativo ou involutivo', g2: 'Grau II no método comparativo ou involutivo', g1: 'Grau I no método comparativo ou involutivo' },
+            { id: '02', desc: 'Estimativa dos Custos de Reedição', g3: 'Grau III no método da quantificação de custo', g2: 'Grau II no método da quantificação de custo', g1: 'Grau I no método da quantificação de custo' },
+            { id: '03', desc: 'Fator de Comercialização', g3: 'Inferido em mercado semelhante', g2: 'Justificado', g1: 'Arbitrado' },
+          ] : [
             { id: '01', desc: 'Caracterização do imóvel avaliando', g3: 'Completa quanto a todos os fatores analisados', g2: 'Completa quanto aos fatores utilizados no tratamento', g1: 'Adoção de situação paradigma' },
             { id: '02', desc: 'Quantidade mínima de dados de mercado efetivamente utilizados', g3: '12', g2: '5', g1: '3' },
             { id: '03', desc: 'Identificação dos dados de mercado', g3: 'Informações de todas as características com foto e características observadas pelo autor do laudo', g2: 'Informações relativas a todas as características dos dados analisados', g1: 'Informações relativas às características dos fatores utilizados' },
             { id: '04', desc: 'Intervalo admissível de ajuste para o conjunto de fatores', g3: '0,80 a 1,25', g2: '0,50 a 2,00', g1: '0,40 a 2,50' },
           ]
           const somaPts = fund.reduce((acc: number, f: any) => acc + (f?.pontos || 0), 0)
-          const grauFinal = somaPts >= 10 ? 'III' : somaPts >= 6 ? 'II' : somaPts >= 4 ? 'I' : '–'
+          const grauFinal = isEvolutivo
+            ? (somaPts >= 8 ? 'III' : somaPts >= 5 ? 'II' : somaPts >= 3 ? 'I' : '–')
+            : (somaPts >= 10 ? 'III' : somaPts >= 6 ? 'II' : somaPts >= 4 ? 'I' : '–')
           return (
             <View style={s.grausTable}>
               <View style={s.grausHead}>
@@ -1038,7 +1044,10 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
             { grau: 'I',   limite: '<= 50%' },
           ] as const).map(({ grau, limite }) => {
             const isOk = capaGrauPrec === grau
-            const ic = cddm ? `${cddm.intervaloConfianca.toFixed(2).replace('.',',')}%` : '–'
+            const icVal = isEvolutivo
+              ? evSnap?.resultado?.intervaloConfianca
+              : cddm?.intervaloConfianca
+            const ic = icVal != null ? `${Number(icVal).toFixed(2).replace('.',',')}%` : '–'
             return (
               <View key={grau} style={s.precBodyRow}>
                 <Text style={[s.precTdGrau, isOk ? { color: AZUL2 } : {}]}>{grau}</Text>
