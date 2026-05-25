@@ -1358,7 +1358,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
 
                 {/* ── Elementos CDDM/Evolutivo inline ─────────────────────────────── */}
                 {/* 9 — Pesquisa imobiliária */}
-                    <SecHeader num="8" titulo="Pesquisa Imobiliária" />
+                    <h2 className="text-xl font-bold mb-2 titulo-laudo mt-4">8. Pesquisa Imobiliária</h2>
 
 
                     {/* Cards de elemento — blocos temáticos, até 3 colunas, campos vazios omitidos */}
@@ -1453,7 +1453,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     {/* 9.1 — Homogeneização */}
                     {temCddm && (
                       <>
-                        <SecHeader num="8.1" titulo="Homogeneização" />
+                        <h2 className="text-xl font-bold mb-2 titulo-laudo mt-4">8.1. Homogeneização</h2>
                         <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
                           <thead>
                             <tr style={{ background: '#2347C6' }}>
@@ -1632,7 +1632,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                       return (
                         <>
                           {/* 8.1 Homogeneização do terreno */}
-                          <SecHeader num="8.1" titulo="Homogeneização — terreno" />
+                          <h2 className="text-xl font-bold mb-2 titulo-laudo mt-4">8.1. Homogeneização — terreno</h2>
                           <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: 4 }}>
                             <thead>
                               <tr style={{ background: '#2347C6' }}>
@@ -1719,7 +1719,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                           {/* 8.2 VEIU */}
                           {benfs.length > 0 && (
                             <>
-                              <SecHeader num="8.2" titulo="Valor das Edificações — CUB R8N Depreciado (VEIU)" />
+                              <h2 className="text-xl font-bold mb-2 titulo-laudo mt-4">8.2. Valor das Edificações — CUB R8N Depreciado (VEIU)</h2>
                               <div style={{ overflowX: 'auto', marginTop: 4 }}>
                                 <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '7px' }}>
                                   <thead>
