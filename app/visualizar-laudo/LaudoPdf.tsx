@@ -1360,7 +1360,7 @@ export function LaudoPdf({
         )}
 
         {/* ── Memorial de cálculos (comparativo) ──────────────────────────── */}
-        {temCddm && cddm && (
+        {temCddm && cddmData && (
           <View style={{ flexDirection: 'row', marginTop: 6 }}>
             <View style={{ flex: 1.3, borderWidth: 0.5, borderColor: CINZA, marginRight: 4 }}>
               <View style={{ backgroundColor: AZUL, paddingVertical: 3, paddingHorizontal: 5 }}>
@@ -1412,7 +1412,7 @@ export function LaudoPdf({
         </Text>
 
         {/* ── Estatísticas + Tabela de valores — Comparativo ─────────────── */}
-        {temCddm && cddm && (
+        {temCddm && cddmData && (
           <>
             {/* Estatísticas */}
             <View style={{ flexDirection: 'row', marginTop: 5, marginBottom: 4 }}>
