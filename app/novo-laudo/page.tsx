@@ -1,6 +1,6 @@
 'use client'
 
-import { buscarLaudo, definirLaudoAtual, limparLaudoAtual, obterLaudoAtual, salvarLaudo } from '@/lib/laudos-storage'
+import { buscarLaudo, definirLaudoAtual, obterLaudoAtual, salvarLaudo } from '@/lib/laudos-storage'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import MenuEtapas from '../components/formulario/MenuEtapas'
@@ -851,31 +851,6 @@ export default function NovoLaudoPage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link
-              href="/"
-              className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 transition"
-            >
-              Início
-            </Link>
-
-            <Link
-              href="/meus-laudos"
-              className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 transition"
-            >
-              Meus laudos
-            </Link>
-
-            <button
-              type="button"
-              onClick={async () => {
-                await limparLaudoAtual()
-                window.location.href = '/novo-laudo?modo=novo'
-              }}
-              className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 transition"
-            >
-              Novo laudo em branco
-            </button>
-
             <Link
               href={laudoUuid ? `/visualizar-laudo?id=${encodeURIComponent(laudoUuid)}` : '/visualizar-laudo'}
               target="_blank"
