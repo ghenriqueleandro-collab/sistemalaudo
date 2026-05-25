@@ -1320,7 +1320,7 @@ export function LaudoPdf({
         {/* ── 9.1. HOMOGENEIZAÇÃO (só comparativo) ────────────────────────── */}
         {temCddm && (
           <>
-            <SecHeader num="7.1" titulo="Homogeneização" />
+            <H3>7.1. Homogeneização</H3>
             <View style={s.homogTable}>
               <View style={s.homogRowH}>
                 <Text style={[s.homogTh,{flex:0.6}]}>Elem.</Text>
