@@ -326,12 +326,13 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
   const capaMetodologia = isEvolutivo ? 'Evolutivo' : dados.metodoAvaliacao==='comparativo' ? 'Comparativo Direto' : dados.metodoAvaliacao||'–'
   const capaFinalidade  = dados.finalidade==='garantia' ? 'Avaliação para fins de garantia' : dados.finalidade==='execucao' ? 'Avaliação para fins de execução' : dados.finalidade||'–'
 
+  const gv = (i:any) => i.pontos || (i.grau==='III'?3:i.grau==='II'?2:i.grau==='I'?1:0)
   const capaGrauFund = (()=>{
     if (isEvolutivo) {
-      const soma=(dados.fundamentacaoEvolutivo||[]).reduce((s:number,i:any)=>s+(i.pontos||0),0)
+      const soma=(dados.fundamentacaoEvolutivo||[]).reduce((s:number,i:any)=>s+gv(i),0)
       if(soma>=8)return'III';if(soma>=5)return'II';if(soma>=3)return'I';return'–'
     }
-    const soma=(dados.fundamentacao||[]).reduce((s:number,i:any)=>s+(i.pontos||0),0)
+    const soma=(dados.fundamentacao||[]).reduce((s:number,i:any)=>s+gv(i),0)
     if(soma>=10)return'III';if(soma>=6)return'II';if(soma>=4)return'I';return'–'
   })()
 
@@ -339,7 +340,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
     const prec=dados.precisao||[]
     if(prec.length===0)return'–'
     if(prec.length===1)return (prec[0] as any).grau||'–'
-    const soma=prec.reduce((s:number,i:any)=>s+(i.pontos||0),0)
+    const soma=prec.reduce((s:number,i:any)=>s+gv(i),0)
     if(soma>=8)return'III';if(soma>=5)return'II';if(soma>=3)return'I';return'–'
   })()
 
@@ -973,7 +974,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
             { id: '03', desc: 'Identificação dos dados de mercado', g3: 'Informações de todas as características com foto e características observadas pelo autor do laudo', g2: 'Informações relativas a todas as características dos dados analisados', g1: 'Informações relativas às características dos fatores utilizados' },
             { id: '04', desc: 'Intervalo admissível de ajuste para o conjunto de fatores', g3: '0,80 a 1,25', g2: '0,50 a 2,00', g1: '0,40 a 2,50' },
           ]
-          const somaPts = fund.reduce((acc: number, f: any) => acc + (f?.pontos || 0), 0)
+          const somaPts = fund.reduce((acc: number, f: any) => acc + gv(f), 0)
           const grauFinal = isEvolutivo
             ? (somaPts >= 8 ? 'III' : somaPts >= 5 ? 'II' : somaPts >= 3 ? 'I' : '–')
             : (somaPts >= 10 ? 'III' : somaPts >= 6 ? 'II' : somaPts >= 4 ? 'I' : '–')
