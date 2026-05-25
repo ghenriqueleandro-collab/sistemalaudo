@@ -101,20 +101,31 @@ export default function EtapaAnexosAssinatura({
       return
     }
 
-    // Lê elementos de múltiplas fontes para compatibilidade com qualquer versão do CDDM
-    const elementos: any[] = (
-      Array.isArray(form?.elementosComparativos) && form.elementosComparativos.length > 0
-        ? form.elementosComparativos
-        : Array.isArray(form?.dadosCalculoCDDM?.elementos) && form.dadosCalculoCDDM.elementos.length > 0
-          ? form.dadosCalculoCDDM.elementos
-          : []
-    )
+    // Lê elementos de múltiplas fontes: comparativo (CDDM) e evolutivo
+    const isEvolutivo = form?.metodoAvaliacao === 'evolutivo' &&
+      form?.tratamentoDados === 'tratamento_por_fatores'
+
+    const elementos: any[] = (() => {
+      // Método evolutivo: elementos em dadosCalculoEvolutivo.elementos
+      if (isEvolutivo) {
+        const ev = form?.dadosCalculoEvolutivo?.elementos
+        if (Array.isArray(ev) && ev.length > 0) return ev
+      }
+      // Método comparativo: elementosComparativos ou dadosCalculoCDDM
+      if (Array.isArray(form?.elementosComparativos) && form.elementosComparativos.length > 0)
+        return form.elementosComparativos
+      if (Array.isArray(form?.dadosCalculoCDDM?.elementos) && form.dadosCalculoCDDM.elementos.length > 0)
+        return form.dadosCalculoCDDM.elementos
+      return []
+    })()
+
     const comparativos = elementos
       .map(el => parseCoords(el?.coordenadas || ''))
       .filter((c): c is { lat: number; lng: number } => c !== null)
 
     if (comparativos.length === 0) {
-      setErroMapa('Nenhum comparativo com coordenadas válidas. Preencha o campo "Coordenadas" de pelo menos 1 elemento na etapa 10.')
+      const etapa = isEvolutivo ? '8' : '10'
+      setErroMapa(`Nenhum elemento com coordenadas válidas. Preencha o campo "Coordenadas" de pelo menos 1 elemento na etapa ${etapa}.`)
       return
     }
 
