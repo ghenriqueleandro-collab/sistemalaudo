@@ -1,6 +1,7 @@
 /**
  * SALVAR EM: src/app/components/AppShell.tsx
- * (substitui o AppShell.tsx existente)
+ *
+ * Atualizado: adicionado link "Empresas" visível apenas para admin.
  */
 
 'use client'
@@ -58,19 +59,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const carregarNotificacoes = useCallback(async () => {
     if (!email) return
     try {
-      const res = await fetch(`/api/notificacoes?email=${encodeURIComponent(email)}`, { cache: 'no-store' })
+      const res = await fetch(
+        `/api/notificacoes?email=${encodeURIComponent(email)}`,
+        { cache: 'no-store' }
+      )
       if (res.ok) setNotificacoes(await res.json())
     } catch {}
   }, [email])
 
-  // Atualiza a cada 15 segundos para notificações em tempo real
   useEffect(() => {
     carregarNotificacoes()
     const intervalo = setInterval(carregarNotificacoes, 15_000)
     return () => clearInterval(intervalo)
   }, [carregarNotificacoes])
 
-  // Fecha o sino ao clicar fora
   useEffect(() => {
     function handleClickFora(e: MouseEvent) {
       if (sinoRef.current && !sinoRef.current.contains(e.target as Node)) {
@@ -87,7 +89,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, email }),
     })
-    setNotificacoes((prev) => prev.map((n) => n.id === id ? { ...n, lida: true } : n))
+    setNotificacoes((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, lida: true } : n))
+    )
   }
 
   async function marcarTodasComoLidas() {
@@ -99,7 +103,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     setNotificacoes((prev) => prev.map((n) => ({ ...n, lida: true })))
   }
 
-  const permissoes = (session?.user as any)?.permissoes as Record<string, boolean> | undefined
+  const permissoes = (session?.user as any)?.permissoes as
+    | Record<string, boolean>
+    | undefined
   const isAdmin = perfil === 'admin'
 
   const links = [
@@ -116,6 +122,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     {
       href: '/aprovacoes',
       label: 'Aprovações',
+      visivel: isAdmin,
+    },
+    {
+      href: '/empresas',           // ← NOVO
+      label: 'Empresas',
       visivel: isAdmin,
     },
     {
@@ -147,7 +158,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition ${classeLink(pathname === link.href)}`}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition ${classeLink(
+                  pathname === link.href
+                )}`}
               >
                 {link.label}
               </Link>
@@ -161,7 +174,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 onClick={() => setSinoAberto((v) => !v)}
                 className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 transition"
               >
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                   <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                 </svg>
@@ -172,13 +191,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               </button>
 
-              {/* Painel de notificações */}
               {sinoAberto && (
                 <div className="absolute right-0 top-12 z-50 w-80 rounded-[20px] border border-slate-200 bg-white shadow-[0_20px_60px_-20px_rgba(15,23,42,0.4)] overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                    <span className="text-sm font-semibold text-slate-900">Notificações</span>
+                    <span className="text-sm font-semibold text-slate-900">
+                      Notificações
+                    </span>
                     {naoLidas > 0 && (
-                      <button onClick={marcarTodasComoLidas} className="text-xs font-medium text-blue-600 hover:text-blue-700">
+                      <button
+                        onClick={marcarTodasComoLidas}
+                        className="text-xs font-medium text-blue-600 hover:text-blue-700"
+                      >
                         Marcar tudo como lido
                       </button>
                     )}
@@ -194,15 +217,29 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         <div
                           key={n.id}
                           onClick={() => !n.lida && marcarComoLida(n.id)}
-                          className={`flex gap-3 px-4 py-3 border-b border-slate-50 cursor-pointer hover:bg-slate-50/80 ${!n.lida ? 'bg-blue-50/40' : ''}`}
+                          className={`flex gap-3 px-4 py-3 border-b border-slate-50 cursor-pointer hover:bg-slate-50/80 ${
+                            !n.lida ? 'bg-blue-50/40' : ''
+                          }`}
                         >
-                          <div className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${!n.lida ? 'bg-blue-500' : 'bg-transparent'}`} />
+                          <div
+                            className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${
+                              !n.lida ? 'bg-blue-500' : 'bg-transparent'
+                            }`}
+                          />
                           <div className="flex-1 min-w-0">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold mb-1 ${tipoClasse[n.tipo] || tipoClasse.default}`}>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold mb-1 ${
+                                tipoClasse[n.tipo] || tipoClasse.default
+                              }`}
+                            >
                               {tipoLabel[n.tipo] || tipoLabel.default}
                             </span>
-                            <p className="text-xs text-slate-700 leading-relaxed">{n.mensagem}</p>
-                            <p className="text-[10px] text-slate-400 mt-1">{formatarDataRelativa(n.criadoEm)}</p>
+                            <p className="text-xs text-slate-700 leading-relaxed">
+                              {n.mensagem}
+                            </p>
+                            <p className="text-[10px] text-slate-400 mt-1">
+                              {formatarDataRelativa(n.criadoEm)}
+                            </p>
                           </div>
                         </div>
                       ))

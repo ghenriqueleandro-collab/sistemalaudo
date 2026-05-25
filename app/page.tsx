@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { signIn } from 'next-auth/react'
+import { signIn, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -54,13 +54,10 @@ export default function HomePage() {
       email: email.trim(),
       password: senha,
       redirect: false,
-      callbackUrl: '/meus-laudos',
     })
 
     if (resultado?.error) {
-      setErros({
-        geral: 'E-mail ou senha inválidos.',
-      })
+      setErros({ geral: 'E-mail ou senha inválidos.' })
       setCarregando(false)
       return
     }
@@ -69,8 +66,21 @@ export default function HomePage() {
       localStorage.setItem('lesath_login_email', email.trim())
     }
 
-    router.push('/meus-laudos')
-    router.refresh()
+    // Lê a sessão após login para redirecionar conforme perfil
+    try {
+      const sessionData = await getSession()
+      const perfil = (sessionData?.user as any)?.perfil
+
+      if (perfil === 'cliente') {
+        router.push('/portal')
+      } else {
+        router.push('/meus-laudos')
+      }
+      router.refresh()
+    } catch {
+      router.push('/meus-laudos')
+      router.refresh()
+    }
   }
 
   return (
@@ -122,7 +132,7 @@ export default function HomePage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="seuemail@lesathengenharia.com.br"
+                placeholder="seuemail@empresa.com.br"
                 className={`w-full rounded-2xl border px-4 py-3 text-sm text-slate-900 outline-none transition ${
                   erros.email
                     ? 'border-rose-300 bg-rose-50'
@@ -140,7 +150,6 @@ export default function HomePage() {
                 <label className="block text-sm font-semibold text-slate-700">
                   Senha
                 </label>
-
                 <button
                   type="button"
                   className="text-sm font-semibold text-blue-700 transition hover:text-blue-800"
@@ -162,10 +171,9 @@ export default function HomePage() {
                   }`}
                   autoComplete="current-password"
                 />
-
                 <button
                   type="button"
-                  onClick={() => setMostrarSenha((valor) => !valor)}
+                  onClick={() => setMostrarSenha((v) => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   {mostrarSenha ? 'Ocultar' : 'Mostrar'}
@@ -187,7 +195,6 @@ export default function HomePage() {
                 />
                 Manter meu acesso neste dispositivo
               </label>
-
               <div className="text-sm text-slate-500">Acesso interno da operação</div>
             </div>
 
@@ -196,7 +203,7 @@ export default function HomePage() {
               disabled={carregando}
               className="inline-flex w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#0f3d68,#2563eb)] px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-900/20 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {carregando ? 'Validando acesso...' : 'Entrar na gestão'}
+              {carregando ? 'Validando acesso...' : 'Entrar'}
             </button>
           </form>
         </div>
