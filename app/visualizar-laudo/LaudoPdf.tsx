@@ -221,6 +221,7 @@ const AZUL2  = '#2347C6'
 const AZULLT = '#EAF0FB'
 const CINZA  = '#C9D3E6'
 const BRANCO = '#ffffff'
+const TEXTO  = '#1e293b'
 
 const s = StyleSheet.create({
   page: {
