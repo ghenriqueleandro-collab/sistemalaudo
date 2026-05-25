@@ -101,7 +101,14 @@ export default function EtapaAnexosAssinatura({
       return
     }
 
-    const elementos: any[] = Array.isArray(form?.elementosComparativos) ? form.elementosComparativos : []
+    // Lê elementos de múltiplas fontes para compatibilidade com qualquer versão do CDDM
+    const elementos: any[] = (
+      Array.isArray(form?.elementosComparativos) && form.elementosComparativos.length > 0
+        ? form.elementosComparativos
+        : Array.isArray(form?.dadosCalculoCDDM?.elementos) && form.dadosCalculoCDDM.elementos.length > 0
+          ? form.dadosCalculoCDDM.elementos
+          : []
+    )
     const comparativos = elementos
       .map(el => parseCoords(el?.coordenadas || ''))
       .filter((c): c is { lat: number; lng: number } => c !== null)
