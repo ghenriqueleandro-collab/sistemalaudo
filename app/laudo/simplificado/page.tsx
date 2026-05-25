@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { buscarLaudo, definirLaudoAtual, limparLaudoAtual, obterLaudoAtual, salvarLaudo } from '@/lib/laudos-storage'
 import Link from 'next/link'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import MenuEtapasSimpl from '../../components/formulario/simplificado/MenuEtapasSimpl'
 import NavegacaoEtapasSimpl from '../../components/formulario/simplificado/NavegacaoEtapasSimpl'
 import Etapa01A06Simpl from '../../components/formulario/simplificado/Etapa01A06Simpl'
@@ -734,18 +734,40 @@ export default function LaudoSimplificadoPage() {
     }
   }
 
-  // Auto-save com debounce de 2s
+  // ── Ref que sempre aponta para o executarSave mais recente ─────────────────
+  const saveRef = useRef<(silencioso?: boolean) => Promise<void>>(async () => {})
+  useEffect(() => { saveRef.current = executarSave })
+
+  // ── Auto-save com debounce de 2s (campos gerais) ─────────────────────────
   useEffect(() => {
     if (!formPronto || !laudoUuid) return
-    const timer = setTimeout(() => { executarSave(true) }, 2000)
+    const timer = setTimeout(() => { saveRef.current(true) }, 2000)
     return () => clearTimeout(timer)
   }, [form, fotos, divisoes, acabamentos, fundamentacao, fundamentacaoInferencia,
-      fundamentacaoEvolutivo, precisao, resumoMercado, outrosFatoresImovel])
+      fundamentacaoEvolutivo, precisao, resumoMercado, outrosFatoresImovel,
+      formPronto, laudoUuid])
 
+  // ── Salva imediatamente quando empresa/solicitante muda ───────────────────
+  const empresaIdAnterior = useRef<string | undefined>(undefined)
   useEffect(() => {
-    const handler = () => { executarSave(true) }
+    if (!formPronto || !laudoUuid) return
+    const novoId = (form as any).empresaClienteId
+    if (empresaIdAnterior.current !== undefined && empresaIdAnterior.current !== novoId) {
+      saveRef.current(true)
+    }
+    empresaIdAnterior.current = novoId
+  }, [(form as any).empresaClienteId, formPronto, laudoUuid])
+
+  // ── Salva ao fechar a aba ─────────────────────────────────────────────────
+  useEffect(() => {
+    const handler = () => { saveRef.current(true) }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
+  }, [])
+
+  // ── Salva ao desmontar (navegação interna Next.js) ────────────────────────
+  useEffect(() => {
+    return () => { saveRef.current(true) }
   }, [])
 
   // ─── RENDER ───────────────────────────────────────────────────────────────────

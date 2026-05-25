@@ -2,7 +2,7 @@
 
 import { buscarLaudo, definirLaudoAtual, limparLaudoAtual, obterLaudoAtual, salvarLaudo } from '@/lib/laudos-storage'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import MenuEtapas from '../components/formulario/MenuEtapas'
 import NavegacaoEtapas from '../components/formulario/NavegacaoEtapas'
 import Etapa01A06 from '../components/formulario/Etapa01A06'
@@ -781,18 +781,44 @@ export default function NovoLaudoPage() {
     }
   }
 
-  // ── Auto-save com debounce de 2s ──────────────────────────────────────────
+  // ── Ref que sempre aponta para o executarSave mais recente ─────────────────
+  // Permite chamar o save com o form atualizado ao desmontar o componente,
+  // cobrindo navegações internas do Next.js (que não disparam beforeunload).
+  const saveRef = useRef<(silencioso?: boolean) => Promise<void>>(async () => {})
+  useEffect(() => { saveRef.current = executarSave })
+
+  // ── Auto-save com debounce de 2s (campos gerais) ─────────────────────────
   useEffect(() => {
     if (!formPronto || !laudoUuid) return
-    const timer = setTimeout(() => { executarSave(true) }, 2000)
+    const timer = setTimeout(() => { saveRef.current(true) }, 2000)
     return () => clearTimeout(timer)
   }, [form, fotos, divisoes, acabamentos, fundamentacao, fundamentacaoInferencia,
-      fundamentacaoEvolutivo, precisao, resumoMercado, outrosFatoresImovel, valoresAdicionais])
+      fundamentacaoEvolutivo, precisao, resumoMercado, outrosFatoresImovel, valoresAdicionais,
+      formPronto, laudoUuid])
 
+  // ── Salva imediatamente quando empresa/solicitante muda ───────────────────
+  // empresaClienteId e solicitante não esperam o debounce de 2s, pois o
+  // usuário costuma navegar para "Meus laudos" logo após escolher a empresa.
+  const empresaIdAnterior = useRef<string | undefined>(undefined)
   useEffect(() => {
-    const handler = () => { executarSave(true) }
+    if (!formPronto || !laudoUuid) return
+    const novoId = (form as any).empresaClienteId
+    if (empresaIdAnterior.current !== undefined && empresaIdAnterior.current !== novoId) {
+      saveRef.current(true)
+    }
+    empresaIdAnterior.current = novoId
+  }, [(form as any).empresaClienteId, formPronto, laudoUuid])
+
+  // ── Salva ao fechar a aba ─────────────────────────────────────────────────
+  useEffect(() => {
+    const handler = () => { saveRef.current(true) }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
+  }, [])
+
+  // ── Salva ao desmontar (navegação interna Next.js) ────────────────────────
+  useEffect(() => {
+    return () => { saveRef.current(true) }
   }, [])
 
   // ─── RENDER ───────────────────────────────────────────────────────────────────
