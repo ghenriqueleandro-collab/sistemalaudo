@@ -1308,7 +1308,7 @@ export function LaudoPdf({
         )}
 
         {/* ── Elementos CDDM/Evolutivo inline ─────────────── */}
-        {temElementos && elementosExibir.map((el: any, i: number) => renderElemento(el, i))}
+        {temElementos && elemsExibir.map((el: any, i: number) => renderElemento(el, i))}
 
         {/* Mapa de localização — após os elementos */}
         {dados.localizacaoComparativos && (
@@ -1333,8 +1333,8 @@ export function LaudoPdf({
                 <Text style={[s.homogTh,{flex:0.8}]}>F.Área</Text>
                 <Text style={[s.homogThLast,{flex:1.2}]}>VU/m² Hom.</Text>
               </View>
-              {elementosCddm.map((el: any, i: number) => {
-                const isLast = i === elementosCddm.length - 1
+              {elemsCddm.map((el: any, i: number) => {
+                const isLast = i === elemsCddm.length - 1
                 const td = el.saneado ? s.homogTd : s.homogTdOut
                 return (
                   <View key={`h-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
@@ -1399,7 +1399,7 @@ export function LaudoPdf({
               <View style={s.memorialRow}><Text style={s.memorialLbl}>Limite inferior (-30%)</Text><Text style={s.memorialVal}>{fm(cddmData.limiteInf30)}</Text></View>
               <View style={s.memorialRow}><Text style={s.memorialLbl}>Desvio Padrão</Text><Text style={s.memorialVal}>{cddmData.desvioPadrao.toFixed(2).replace('.',',')}</Text></View>
               <View style={s.memorialRow}><Text style={s.memorialLbl}>Coeficiente de Variação</Text><Text style={s.memorialVal}>{cddmData.coefVariacao.toFixed(2).replace('.',',')}%</Text></View>
-              <View style={s.memorialRow}><Text style={s.memorialLbl}>Elementos saneados</Text><Text style={s.memorialVal}>{elementosCddm.filter((e: any) => e.saneado).length} de {elementosCddm.length}</Text></View>
+              <View style={s.memorialRow}><Text style={s.memorialLbl}>Elementos saneados</Text><Text style={s.memorialVal}>{elemsCddm.filter((e: any) => e.saneado).length} de {elemsCddm.length}</Text></View>
               <View style={s.memorialRow}><Text style={s.memorialLbl}>T de Student</Text><Text style={s.memorialVal}>{cddmData.tStudent.toFixed(3).replace('.',',')}</Text></View>
               <View style={s.memorialRow}><Text style={s.memorialLbl}>Limite Sup. IC</Text><Text style={s.memorialVal}>{fm(cddmData.limiteSuperior)}</Text></View>
               <View style={s.memorialRowL}><Text style={s.memorialLbl}>Limite Inf. IC</Text><Text style={s.memorialVal}>{fm(cddmData.limiteInferior)}</Text></View>
