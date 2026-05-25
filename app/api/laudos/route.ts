@@ -27,8 +27,8 @@ export async function GET() {
       .filter(Boolean)
       .sort(
         (a, b) =>
-          new Date(b.atualizadoEm ?? b.criadoEm ?? 0).getTime() -
-          new Date(a.atualizadoEm ?? a.criadoEm ?? 0).getTime()
+          new Date(b.criadoEm ?? 0).getTime() -
+          new Date(a.criadoEm ?? 0).getTime()
       )
 
     return NextResponse.json(resultado)
