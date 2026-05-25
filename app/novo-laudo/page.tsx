@@ -136,6 +136,7 @@ export default function NovoLaudoPage() {
   const [editandoLaudoExistente, setEditandoLaudoExistente] = useState(false)
   const [formPronto, setFormPronto] = useState(false)
   const [salvando, setSalvando] = useState(false)
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [laudoUuid, setLaudoUuid] = useState(() => crypto.randomUUID())
 
   // Sincroniza as divisões internas com a lista de acabamentos
@@ -637,15 +638,9 @@ export default function NovoLaudoPage() {
     return url
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-
-    if (!form.garantiaClassificacao) {
-      alert('Selecione a classificação da garantia.')
-      return
-    }
-
+  async function executarSave(silencioso = false) {
     setSalvando(true)
+    setAutoSaveStatus('saving')
     try {
       const status = obterStatusLaudo()
 
@@ -772,15 +767,33 @@ export default function NovoLaudoPage() {
       }
 
       await definirLaudoAtual(idSalvo)
-      window.open('/visualizar-laudo?id=' + encodeURIComponent(laudoUuid), '_blank')
+      setAutoSaveStatus('saved')
+      setTimeout(() => setAutoSaveStatus('idle'), 3000)
     } catch (error) {
       console.error('Erro ao salvar laudo:', error)
-      const msg = error instanceof Error ? error.message : String(error)
-      alert(`Erro ao salvar o laudo.\n\nDetalhe: ${msg}`)
+      setAutoSaveStatus('error')
+      if (!silencioso) {
+        const msg = error instanceof Error ? error.message : String(error)
+        alert(`Erro ao salvar o laudo.\n\nDetalhe: ${msg}`)
+      }
     } finally {
       setSalvando(false)
     }
   }
+
+  // ── Auto-save com debounce de 2s ──────────────────────────────────────────
+  useEffect(() => {
+    if (!formPronto || !laudoUuid) return
+    const timer = setTimeout(() => { executarSave(true) }, 2000)
+    return () => clearTimeout(timer)
+  }, [form, fotos, divisoes, acabamentos, fundamentacao, fundamentacaoInferencia,
+      fundamentacaoEvolutivo, precisao, resumoMercado, outrosFatoresImovel, valoresAdicionais])
+
+  useEffect(() => {
+    const handler = () => { executarSave(true) }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [])
 
   // ─── RENDER ───────────────────────────────────────────────────────────────────
 
@@ -848,7 +861,18 @@ export default function NovoLaudoPage() {
         </div>
 
         {/* ── FORMULÁRIO FULL-WIDTH ── */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Indicador de auto-save */}
+        {autoSaveStatus !== 'idle' && (
+          <div className={`mb-4 text-xs px-3 py-1.5 rounded-lg w-fit ${
+            autoSaveStatus === 'saving' ? 'bg-amber-50 text-amber-700' :
+            autoSaveStatus === 'saved'  ? 'bg-green-50 text-green-700' :
+            'bg-red-50 text-red-700'
+          }`}>
+            {autoSaveStatus === 'saving' ? '⏳ Salvando…' : autoSaveStatus === 'saved' ? '✓ Salvo automaticamente' : '✗ Erro ao salvar'}
+          </div>
+        )}
+
+        <div className="space-y-6">
 
           {etapaAtual === 'cliente-status' && (
             <EtapaClienteStatus
@@ -985,17 +1009,7 @@ export default function NovoLaudoPage() {
             />
           )}
 
-          {/* Botão salvar */}
-          <div className="pt-4 border-t border-slate-200">
-            <button
-              disabled={salvando}
-              className="w-full sm:w-auto rounded-xl bg-blue-600 text-white px-6 py-2.5 text-sm font-semibold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
-            >
-              {salvando ? 'Salvando...' : 'Salvar Laudo'}
-            </button>
-          </div>
-
-        </form>
+        </div>
       </section>
 
       {/* ── NAVEGAÇÃO STICKY NO RODAPÉ ── */}
