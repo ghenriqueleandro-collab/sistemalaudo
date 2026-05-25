@@ -257,6 +257,7 @@ export default function NovoLaudoPage() {
 
         const [docPdf, locComp, imgBenf] = await Promise.all([
           resolverRef(laudoSalvo.documentacaoPdf || ''),
+          resolverRef(laudoSalvo.calculoPdf || ''),
           resolverRef(laudoSalvo.localizacaoComparativos || ''),
           resolverRef(laudoSalvo.imagemBenfeitorias || ''),
         ])
@@ -988,6 +989,7 @@ export default function NovoLaudoPage() {
               handleLegenda={handleLegenda}
               onRemoverFoto={removerFoto}
               onReordenarFotos={reordenarFotos}
+              setForm={setForm}
             />
           )}
 
