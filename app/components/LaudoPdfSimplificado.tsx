@@ -616,19 +616,19 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
           </>
         )}
 
-        {/* Mapa de localização (se disponível) — sem título de seção separado */}
-        {dados.localizacaoComparativos && (
-          <View wrap={false} style={{ marginTop: 6 }}>
-            <Image src={dados.localizacaoComparativos} style={{ width: '100%', height: 180, objectFit: 'cover', borderWidth: 0.5, borderColor: CINZA }} />
-          </View>
-        )}
-
         {/* ── 8. PESQUISA IMOBILIÁRIA (renumerado de 9 para 8) ─────────────── */}
         <SecHeader num="7" titulo="Pesquisa Imobiliária" />
 
 
         {/* ── Cards de elementos ───────────────────────────────────────────── */}
         {temElementos && elementosExibir.map((el: any, i: number) => renderElemento(el, i))}
+
+        {/* Mapa de localização — após os elementos */}
+        {dados.localizacaoComparativos && (
+          <View wrap={false} style={{ marginTop: 6 }}>
+            <Image src={dados.localizacaoComparativos} style={{ width: '100%', height: 200, objectFit: 'cover', borderWidth: 0.5, borderColor: CINZA }} />
+          </View>
+        )}
 
         {/* ── 9.1. HOMOGENEIZAÇÃO (só comparativo) ────────────────────────── */}
         {temCddm && (

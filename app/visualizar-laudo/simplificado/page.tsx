@@ -1143,6 +1143,17 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                       )
                     })}
 
+                    {/* Mapa de localização — após os elementos */}
+                    {dados.localizacaoComparativos && (
+                      <div style={{ marginTop: '8px' }}>
+                        <img
+                          src={dados.localizacaoComparativos}
+                          alt="Mapa de localização dos comparativos"
+                          style={{ width: '100%', borderRadius: '6px', border: '0.5px solid #C9D3E6', objectFit: 'cover', maxHeight: '260px' }}
+                        />
+                      </div>
+                    )}
+
                     {/* 9.1 — Homogeneização */}
                     {temCddm && (
                       <>
