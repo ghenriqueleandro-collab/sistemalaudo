@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import type { StatusAcompanhamento } from '../../../lib/laudos-storage'
+import type { StatusAcompanhamento } from '../../lib/laudos-storage'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
