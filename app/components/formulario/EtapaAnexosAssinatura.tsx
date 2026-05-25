@@ -18,7 +18,7 @@ type Props = {
   formatarDataBR: (data: string) => string
   handlePdfUpload: (
     e: React.ChangeEvent<HTMLInputElement>,
-    campo: 'documentacaoPdf' | 'calculoPdf'
+    campo: 'documentacaoPdf'
   ) => void
   handleLocalizacaoComparativos: (e: React.ChangeEvent<HTMLInputElement>) => void
   handleFotos: (e: React.ChangeEvent<HTMLInputElement>) => void
@@ -26,7 +26,7 @@ type Props = {
   handleLegenda: (index: number, valor: string) => void
   onRemoverFoto: (index: number) => void
   onReordenarFotos: (origem: number, destino: number) => void
-  onRemoverAnexo?: (campo: 'documentacaoPdf' | 'calculoPdf' | 'localizacaoComparativos') => void
+  onRemoverAnexo?: (campo: 'documentacaoPdf' | 'localizacaoComparativos') => void
 }
 
 
@@ -295,15 +295,6 @@ useEffect(() => {
           />
         </div>
 
-        <div>
-          <label className="block font-medium mb-1">Cálculos em PDF</label>
-          <input
-            type="file"
-            accept="application/pdf"
-            onChange={(e) => handlePdfUpload(e, 'calculoPdf')}
-            className="w-full border p-2 rounded"
-          />
-        </div>
 
         <div className="space-y-4">
           <div>

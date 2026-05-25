@@ -12,7 +12,10 @@ type MenuEtapasProps = {
   tipoLaudo?: 'detalhado' | 'simplificado'
 }
 
-const ETAPAS_APENAS_COMPARATIVO: EtapaId[] = ['9.2', '10']
+// 9.2 sempre oculto — benfeitorias agora calculadas dentro do motor CDDM/Evolutivo
+const ETAPAS_SEMPRE_OCULTAS: EtapaId[] = ['9.2']
+// 10 (Valor do imóvel) oculto no método evolutivo
+const ETAPAS_APENAS_COMPARATIVO: EtapaId[] = ['10']
 
 export default function MenuEtapas({
   etapaAtual,
@@ -26,9 +29,10 @@ export default function MenuEtapas({
   const activeRef = useRef<HTMLButtonElement>(null)
 
   const isEvolutivo =
-    tipoLaudo === 'simplificado' && metodoAvaliacao === 'evolutivo' && tratamentoDados === 'tratamento_por_fatores'
+    metodoAvaliacao === 'evolutivo' && tratamentoDados === 'tratamento_por_fatores'
 
   const etapasVisiveis = ETAPAS
+    .filter(e => !ETAPAS_SEMPRE_OCULTAS.includes(e.id))
     .filter(e => !isEvolutivo || !ETAPAS_APENAS_COMPARATIVO.includes(e.id))
     .map(e => {
       if (isEvolutivo && e.id === '9.1') {

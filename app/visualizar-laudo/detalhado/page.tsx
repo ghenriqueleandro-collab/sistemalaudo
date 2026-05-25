@@ -441,15 +441,13 @@ function VisualizarLaudoContent() {
       const logoUrl = window.location.origin + '/logo-lesath.png'
 
       // Pré-renderiza PDFs anexados como imagens para embed no PDF gerado
-      const [documentacaoPdfPaginas, calculoPdfPaginas] = await Promise.all([
+      const [documentacaoPdfPaginas] = await Promise.all([
         dados.documentacaoPdf ? pdfPagesToImages(dados.documentacaoPdf) : Promise.resolve([]),
-        dados.calculoPdf      ? pdfPagesToImages(dados.calculoPdf)      : Promise.resolve([]),
       ])
 
       const dadosComPaginas = {
         ...dados,
         documentacaoPdfPaginas,
-        calculoPdfPaginas,
       }
 
       const blob = await pdf(
@@ -522,9 +520,8 @@ function VisualizarLaudoContent() {
               preview: await resolverRef(c.preview),
             }))
           )
-          const [docPdf, calcPdf, locComp, imgBenf] = await Promise.all([
+          const [docPdf, locComp, imgBenf] = await Promise.all([
             resolverRef(parsed.documentacaoPdf || ''),
-            resolverRef(parsed.calculoPdf || ''),
             resolverRef(parsed.localizacaoComparativos || ''),
             resolverRef(parsed.imagemBenfeitorias || ''),
           ])
@@ -550,7 +547,6 @@ function VisualizarLaudoContent() {
             fotos: fotosResolvidas,
             croquis: croquisResolvidos,
             documentacaoPdf: docPdf,
-            calculoPdf: calcPdf,
             localizacaoComparativos: locComp,
             imagemBenfeitorias: imgBenf,
             observacoesTerrenoEncravado: parsed.observacoesTerrenoEncravado || '',
@@ -666,6 +662,16 @@ function VisualizarLaudoContent() {
   const valorArredondadoExtenso = numeroPorExtenso(valorArredondadoLaudo)
   const valorLiquidezForcadaNumero = converterNumero(dados.valorLiquidezForcada || '')
   const valorLiquidezForcadaExtenso = valorLiquidezForcadaNumero > 0 ? numeroPorExtenso(valorLiquidezForcadaNumero) : ''
+  // ── Dados CDDM/Evolutivo inline ─────────────────────────────────────
+  const cddm = (dados as any).dadosCalculoCDDM as any | undefined
+  const ev = (dados as any).dadosCalculoEvolutivo as any | undefined
+  const isEvolutivo = dados.metodoAvaliacao === 'evolutivo'
+  const elementosCddm: any[] = cddm?.elementos || []
+  const elementosEv: any[] = ev?.elementos || []
+  const elementosExibir: any[] = isEvolutivo ? elementosEv : elementosCddm
+  const temCddm = elementosCddm.length > 0
+  const temElementos = elementosExibir.length > 0
+
   const fotoFachada = (dados.fotos || []).find((foto) => (foto.legenda || '').trim().toLowerCase() === 'fachada')
   const garantiaTexto = obterTextoGarantia(dados.garantiaClassificacao, dados.garantiaObservacoes)
 
@@ -1341,24 +1347,429 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 <div className="space-y-2">
                   {dados.periodoPesquisaInicio && dados.periodoPesquisaFim && <p>• <strong>Período de abrangência da pesquisa:</strong> {formatarData(dados.periodoPesquisaInicio)} a {formatarData(dados.periodoPesquisaFim)}</p>}
                   {dados.tipoInformacoesObtidas && <p>• <strong>Tipo de informações obtidas:</strong> {dados.tipoInformacoesObtidas}</p>}
-                  {dados.caracteristicasTerreno && <p>• <strong>Características:</strong> {dados.caracteristicasTerreno}</p>}
+                  {!temElementos && dados.caracteristicasTerreno && <p>• <strong>Características:</strong> {dados.caracteristicasTerreno}</p>}
                 </div>
-                <div className="mt-4 space-y-2">
-                  <p>Após os tratamentos e homogeneizações, foi desenvolvido um modelo com os seguintes fatores considerados:</p>
-                  <ul className="list-disc pl-6 mt-2">{dados.fatoresSelecionados?.map((fator, index) => <li key={index}>{fator}</li>)}</ul>
-                </div>
+                {!temElementos && (
+                  <div className="mt-4 space-y-2">
+                    <p>Após os tratamentos e homogeneizações, foi desenvolvido um modelo com os seguintes fatores considerados:</p>
+                    <ul className="list-disc pl-6 mt-2">{dados.fatoresSelecionados?.map((fator, index) => <li key={index}>{fator}</li>)}</ul>
+                  </div>
+                )}
+
+                {/* ── Elementos CDDM/Evolutivo inline ─────────────────────────────── */}
+                {/* 9 — Pesquisa imobiliária */}
+                    <SecHeader num="8" titulo="Pesquisa Imobiliária" />
+
+
+                    {/* Cards de elemento — blocos temáticos, até 3 colunas, campos vazios omitidos */}
+                    {temElementos && elementosExibir.map((el: any, i: number) => {
+                      const vOf  = el.valorOferta > 0 ? formatarMoeda(el.valorOferta)
+                        : el.valorOferta ? formatarMoeda(Number(String(el.valorOferta).replace(/[^\d,]/g,'').replace(',','.'))) : ''
+                      const fOf  = parseFloat(String(el.fatorOferta||'').replace(',','.')) || 1
+                      const vLiq = el.valorOferta > 0 ? formatarMoeda(el.valorOferta * fOf) : ''
+                      const vuOf = el.valorUnitarioOferta > 0 ? formatarMoeda(el.valorUnitarioOferta) : ''
+                      const vuTer = el.vuTerreno > 0 ? formatarMoeda(el.vuTerreno) : ''
+                      const cidadeUF = [el.cidade, el.uf].filter(Boolean).join(' · ')
+                      const foto = el.foto || ''
+
+                      const ok = (v: any) => { const s = String(v ?? '').trim(); return s && s !== '0' && s !== '-' ? s : '' }
+                      const LBL: React.CSSProperties = { background: '#EAF0FB', padding: '3px 6px', fontSize: '7.5px', fontWeight: 700, color: '#1a3564', borderRight: '0.5px solid #C9D3E6', whiteSpace: 'nowrap' }
+                      const VAL: React.CSSProperties = { padding: '3px 6px', fontSize: '7.5px', color: '#1e293b' }
+                      const brd: React.CSSProperties = { borderTop: '0.5px solid #C9D3E6' }
+                      const R = { borderRight: '0.5px solid #C9D3E6' }
+
+                      const r1 = (l: string, v: any, extra?: React.CSSProperties) => {
+                        const a = ok(v); if (!a) return null
+                        return <tr style={brd}><td style={{ ...LBL, width: '18%' }}>{l}</td><td style={{ ...VAL, ...extra }}>{a}</td></tr>
+                      }
+                      const r2 = (l1: string, v1: any, l2: string, v2: any) => {
+                        const a = ok(v1), b = ok(v2); if (!a && !b) return null
+                        if (!b) return r1(l1, a); if (!a) return r1(l2, b)
+                        return <tr style={brd}><td style={{ ...LBL, width: '18%' }}>{l1}</td><td style={{ ...VAL, width: '32%', ...R }}>{a}</td><td style={{ ...LBL, width: '18%', ...R }}>{l2}</td><td style={VAL}>{b}</td></tr>
+                      }
+                      const r3 = (l1: string, v1: any, l2: string, v2: any, l3: string, v3: any) => {
+                        const a = ok(v1), b = ok(v2), c = ok(v3); if (!a && !b && !c) return null
+                        if (!c) return r2(l1, a, l2, b); if (!b && !a) return r1(l3, c)
+                        if (!a) return r2(l2, b, l3, c); if (!b) return r2(l1, a, l3, c)
+                        return <tr style={brd}><td style={{ ...LBL, width: '14%' }}>{l1}</td><td style={{ ...VAL, width: '19%', ...R }}>{a}</td><td style={{ ...LBL, width: '14%', ...R }}>{l2}</td><td style={{ ...VAL, width: '19%', ...R }}>{b}</td><td style={{ ...LBL, width: '14%', ...R }}>{l3}</td><td style={VAL}>{c}</td></tr>
+                      }
+
+                      const linhas = [
+                        r3('Tipo', el.tipo, 'Data', el.data ? formatarDataBR(el.data) : '', 'Empreendimento', el.empreendimento),
+                        r1('Logradouro', el.logradouro || el.endereco),
+                        r3('Bairro', el.bairro, 'Cidade · UF', cidadeUF, 'Distância', el.distanciaAvaliando || el.distancia),
+                        r1('Coordenadas', el.coordenadas, { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }),
+                      r1('Fonte', el.fonte),
+                        r3('Conservação', el.estadoConservacao, 'Idade', el.idadeAparente > 0 ? `${el.idadeAparente} anos` : (el.idade ? `${el.idade} anos` : ''), 'Andar', el.andar > 0 ? el.andar : ''),
+                        r2('Área terreno', el.areaTerreno > 0 ? `${Number(el.areaTerreno).toLocaleString('pt-BR')} m²` : '', 'Área constr./útil', el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : (el.areaConstruida ? `${el.areaConstruida} m²` : '')),
+                        r2('Padrão constr.', el.padraoConstrutivo, 'FOC', el.foc ? el.foc.toString().replace('.',',') : ''),
+                        r3('Dormitórios', el.dormitorios > 0 ? el.dormitorios : '', 'Suítes', el.suites > 0 ? el.suites : '', 'Vagas', el.vagas > 0 ? el.vagas : ''),
+                        r3('Valor oferta', vOf, 'Valor líquido', vLiq !== vOf ? vLiq : '', 'V.U./m²', vuOf || vuTer),
+                        r3('F. Oferta', ok(el.fatorOferta), 'F. Local/Nota', ok(el.fatorLocal || el.fatorLocalBruto || el.notaLocal), 'F. Andar', ok(el.fatorAndar || el.fatorAndarBruto)),
+                        r3('Tipo oferta', el.tipoOferta, 'Status', el.status, 'Telefone', el.telefone),
+                        el.link ? <tr key="link" style={brd}><td style={{ ...LBL, width: '18%' }}>Link</td><td style={{ ...VAL, fontSize: '6.5px', color: '#2347C6', wordBreak: 'break-all' }}>{String(el.link)}</td></tr> : null,
+                        r1('Obs.', el.observacoes),
+                      ].filter(Boolean)
+
+                      if (linhas.length === 0) return null
+
+                      return (
+                        <div key={`elem-${i}`} style={{ marginBottom: '6px', breakInside: 'avoid', border: '1px solid #b8c4d8', borderRadius: '3px', overflow: 'hidden' }}>
+                          {/* Cabeçalho do card — navy #1a3564 */}
+                          <div style={{ background: '#1a3564', padding: '4px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '8px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
+                              {isEvolutivo ? 'ELEMENTO' : 'ELEMENTO COMPARATIVO'} {String(i + 1).padStart(2, '0')}
+                            </span>
+                            <span style={{ fontSize: '7.5px', color: '#8fa4c7' }}>
+                              {el.fonte || ''}{el.data ? ` • ${formatarDataBR(el.data)}` : ''}
+                            </span>
+                          </div>
+                          {/* Corpo: campos + foto lateral */}
+                          <div style={{ display: 'flex' }}>
+                            <table style={{ flex: 1, borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', borderTop: 'none', borderRight: foto ? '0.5px solid #C9D3E6' : 'none' }}>
+                              <tbody>{linhas}</tbody>
+                            </table>
+                            {foto && (
+                              <div style={{ width: '110px', flexShrink: 0, borderTop: 'none', borderLeft: '0.5px solid #C9D3E6', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8f9fc' }}>
+                                <img src={foto} alt={`Elemento ${i+1}`} style={{ width: '110px', height: '100%', objectFit: 'cover' }} />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                    {/* Mapa de localização — após os elementos */}
+                    {dados.localizacaoComparativos && (
+                      <div style={{ marginTop: '8px' }}>
+                        <img
+                          src={dados.localizacaoComparativos}
+                          alt="Mapa de localização dos comparativos"
+                          style={{ width: '100%', borderRadius: '6px', border: '0.5px solid #C9D3E6', objectFit: 'cover', maxHeight: '260px' }}
+                        />
+                      </div>
+                    )}
+
+                    {/* 9.1 — Homogeneização */}
+                    {temCddm && (
+                      <>
+                        <SecHeader num="8.1" titulo="Homogeneização" />
+                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
+                          <thead>
+                            <tr style={{ background: '#2347C6' }}>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>Elem.</th>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>VU/m²</th>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>F.Local</th>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>F.Padrão</th>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>F.FOC</th>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>F.Andar</th>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>F.Vaga</th>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>F.Área</th>
+                              <th style={{ padding: '3px 2px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center' }}>VU/m² Hom.</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {elementosCddm.map((el: any, i: number) => {
+                              const isSan = el.saneado
+                              const cellStyle: React.CSSProperties = {
+                                padding: '2.5px 2px', fontSize: '7px',
+                                color: isSan ? '#1e293b' : '#9ca3af',
+                                fontStyle: isSan ? 'normal' : 'italic',
+                                textAlign: 'center', borderRight: '0.5px solid #C9D3E6', borderTop: '0.5px solid #C9D3E6',
+                              }
+                              return (
+                                <tr key={`h-${i}`}>
+                                  <td style={cellStyle}>{i + 1}</td>
+                                  <td style={cellStyle}>{formatarMoeda(el.valorUnitarioOferta || 0)}</td>
+                                  <td style={cellStyle}>{(el.fatorLocal || 1).toFixed(4).replace('.', ',')}</td>
+                                  <td style={cellStyle}>{(el.fatorPadrao || 1).toFixed(4).replace('.', ',')}</td>
+                                  <td style={cellStyle}>{(el.fatorFOC || 1).toFixed(4).replace('.', ',')}</td>
+                                  <td style={cellStyle}>{(el.fatorAndar || 1).toFixed(4).replace('.', ',')}</td>
+                                  <td style={cellStyle}>{(el.fatorVaga || 1).toFixed(4).replace('.', ',')}</td>
+                                  <td style={cellStyle}>{(el.fatorArea || 1).toFixed(4).replace('.', ',')}</td>
+                                  <td style={{ ...cellStyle, borderRight: 'none', fontWeight: 700, color: isSan ? '#17325C' : '#9ca3af' }}>
+                                    {formatarMoeda(el.vuHomog || 0)}
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+
+                        <div style={{ background: '#EAF0FB', border: '0.5px solid #C9D3E6', padding: '5px', marginTop: '4px', fontSize: '7px', color: '#1e293b', lineHeight: 1.4 }}>
+                          <div style={{ fontWeight: 700, marginBottom: 2 }}>Legenda dos fatores aplicados:</div>
+                          <div>F.Local = Fator de Localização &nbsp;·&nbsp; F.Padrão = Fator de Padrão Construtivo &nbsp;·&nbsp; F.FOC = Fator de Obsolescência e Conservação</div>
+                          <div>F.Andar = Fator de Andar &nbsp;·&nbsp; F.Vaga = Fator de Vaga de Garagem &nbsp;·&nbsp; F.Área = Fator de Adequação por Área</div>
+                          {cddm && cddm.outliersDescartados > 0 && (
+                            <div style={{ marginTop: 3, color: '#94a3b8', fontStyle: 'italic' }}>
+                              Elementos em itálico/cinza foram descartados pelo saneamento estatístico (Critério de Chauvenet — fora do intervalo ±30% da média).
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Memorial de cálculos (estilo MK) */}
+                        {cddm && (
+                          <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                            <div style={{ flex: 1.3, border: '0.5px solid #C9D3E6' }}>
+                              <div style={{ background: '#17325C', padding: '3px 5px', textAlign: 'center', fontSize: '8px', fontWeight: 700, color: '#fff' }}>
+                                ENQUADRAMENTO DA AVALIAÇÃO
+                              </div>
+                              <div style={{ display: 'flex', borderBottom: '0.5px solid #C9D3E6' }}>
+                                <div style={{ flex: 1.6, padding: '3px 5px', fontSize: '7px', color: '#1e293b', borderRight: '0.5px solid #C9D3E6' }}>
+                                  Amplitude do intervalo de confiança de 80% em torno da estimativa central
+                                </div>
+                                <div style={{ flex: 1.5 }}>
+                                  <div style={{ display: 'flex', background: '#EAF0FB', borderBottom: '0.5px solid #C9D3E6' }}>
+                                    <div style={{ flex: 1, fontSize: '7px', fontWeight: 700, color: '#17325C', textAlign: 'center', padding: '2px', borderRight: '0.5px solid #C9D3E6' }}>III</div>
+                                    <div style={{ flex: 1, fontSize: '7px', fontWeight: 700, color: '#17325C', textAlign: 'center', padding: '2px', borderRight: '0.5px solid #C9D3E6' }}>II</div>
+                                    <div style={{ flex: 1, fontSize: '7px', fontWeight: 700, color: '#17325C', textAlign: 'center', padding: '2px' }}>I</div>
+                                  </div>
+                                  <div style={{ display: 'flex' }}>
+                                    <div style={{ flex: 1, fontSize: '7px', color: '#1e293b', textAlign: 'center', padding: '2px', borderRight: '0.5px solid #C9D3E6' }}>≤ 30%</div>
+                                    <div style={{ flex: 1, fontSize: '7px', color: '#1e293b', textAlign: 'center', padding: '2px', borderRight: '0.5px solid #C9D3E6' }}>≤ 40%</div>
+                                    <div style={{ flex: 1, fontSize: '7px', color: '#1e293b', textAlign: 'center', padding: '2px' }}>≤ 50%</div>
+                                  </div>
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', borderBottom: '0.5px solid #C9D3E6' }}>
+                                <div style={{ flex: 2, padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#1e293b', borderRight: '0.5px solid #C9D3E6' }}>Intervalo de confiança</div>
+                                <div style={{ flex: 1.1, padding: '3px 5px', fontSize: '7.5px', fontWeight: 700, color: '#2347C6', textAlign: 'center' }}>{cddm.intervaloConfianca.toFixed(2).replace('.', ',')}%</div>
+                              </div>
+                              <div style={{ display: 'flex' }}>
+                                <div style={{ flex: 2, padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', background: '#17325C', borderRight: '0.5px solid #C9D3E6' }}>GRAU DE PRECISÃO</div>
+                                <div style={{ flex: 1.1, padding: '3px 5px', fontSize: '10px', fontWeight: 700, color: '#2347C6', textAlign: 'center', background: '#dbeafe' }}>{cddm.grauPrecisao || '—'}</div>
+                              </div>
+                            </div>
+
+                            <div style={{ flex: 1, border: '0.5px solid #C9D3E6' }}>
+                              <div style={{ background: '#17325C', padding: '3px 5px', textAlign: 'center', fontSize: '8px', fontWeight: 700, color: '#fff' }}>
+                                MEMORIAL DE CÁLCULOS
+                              </div>
+                              {[
+                                ['Média Saneada', formatarMoeda(cddm.mediaSaneada)],
+                                ['Limite superior (+30%)', formatarMoeda(cddm.limiteSup30)],
+                                ['Limite inferior (-30%)', formatarMoeda(cddm.limiteInf30)],
+                                ['Desvio Padrão', cddm.desvioPadrao.toFixed(2).replace('.', ',')],
+                                ['Coef. de Variação', cddm.coefVariacao.toFixed(2).replace('.', ',') + '%'],
+                                ['Elementos saneados', `${elementosCddm.filter((e: any) => e.saneado).length} de ${elementosCddm.length}`],
+                                ['T de Student', cddm.tStudent.toFixed(3).replace('.', ',')],
+                                ['Limite Sup. IC', formatarMoeda(cddm.limiteSuperior)],
+                                ['Limite Inf. IC', formatarMoeda(cddm.limiteInferior)],
+                              ].map(([lbl, val], idx, arr) => (
+                                <div key={lbl} style={{ display: 'flex', borderBottom: idx === arr.length - 1 ? 'none' : '0.5px solid #C9D3E6' }}>
+                                  <div style={{ flex: 1.5, padding: '2.5px 5px', fontSize: '7px', color: '#1e293b', borderRight: '0.5px solid #C9D3E6' }}>{lbl}</div>
+                                  <div style={{ flex: 1, padding: '2.5px 5px', fontSize: '7px', fontWeight: 700, color: '#2347C6', textAlign: 'right' }}>{val}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Estatísticas e tabela de valores — Comparativo */}
+                        {cddm && (() => {
+                          const elSan = elementosCddm.filter((e: any) => e.saneado)
+                          const vuMedio = cddm.mediaSaneada
+                          const vuMin = cddm.limiteInferior
+                          const vuMax = cddm.limiteSuperior
+                          const vuLim30i = cddm.limiteInf30
+                          const vuLim30s = cddm.limiteSup30
+                          const area = cddm.avaliando.area
+                          const tdC: React.CSSProperties = { padding: '3px 5px', fontSize: '7.5px', border: '0.5px solid #C9D3E6', textAlign: 'center' }
+                          const tdCHl: React.CSSProperties = { ...tdC, background: '#EAF0FB', fontWeight: 700, color: '#17325C' }
+                          return (
+                            <>
+                              {/* Estatísticas */}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 5, margin: '6px 0' }}>
+                                {[
+                                  ['Desvio padrão', formatarMoeda(cddm.desvioPadrao)],
+                                  ['Coef. variação', cddm.coefVariacao.toFixed(2).replace('.',',')+'%'],
+                                  ['Grau de precisão', cddm.grauPrecisao || '—'],
+                                  ['IC 80%', cddm.intervaloConfianca.toFixed(2).replace('.',',')+'%'],
+                                ].map(([l,v]) => (
+                                  <div key={l as string} style={{ background: '#EAF0FB', border: '0.5px solid #C9D3E6', borderRadius: 3, padding: '5px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '7px', color: '#5a7090', marginBottom: 2 }}>{l}</div>
+                                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{v}</div>
+                                  </div>
+                                ))}
+                              </div>
+                              {/* Tabela de valores */}
+                              <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginBottom: 4 }}>
+                                <thead>
+                                  <tr style={{ background: '#1a3564' }}>
+                                    <th style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', borderRight: '0.5px solid #475e9b' }}>Intervalo</th>
+                                    <th style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>V.U. (R$/m²)</th>
+                                    <th style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center' }}>Valor total (R$)</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr><td style={tdC}>Mínimo</td><td style={tdC}>{formatarMoeda(vuMin)}</td><td style={tdC}>{formatarMoeda(vuMin * area)}</td></tr>
+                                  <tr><td style={tdCHl}>Médio (adotado)</td><td style={tdCHl}>{formatarMoeda(vuMedio)}</td><td style={tdCHl}>{formatarMoeda(vuMedio * area)}</td></tr>
+                                  <tr><td style={tdC}>Máximo</td><td style={tdC}>{formatarMoeda(vuMax)}</td><td style={tdC}>{formatarMoeda(vuMax * area)}</td></tr>
+                                  <tr><td style={tdC}>Limite −30%</td><td style={tdC}>{formatarMoeda(vuLim30i)}</td><td style={tdC}>{formatarMoeda(vuLim30i * area)}</td></tr>
+                                  <tr><td style={tdC}>Limite +30%</td><td style={tdC}>{formatarMoeda(vuLim30s)}</td><td style={tdC}>{formatarMoeda(vuLim30s * area)}</td></tr>
+                                </tbody>
+                              </table>
+                            </>
+                          )
+                        })()}
+                        <div style={{ marginTop: 4, marginBottom: 2, fontSize: '7px', fontStyle: 'italic', color: '#475569' }}>
+                          * Quando a amplitude do intervalo de confiança ultrapassar 50% não há classificação do resultado quanto à precisão e é necessária justificativa com base no diagnóstico do mercado. (ABNT 14653-2 - 2011 - Item 13.4)
+                        </div>
+                      </>
+                    )}
+
+                    {/* Seção de cálculo evolutivo */}
+                    {isEvolutivo && evSnap && evSnap.resultado && (() => {
+                      const pnEv = (s: any) => { if (!s && s !== 0) return 0; const n = parseFloat(String(s).replace(/[R$\s]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.')); return isNaN(n) ? 0 : n }
+                      const res = evSnap.resultado
+                      const elems = evSnap.elementos || []
+                      const benfs = (evSnap.benfeitorias || []) as any[]
+                      const area = pnEv(evSnap.avaliando?.area)
+                      const vuMed = res.media || 0
+                      const tdC: React.CSSProperties = { padding: '3px 5px', fontSize: '7.5px', border: '0.5px solid #C9D3E6', textAlign: 'center' }
+                      const tdCHl: React.CSSProperties = { ...tdC, background: '#EAF0FB', fontWeight: 700, color: '#17325C' }
+                      const thS: React.CSSProperties = { padding: '3px 4px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }
+                      return (
+                        <>
+                          {/* 8.1 Homogeneização do terreno */}
+                          <SecHeader num="8.1" titulo="Homogeneização — terreno" />
+                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: 4 }}>
+                            <thead>
+                              <tr style={{ background: '#2347C6' }}>
+                                <th style={thS}>Elem.</th>
+                                <th style={thS}>V.U. (R$/m²)</th>
+                                <th style={thS}>F. Local</th>
+                                <th style={thS}>F. Topografia</th>
+                                <th style={thS}>F. Visibilidade</th>
+                                <th style={thS}>F. Acumulado</th>
+                                <th style={{ ...thS, borderRight: 'none' }}>V.U. Homog. (R$/m²)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {elems.map((el: any, i: number) => {
+                                const nLocalAv = pnEv(evSnap.avaliando?.notaLocal) || 100
+                                const nTopoAv  = pnEv(evSnap.avaliando?.notaTopo)  || 100
+                                const nVisAv   = pnEv(evSnap.avaliando?.notaVis)   || 100
+                                const fLoc  = (pnEv(el.fatorLocal)       || 100) > 0 ? nLocalAv / (pnEv(el.fatorLocal)       || 100) : 1
+                                const fTopo = (pnEv(el.fatorTopografia)  || 100) > 0 ? nTopoAv  / (pnEv(el.fatorTopografia)  || 100) : 1
+                                const fVis  = (pnEv(el.fatorVisibilidade)|| 100) > 0 ? nVisAv   / (pnEv(el.fatorVisibilidade)|| 100) : 1
+                                const fAcum = fLoc * fTopo * fVis
+                                const atNum = pnEv(el.areaTerreno)
+                                const voNum = pnEv(el.valorOferta)
+                                const vuOrig = atNum > 0 ? voNum / atNum : 0
+                                const vuH = Math.round(vuOrig * fAcum * 100) / 100
+                                const tdS: React.CSSProperties = { padding: '2.5px 3px', fontSize: '7px', border: '0.5px solid #C9D3E6', textAlign: 'center' }
+                                return (
+                                  <tr key={i}>
+                                    <td style={tdS}>{i+1}</td>
+                                    <td style={tdS}>{formatarMoeda(vuOrig)}</td>
+                                    <td style={tdS}>{fLoc.toFixed(4).replace('.', ',')}</td>
+                                    <td style={tdS}>{fTopo.toFixed(4).replace('.', ',')}</td>
+                                    <td style={tdS}>{fVis.toFixed(4).replace('.', ',')}</td>
+                                    <td style={tdS}>{fAcum.toFixed(4).replace('.', ',')}</td>
+                                    <td style={{ ...tdS, borderRight: 'none', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(vuH)}</td>
+                                  </tr>
+                                )
+                              })}
+                              <tr style={{ background: '#EAF0FB' }}>
+                                <td colSpan={6} style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#17325C', textAlign: 'right', border: '0.5px solid #C9D3E6' }}>Média das amostras</td>
+                                <td style={{ padding: '3px 5px', fontSize: '7.5px', fontWeight: 700, color: '#17325C', textAlign: 'center', border: '0.5px solid #C9D3E6' }}>{formatarMoeda(vuMed)}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                          {/* Estatísticas */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 5, margin: '6px 0' }}>
+                            {([
+                              ['Desvio padrão', res.desvio != null ? formatarMoeda(res.desvio) : '—'],
+                              ['Coef. variação', res.desvio != null && vuMed > 0 ? ((res.desvio/vuMed)*100).toFixed(2).replace('.',',')+'%' : '—'],
+                              ['Grau de precisão', res.grauPrecisao || '—'],
+                              ['IC 80%', res.intervaloConfianca != null ? res.intervaloConfianca.toFixed(2).replace('.',',')+'%' : '—'],
+                            ] as [string,string][]).map(([l,v]) => (
+                              <div key={l} style={{ background: '#EAF0FB', border: '0.5px solid #C9D3E6', borderRadius: 3, padding: '5px', textAlign: 'center' }}>
+                                <div style={{ fontSize: '7px', color: '#5a7090', marginBottom: 2 }}>{l}</div>
+                                <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{v}</div>
+                              </div>
+                            ))}
+                          </div>
+                          {/* Tabela de valores */}
+                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginBottom: 4 }}>
+                            <thead>
+                              <tr style={{ background: '#1a3564' }}>
+                                <th style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'left', borderRight: '0.5px solid #475e9b' }}>Intervalo</th>
+                                <th style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b' }}>V.U. (R$/m²)</th>
+                                <th style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center' }}>Valor total (R$)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {([
+                                ['Mínimo',          res.minimo||0,    false],
+                                ['Médio (adotado)',  vuMed,            true],
+                                ['Máximo',          res.maximo||0,    false],
+                                ['Limite −30%',     res.lim30inf||0,  false],
+                                ['Limite +30%',     res.lim30sup||0,  false],
+                              ] as [string,number,boolean][]).map(([lbl,vu,hl]) => (
+                                <tr key={lbl} style={hl ? { background: '#EAF0FB' } : {}}>
+                                  <td style={{ ...tdC, textAlign: 'left', fontWeight: hl?700:400, color: hl?'#17325C':'#1e293b' }}>{lbl}</td>
+                                  <td style={{ ...tdC, fontWeight: hl?700:400, color: hl?'#17325C':'#1e293b' }}>{formatarMoeda(vu)}</td>
+                                  <td style={{ ...tdC, fontWeight: hl?700:400, color: hl?'#17325C':'#1e293b' }}>{formatarMoeda(vu * area)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          {/* 8.2 VEIU */}
+                          {benfs.length > 0 && (
+                            <>
+                              <SecHeader num="8.2" titulo="Valor das Edificações — CUB R8N Depreciado (VEIU)" />
+                              <div style={{ overflowX: 'auto', marginTop: 4 }}>
+                                <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '7px' }}>
+                                  <thead>
+                                    <tr style={{ background: '#2347C6' }}>
+                                      {(['Descrição','Padrão','CUB R8N','Pc','Ac (m²)','Ir','R','Ie','%v','Ka','Estado','Ec','K','Foc','Vb (R$)'] as string[]).map((h,i,a) => (
+                                        <th key={h} style={{ padding: '3px 4px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: i<2?'left':'center', borderRight: i<a.length-1?'0.5px solid #475e9b':'none', whiteSpace: 'nowrap' }}>{h}</th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {benfs.map((b: any, i: number) => {
+                                      const cubVal = pnEv(b.cub)
+                                      const acVal  = pnEv(b.area)
+                                      const ieVal  = pnEv(b.idadeReal)
+                                      const tdB: React.CSSProperties = { padding: '2.5px 4px', fontSize: '6.5px', border: '0.5px solid #C9D3E6', textAlign: 'center', whiteSpace: 'nowrap' }
+                                      return (
+                                        <tr key={i} style={{ background: i%2===0?'#fff':'#f8fafc' }}>
+                                          <td style={{ ...tdB, textAlign: 'left', maxWidth: 120 }}>{b.descricao || `Benfeitoria ${i+1}`}</td>
+                                          <td style={{ ...tdB, textAlign: 'left' }}>{b.padrao || '—'}</td>
+                                          <td style={tdB}>{cubVal > 0 ? formatarMoeda(cubVal) : '—'}</td>
+                                          <td style={tdB}>{b.Pc?.toFixed(3).replace('.', ',') || '—'}</td>
+                                          <td style={tdB}>{acVal > 0 ? acVal.toLocaleString('pt-BR') : '—'}</td>
+                                          <td style={tdB}>{b.Ir || '—'}</td>
+                                          <td style={tdB}>{b.R != null ? (b.R*100).toFixed(0).replace('.', ',')+'%' : '—'}</td>
+                                          <td style={tdB}>{ieVal > 0 ? ieVal : '—'}</td>
+                                          <td style={tdB}>{b.pctVida != null ? b.pctVida.toFixed(1).replace('.', ',')+'%' : '—'}</td>
+                                          <td style={tdB}>{b.Ka?.toFixed(3).replace('.', ',') || '—'}</td>
+                                          <td style={tdB}>{b.estadoConservacao || '—'}</td>
+                                          <td style={tdB}>{b.Ec != null ? (b.Ec*100).toFixed(2).replace('.', ',')+'%' : '—'}</td>
+                                          <td style={tdB}>{b.K?.toFixed(3).replace('.', ',') || '—'}</td>
+                                          <td style={tdB}>{b.Foc?.toFixed(4).replace('.', ',') || '—'}</td>
+                                          <td style={{ ...tdB, fontWeight: 700, color: '#17325C', borderRight: 'none' }}>{formatarMoeda(b.valor || 0)}</td>
+                                        </tr>
+                                      )
+                                    })}
+                                    <tr style={{ background: '#1a3564' }}>
+                                      <td colSpan={14} style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'right', border: '0.5px solid #333' }}>Total das edificações</td>
+                                      <td style={{ padding: '3px 5px', fontSize: '7.5px', fontWeight: 700, color: '#fff', textAlign: 'center', border: '0.5px solid #333' }}>{formatarMoeda(evSnap.valorBenfeitorias || 0)}</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            </>
+                          )}
+
+                        </>
+                      )
+                    })()}
               </div>
             </PaginaFlexivel>
-
-            {dados.imagemBenfeitorias && (
-              <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                <CabecalhoLaudo />
-                <div className="mb-8 mt-8">
-                  <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.metodologia}.1 CÁLCULO DAS BENFEITORIAS</h2>
-                  <div className="evitar-quebra"><img src={dados.imagemBenfeitorias} alt="Cálculo das benfeitorias" className="max-w-full border rounded" /></div>
-                </div>
-              </PaginaFlexivel>
-            )}
 
             <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
               <CabecalhoLaudo />
@@ -1865,9 +2276,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               </Pagina>
             ) : null}
 
-            {dados.calculoPdf ? (
-              <AnexoPdfPaginado file={dados.calculoPdf} titulo={`${sn.anexos}.4. CÁLCULO`} paginaInicial={Number(proximaPagina())} dataLaudo={dados.dataLaudo} onPageCount={setCalculoNumPages} larguraPagina={620} />
-            ) : null}
+
 
             {/* Rodapé único ao final do documento */}
             <div className="mt-10 pt-3">

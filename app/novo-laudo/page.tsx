@@ -5,14 +5,12 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import MenuEtapas from '../components/formulario/MenuEtapas'
 import NavegacaoEtapas from '../components/formulario/NavegacaoEtapas'
-import Etapa01A06 from '../components/formulario/Etapa01A06'
+import Etapa01A06Simpl from '../components/formulario/simplificado/Etapa01A06Simpl'
 import EtapaAcabamentos from '../components/formulario/EtapaAcabamentos'
 import EtapaConsideracoesMercado from '../components/formulario/EtapaConsideracoesMercado'
 import EtapaGlossario from '../components/formulario/EtapaGlossario'
-import EtapaMetodologiaCalculos from '../components/formulario/EtapaMetodologiaCalculos'
 import EtapaCalculoCDDM from '../components/formulario/EtapaCalculoCDDM'
 import EtapaCalculoEvolutivo from '../components/formulario/EtapaCalculoEvolutivo'
-import EtapaCalculoBenfeitorias from '../components/formulario/EtapaCalculoBenfeitorias'
 import EtapaValorImovel from '../components/formulario/EtapaValorImovel'
 import EtapaFundamentacaoPrecisao from '../components/formulario/EtapaFundamentacaoPrecisao'
 import EtapaConclusao from '../components/formulario/EtapaConclusao'
@@ -40,7 +38,6 @@ export default function NovoLaudoPage() {
     modoValorImovel: 'separado' as 'separado' | 'total',
     valorTotal: '',
     _refDocPdf:  undefined as string | undefined,
-    _refCalcPdf: undefined as string | undefined,
     _refLocComp: undefined as string | undefined,
     _refImgBenf: undefined as string | undefined,
     padraoCDDM: '',
@@ -88,6 +85,8 @@ export default function NovoLaudoPage() {
     quantidadeElementos: '',
     caracteristicasTerreno: '',
     imagemBenfeitorias: '',
+    fatoresCDDMAtivos: { local: true, padrao: true, foc: true, andar: true, vaga: true } as { local: boolean; padrao: boolean; foc: boolean; andar: boolean; vaga: boolean },
+    tipoImovelCDDM: '' as '' | 'isolado' | 'fracao',
     valorTerreno: '',
     valorBenfeitorias: '',
     fatorComercializacao: '1,00',
@@ -100,7 +99,6 @@ export default function NovoLaudoPage() {
     responsavelRegistro: '',
     documentacaoPdf: '',
     localizacaoComparativos: '',
-    calculoPdf: '',
   })
 
   const [fatoresSelecionados, setFatoresSelecionados] = useState<string[]>([])
@@ -257,9 +255,8 @@ export default function NovoLaudoPage() {
           })
         )
 
-        const [docPdf, calcPdf, locComp, imgBenf] = await Promise.all([
+        const [docPdf, locComp, imgBenf] = await Promise.all([
           resolverRef(laudoSalvo.documentacaoPdf || ''),
-          resolverRef(laudoSalvo.calculoPdf || ''),
           resolverRef(laudoSalvo.localizacaoComparativos || ''),
           resolverRef(laudoSalvo.imagemBenfeitorias || ''),
         ])
@@ -270,12 +267,10 @@ export default function NovoLaudoPage() {
           tipoLaudo: 'detalhado' as const,  // laudos abertos no form detalhado são sempre detalhados
           croquis: croquisResolvidos,
           documentacaoPdf: docPdf,
-          calculoPdf: calcPdf,
-          localizacaoComparativos: locComp,
+            localizacaoComparativos: locComp,
           imagemBenfeitorias: imgBenf,
           // Guarda as refs originais para não re-salvar no próximo save
           _refDocPdf:  laudoSalvo.documentacaoPdf?.startsWith('__ref__:') ? laudoSalvo.documentacaoPdf : undefined,
-          _refCalcPdf: laudoSalvo.calculoPdf?.startsWith('__ref__:')      ? laudoSalvo.calculoPdf      : undefined,
           _refLocComp: laudoSalvo.localizacaoComparativos?.startsWith('__ref__:') ? laudoSalvo.localizacaoComparativos : undefined,
           _refImgBenf: laudoSalvo.imagemBenfeitorias?.startsWith('__ref__:')      ? laudoSalvo.imagemBenfeitorias      : undefined,
           melhoramentosPublicos: laudoSalvo.melhoramentosPublicos || prev.melhoramentosPublicos,
@@ -303,6 +298,17 @@ export default function NovoLaudoPage() {
     } else {
       setForm({ ...form, [name]: value })
     }
+  }
+
+  function toggleFatorCDDM(fator: 'local' | 'padrao' | 'foc' | 'andar' | 'vaga') {
+    setForm((prev: any) => ({
+      ...prev,
+      fatoresCDDMAtivos: { ...prev.fatoresCDDMAtivos, [fator]: !prev.fatoresCDDMAtivos?.[fator] },
+    }))
+  }
+
+  function setTipoImovelCDDM(tipo: 'isolado' | 'fracao') {
+    setForm((prev: any) => ({ ...prev, tipoImovelCDDM: tipo }))
   }
 
   function handleMelhoramentosPublicosChange(campo: string, valor: string) {
@@ -371,19 +377,8 @@ export default function NovoLaudoPage() {
     setForm((prev) => ({ ...prev, croquis: prev.croquis.filter((_: any, i: number) => i !== index) }))
   }
 
-  async function handleImagemBenfeitorias(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    try {
-      const base64 = await comprimirImagem(file, 1400, 0.82)
-      setForm((prev) => ({ ...prev, imagemBenfeitorias: base64 }))
-    } catch (error) {
-      console.error(error)
-      alert('Erro ao processar a imagem.')
-    }
-  }
 
-  async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>, campo: 'documentacaoPdf' | 'calculoPdf') {
+  async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>, campo: 'documentacaoPdf') {
     const file = e.target.files?.[0]
     if (!file) return
     try {
@@ -394,7 +389,7 @@ export default function NovoLaudoPage() {
         reader.readAsDataURL(file)
       })
       // Limpa a ref anterior para forçar novo upload no save
-      const refField = campo === 'documentacaoPdf' ? '_refDocPdf' : '_refCalcPdf'
+      const refField = '_refDocPdf'
       setForm((prev) => ({ ...prev, [campo]: base64, [refField]: undefined }))
     } catch (error) {
       console.error(error)
@@ -402,7 +397,7 @@ export default function NovoLaudoPage() {
     }
   }
 
-  function onRemoverAnexo(campo: 'documentacaoPdf' | 'calculoPdf' | 'localizacaoComparativos') {
+  function onRemoverAnexo(campo: 'documentacaoPdf' | 'localizacaoComparativos') {
     setForm((prev) => ({ ...prev, [campo]: '' }))
   }
 
@@ -590,7 +585,7 @@ export default function NovoLaudoPage() {
             form.caracteristicasTerreno
         )
       case '9.2':
-        return Boolean(form.imagemBenfeitorias)
+        return true
       case '10':
         return Boolean(
           form.valorTerreno.trim() &&
@@ -623,7 +618,7 @@ export default function NovoLaudoPage() {
 
   function obterStatusLaudo(): 'em_preenchimento' | 'finalizado' {
     const etapasObrigatorias: EtapaId[] = [
-      '1-6', '7', '8', '9', '9.1', '9.2', '10', '11', '12', '13', '14',
+      '1-6', '7', '8', '9', '9.1', '10', '11', '12', '13', '14',
     ]
     const todasConcluidas = etapasObrigatorias.every((etapa) => etapaConcluida(etapa))
     return todasConcluidas ? 'finalizado' : 'em_preenchimento'
@@ -730,7 +725,6 @@ export default function NovoLaudoPage() {
       }
 
       const docPdf  = await salvarCampo(form._refDocPdf,  `anexo:${laudoUuid}:documentacaoPdf`,         form.documentacaoPdf || '')
-      const calcPdf = await salvarCampo(form._refCalcPdf, `anexo:${laudoUuid}:calculoPdf`,              form.calculoPdf || '')
       const locComp = await salvarCampo(form._refLocComp, `anexo:${laudoUuid}:localizacaoComparativos`, form.localizacaoComparativos || '')
       const imgBenf = await salvarCampo(form._refImgBenf, `anexo:${laudoUuid}:imagemBenfeitorias`,      form.imagemBenfeitorias || '')
 
@@ -740,7 +734,6 @@ export default function NovoLaudoPage() {
         id: laudoUuid,
         croquis: croquisComRef,
         documentacaoPdf: docPdf,
-        calculoPdf: calcPdf,
         localizacaoComparativos: locComp,
         imagemBenfeitorias: imgBenf,
         fatoresSelecionados,
@@ -884,7 +877,7 @@ export default function NovoLaudoPage() {
           )}
 
           {etapaAtual === '1-6' && (
-            <Etapa01A06
+            <Etapa01A06Simpl
               form={form}
               handleChange={handleChange}
               handleMelhoramentosPublicosChange={handleMelhoramentosPublicosChange}
@@ -899,7 +892,11 @@ export default function NovoLaudoPage() {
               handleCroqui={handleCroqui}
               removerCroqui={removerCroqui}
               setForm={setForm}
-              tipoLaudo={form.tipoLaudo as 'detalhado' | 'simplificado' | undefined}
+              tipoLaudo="detalhado"
+              fatoresCDDMAtivos={(form as any).fatoresCDDMAtivos}
+              toggleFatorCDDM={toggleFatorCDDM}
+              tipoImovelCDDM={(form as any).tipoImovelCDDM}
+              setTipoImovelCDDM={setTipoImovelCDDM}
             />
           )}
 
@@ -920,27 +917,11 @@ export default function NovoLaudoPage() {
           {etapaAtual === '9' && <EtapaGlossario />}
 
           {etapaAtual === '9.1' && (
-            (form.tipoLaudo === 'simplificado' && form.metodoAvaliacao === 'evolutivo' && form.tratamentoDados === 'tratamento_por_fatores')
+            (form.metodoAvaliacao === 'evolutivo' && form.tratamentoDados === 'tratamento_por_fatores')
               ? <EtapaCalculoEvolutivo form={form} setForm={setForm} />
-              : form.tipoLaudo === 'simplificado'
-                ? <EtapaCalculoCDDM form={form} setForm={setForm} fatoresCDDMAtivos={(form as any).fatoresCDDMAtivos} />
-                : (
-                  <EtapaMetodologiaCalculos
-                    form={form}
-                    handleChange={handleChange}
-                    fatoresDisponiveis={fatoresDisponiveis}
-                    fatoresSelecionados={fatoresSelecionados}
-                    toggleFator={toggleFator}
-                  />
-                )
+              : <EtapaCalculoCDDM form={form} setForm={setForm} fatoresCDDMAtivos={(form as any).fatoresCDDMAtivos} />
           )}
 
-          {etapaAtual === '9.2' && !(form.tipoLaudo === 'simplificado' && form.metodoAvaliacao === 'evolutivo' && form.tratamentoDados === 'tratamento_por_fatores') && (
-            <EtapaCalculoBenfeitorias
-              form={form}
-              handleImagemBenfeitorias={handleImagemBenfeitorias}
-            />
-          )}
 
           {etapaAtual === '10' && (
             <EtapaValorImovel
