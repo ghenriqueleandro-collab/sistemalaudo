@@ -960,24 +960,18 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
           ))}
         </View>
 
-        {/* 11.1 — Tabela de fundamentação */}
-        <SecHeader num={`${secGraus}.1`} titulo={isEvolutivo ? 'Grau de Fundamentação — Método Evolutivo' : 'Grau de Fundamentação — Tratamento por Fatores'} />
+        {/* 11.1 — Tabela de fundamentação — Terreno/Fatores */}
+        <SecHeader num={`${secGraus}.1`} titulo="Grau de Fundamentação — Tratamento por Fatores" />
         {(()=>{
-          const fund = (isEvolutivo ? dados.fundamentacaoEvolutivo : dados.fundamentacao || []) as any[]
-          const itensPadrao = isEvolutivo ? [
-            { id: '01', desc: 'Estimativa do valor do terreno', g3: 'Grau III no método comparativo ou involutivo', g2: 'Grau II no método comparativo ou involutivo', g1: 'Grau I no método comparativo ou involutivo' },
-            { id: '02', desc: 'Estimativa dos Custos de Reedição', g3: 'Grau III no método da quantificação de custo', g2: 'Grau II no método da quantificação de custo', g1: 'Grau I no método da quantificação de custo' },
-            { id: '03', desc: 'Fator de Comercialização', g3: 'Inferido em mercado semelhante', g2: 'Justificado', g1: 'Arbitrado' },
-          ] : [
+          const fund = (dados.fundamentacao || []) as any[]
+          const itensPadrao = [
             { id: '01', desc: 'Caracterização do imóvel avaliando', g3: 'Completa quanto a todos os fatores analisados', g2: 'Completa quanto aos fatores utilizados no tratamento', g1: 'Adoção de situação paradigma' },
             { id: '02', desc: 'Quantidade mínima de dados de mercado efetivamente utilizados', g3: '12', g2: '5', g1: '3' },
             { id: '03', desc: 'Identificação dos dados de mercado', g3: 'Informações de todas as características com foto e características observadas pelo autor do laudo', g2: 'Informações relativas a todas as características dos dados analisados', g1: 'Informações relativas às características dos fatores utilizados' },
             { id: '04', desc: 'Intervalo admissível de ajuste para o conjunto de fatores', g3: '0,80 a 1,25', g2: '0,50 a 2,00', g1: '0,40 a 2,50' },
           ]
           const somaPts = fund.reduce((acc: number, f: any) => acc + gv(f), 0)
-          const grauFinal = isEvolutivo
-            ? (somaPts >= 8 ? 'III' : somaPts >= 5 ? 'II' : somaPts >= 3 ? 'I' : '–')
-            : (somaPts >= 10 ? 'III' : somaPts >= 6 ? 'II' : somaPts >= 4 ? 'I' : '–')
+          const grauFinal = somaPts >= 10 ? 'III' : somaPts >= 6 ? 'II' : somaPts >= 4 ? 'I' : '–'
           return (
             <View style={s.grausTable}>
               <View style={s.grausHead}>
@@ -1007,22 +1001,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                 <Text style={{flex:1.7,fontSize:6.5,color:AZUL,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA,fontFamily:'Helvetica-Bold'}}>10</Text>
                 <Text style={{flex:1.7,fontSize:6.5,color:AZUL,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA,fontFamily:'Helvetica-Bold'}}>6</Text>
                 <Text style={{flex:1.7,fontSize:6.5,color:AZUL,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA,fontFamily:'Helvetica-Bold'}}>4</Text>
-                <Text style={{width:44,fontSize:6,color:AZUL,textAlign:'center',paddingVertical:3,fontFamily:'Helvetica-Bold'}}>—</Text>
-              </View>
-              <View style={{flexDirection:'row',borderTopWidth:0.5,borderColor:CINZA,backgroundColor:AZULLT}}>
-                <Text style={{flex:1,fontSize:6,color:AZUL,paddingVertical:3,paddingHorizontal:4,borderRightWidth:0.5,borderColor:CINZA,fontFamily:'Helvetica-Bold'}}>Itens obrigatórios</Text>
-                <Text style={{flex:1.7,fontSize:5.5,color:TEXTO,paddingVertical:3,paddingHorizontal:3,textAlign:'center',borderRightWidth:0.5,borderColor:CINZA,lineHeight:1.3}}>2 e 4 no grau III, demais mín. grau II</Text>
-                <Text style={{flex:1.7,fontSize:5.5,color:TEXTO,paddingVertical:3,paddingHorizontal:3,textAlign:'center',borderRightWidth:0.5,borderColor:CINZA,lineHeight:1.3}}>2 e 4 mín. grau II, demais mín. grau I</Text>
-                <Text style={{flex:1.7,fontSize:5.5,color:TEXTO,paddingVertical:3,paddingHorizontal:3,textAlign:'center',borderRightWidth:0.5,borderColor:CINZA,lineHeight:1.3}}>Todos mín. grau I</Text>
-                <Text style={{width:44,fontSize:6,color:AZUL,textAlign:'center',paddingVertical:3}}>—</Text>
-              </View>
-              <View style={s.grausSomaRow}>
-                <Text style={s.grausSomaLbl}>Somatória de pontos</Text>
-                <Text style={s.grausSomaVal}>{somaPts}</Text>
-              </View>
-              <View style={s.grausResRow}>
-                <Text style={s.grausResLbl}>Grau de fundamentação obtido</Text>
-                <Text style={s.grausResVal}>{grauFinal}</Text>
+                <Text style={{flex:0.9,fontSize:6.5,color:AZUL,textAlign:'center',paddingVertical:3,fontFamily:'Helvetica-Bold'}}>{somaPts} → {grauFinal}</Text>
               </View>
             </View>
           )
@@ -1031,8 +1010,56 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
           Para menos de 5 dados de mercado, o intervalo admissível de ajuste é de 0,80 a 1,25. (ABNT NBR 14653-2:2011)
         </Text>
 
+        {/* 11.2 — Tabela de fundamentação — Método Evolutivo (apenas quando evolutivo) */}
+        {isEvolutivo && (()=>{
+          const fundEv = (dados.fundamentacaoEvolutivo || []) as any[]
+          const itensEv = [
+            { id: '01', desc: 'Estimativa do valor do terreno', g3: 'Grau III no método comparativo ou involutivo', g2: 'Grau II no método comparativo ou involutivo', g1: 'Grau I no método comparativo ou involutivo' },
+            { id: '02', desc: 'Estimativa dos Custos de Reedição', g3: 'Grau III no método da quantificação de custo', g2: 'Grau II no método da quantificação de custo', g1: 'Grau I no método da quantificação de custo' },
+            { id: '03', desc: 'Fator de Comercialização', g3: 'Inferido em mercado semelhante', g2: 'Justificado', g1: 'Arbitrado' },
+          ]
+          const somaPtsEv = fundEv.reduce((acc: number, f: any) => acc + gv(f), 0)
+          const grauFinalEv = somaPtsEv >= 8 ? 'III' : somaPtsEv >= 5 ? 'II' : somaPtsEv >= 3 ? 'I' : '–'
+          return (
+            <>
+              <SecHeader num={`${secGraus}.2`} titulo="Grau de Fundamentação — Método Evolutivo" />
+              <View style={s.grausTable}>
+                <View style={s.grausHead}>
+                  <Text style={s.grausThIdx}>Item</Text>
+                  <Text style={s.grausThDesc}>Descrição</Text>
+                  <Text style={s.grausThGrau}>Grau III</Text>
+                  <Text style={s.grausThGrau}>Grau II</Text>
+                  <Text style={s.grausThGrau}>Grau I</Text>
+                  <Text style={s.grausThPts}>Pontos obtidos</Text>
+                </View>
+                {itensEv.map((it, idx) => {
+                  const itemAtual = fundEv[idx]
+                  const grauAtual = itemAtual?.grau || ''
+                  return (
+                    <View key={it.id} style={s.grausItemRow}>
+                      <Text style={s.grausTdIdx}>{it.id}</Text>
+                      <Text style={s.grausTdDesc}>{it.desc}</Text>
+                      <Text style={grauAtual === 'III' ? s.grausTdGrauOk : s.grausTdGrau}>{it.g3}</Text>
+                      <Text style={grauAtual === 'II' ? s.grausTdGrauOk : s.grausTdGrau}>{it.g2}</Text>
+                      <Text style={grauAtual === 'I' ? s.grausTdGrauOk : s.grausTdGrau}>{it.g1}</Text>
+                      <Text style={s.grausTdPts}>{itemAtual ? (gv(itemAtual) || '–') : '–'}</Text>
+                    </View>
+                  )
+                })}
+                <View style={{flexDirection:'row',borderTopWidth:0.5,borderColor:CINZA,backgroundColor:AZULLT}}>
+                  <Text style={{flex:1,fontSize:6,color:AZUL,paddingVertical:3,paddingHorizontal:4,borderRightWidth:0.5,borderColor:CINZA,fontFamily:'Helvetica-Bold'}}>Pontos mínimos</Text>
+                  <Text style={{flex:1.7,fontSize:6.5,color:AZUL,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA,fontFamily:'Helvetica-Bold'}}>8</Text>
+                  <Text style={{flex:1.7,fontSize:6.5,color:AZUL,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA,fontFamily:'Helvetica-Bold'}}>5</Text>
+                  <Text style={{flex:1.7,fontSize:6.5,color:AZUL,textAlign:'center',paddingVertical:3,borderRightWidth:0.5,borderColor:CINZA,fontFamily:'Helvetica-Bold'}}>3</Text>
+                  <Text style={{flex:0.9,fontSize:6.5,color:AZUL,textAlign:'center',paddingVertical:3,fontFamily:'Helvetica-Bold'}}>{somaPtsEv} → {grauFinalEv}</Text>
+                </View>
+              </View>
+            </>
+          )
+        })()}
+
         {/* 11.2 — Tabela de precisão */}
-        <SecHeader num={`${secGraus}.2`} titulo="Grau de Precisão — Tratamento por Fatores" />
+        <SecHeader num={isEvolutivo ? `${secGraus}.3` : `${secGraus}.2`} titulo="Grau de Precisão — Tratamento por Fatores" />
         <View style={s.precTable}>
           <View style={s.precHeadRow}>
             <Text style={s.precThGrau}>Grau</Text>

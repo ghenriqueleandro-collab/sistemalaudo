@@ -1613,7 +1613,66 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                             Para menos de 5 dados de mercado, o intervalo admissível de ajuste é de 0,80 a 1,25. (ABNT NBR 14653-2:2011)
                           </div>
 
-                          <SecHeader num="10.2" titulo="Grau de Precisão — Tratamento por Fatores" />
+
+                          {/* Tabela evolutivo: aparece quando método é evolutivo */}
+                          {dados.metodoAvaliacao === 'evolutivo' && (() => {
+                            const fundEv = (dados.fundamentacaoEvolutivo || []) as any[]
+                            const gv2 = (i: any) => i.pontos || (i.grau === 'III' ? 3 : i.grau === 'II' ? 2 : i.grau === 'I' ? 1 : 0)
+                            const somaPtsEv = fundEv.reduce((acc: number, f: any) => acc + gv2(f), 0)
+                            const grauFinalEv = somaPtsEv >= 8 ? 'III' : somaPtsEv >= 5 ? 'II' : somaPtsEv >= 3 ? 'I' : '–'
+                            const itensEv = [
+                              { id: '01', desc: 'Estimativa do valor do terreno', g3: 'Grau III no método comparativo ou involutivo', g2: 'Grau II no método comparativo ou involutivo', g1: 'Grau I no método comparativo ou involutivo' },
+                              { id: '02', desc: 'Estimativa dos Custos de Reedição', g3: 'Grau III no método da quantificação de custo', g2: 'Grau II no método da quantificação de custo', g1: 'Grau I no método da quantificação de custo' },
+                              { id: '03', desc: 'Fator de Comercialização', g3: 'Inferido em mercado semelhante', g2: 'Justificado', g1: 'Arbitrado' },
+                            ]
+                            const thBase: React.CSSProperties = { fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px 4px', borderRight: '0.5px solid #475e9b' }
+                            const tdBase: React.CSSProperties = { fontSize: '7px', padding: '3px 4px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', lineHeight: 1.3, verticalAlign: 'middle' }
+                            const tdActive: React.CSSProperties = { ...tdBase, background: '#dbeafe', color: '#1a3564', fontWeight: 700 }
+                            const tdPts: React.CSSProperties = { width: '7%', fontSize: '8px', fontWeight: 700, color: '#1a3564', textAlign: 'center', padding: '3px 4px', background: '#EAF0FB', borderRight: 'none' }
+                            return (
+                              <>
+                                <SecHeader num="10.2" titulo="Grau de Fundamentação — Método Evolutivo" />
+                                <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '7px', marginTop: '4px', marginBottom: '6px' }}>
+                                  <thead>
+                                    <tr style={{ background: '#1a3564' }}>
+                                      <th style={{ ...thBase, width: '4%' }}>Item</th>
+                                      <th style={{ ...thBase, width: '22%', textAlign: 'left' }}>Descrição</th>
+                                      <th style={{ ...thBase, width: '22%' }}>Grau III</th>
+                                      <th style={{ ...thBase, width: '22%' }}>Grau II</th>
+                                      <th style={{ ...thBase, width: '22%' }}>Grau I</th>
+                                      <th style={{ ...thBase, width: '8%', borderRight: 'none' }}>Pontos</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {itensEv.map((it, idx) => {
+                                      const grauAtual = fundEv[idx]?.grau || ''
+                                      const pts = gv2(fundEv[idx] || {})
+                                      return (
+                                        <tr key={it.id} style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                          <td style={{ ...tdBase, width: '4%', fontWeight: 700 }}>{it.id}</td>
+                                          <td style={{ ...tdBase, textAlign: 'left' }}>{it.desc}</td>
+                                          <td style={grauAtual === 'III' ? tdActive : tdBase}>{it.g3}</td>
+                                          <td style={grauAtual === 'II'  ? tdActive : tdBase}>{it.g2}</td>
+                                          <td style={grauAtual === 'I'   ? tdActive : tdBase}>{it.g1}</td>
+                                          <td style={tdPts}>{grauAtual ? (pts || '–') : '–'}</td>
+                                        </tr>
+                                      )
+                                    })}
+                                    <tr style={{ borderTop: '0.5px solid #C9D3E6', background: '#EAF0FB' }}>
+                                      <td colSpan={5} style={{ ...tdBase, fontWeight: 700, color: '#1a3564', textAlign: 'right', borderRight: '0.5px solid #C9D3E6' }}>Somatória</td>
+                                      <td style={tdPts}>{somaPtsEv}</td>
+                                    </tr>
+                                    <tr style={{ borderTop: '0.5px solid #C9D3E6', background: '#EAF0FB' }}>
+                                      <td colSpan={5} style={{ ...tdBase, fontWeight: 700, color: '#1a3564', textAlign: 'right', borderRight: '0.5px solid #C9D3E6' }}>Grau de Fundamentação (Evolutivo)</td>
+                                      <td style={{ ...tdPts, fontSize: '9px' }}>{grauFinalEv}</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </>
+                            )
+                          })()}
+
+                          <SecHeader num={dados.metodoAvaliacao === 'evolutivo' ? '10.3' : '10.2'} titulo="Grau de Precisão — Tratamento por Fatores" />
                           <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '7px', marginTop: '4px' }}>
                             <thead>
                               <tr style={{ background: '#1a3564' }}>

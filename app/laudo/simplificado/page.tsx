@@ -544,8 +544,15 @@ export default function LaudoSimplificadoPage() {
     return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
   }
 
-  const exibirTabelaFatoresTerreno = form.metodoAvaliacao === 'comparativo' && form.tratamentoDados === 'tratamento_por_fatores'
-  const exibirTabelaInferencia = form.metodoAvaliacao === 'comparativo' && form.tratamentoDados === 'inferencia_estatistica'
+  // Tabela terreno (fatores): comparativo OU evolutivo com tratamento por fatores
+  const exibirTabelaFatoresTerreno =
+    form.tratamentoDados === 'tratamento_por_fatores' &&
+    (form.metodoAvaliacao === 'comparativo' || form.metodoAvaliacao === 'evolutivo')
+  // Tabela inferência: comparativo OU evolutivo com inferência estatística
+  const exibirTabelaInferencia =
+    form.tratamentoDados === 'inferencia_estatistica' &&
+    (form.metodoAvaliacao === 'comparativo' || form.metodoAvaliacao === 'evolutivo')
+  // Tabela Método Evolutivo: sempre que método for evolutivo
   const exibirTabelaMetodoEvolutivo = form.metodoAvaliacao === 'evolutivo'
 
   const somaFundamentacao = fundamentacao.reduce((acc, f) => {
@@ -845,7 +852,12 @@ export default function LaudoSimplificadoPage() {
                 <EtapaCalculoEvolutivo form={form} setForm={setForm} />
               </EtapaEvolutivoErrorBoundary>
             )
-              : <EtapaCalculoCDDM form={form} setForm={setForm} fatoresCDDMAtivos={(form as any).fatoresCDDMAtivos} />
+              : <EtapaCalculoCDDM
+                  form={form}
+                  setForm={setForm}
+                  fatoresCDDMAtivos={(form as any).fatoresCDDMAtivos}
+                  onSave={(elems: any[]) => setForm((prev: any) => ({ ...prev, elementosComparativos: elems }))}
+                />
           )}
 
           {etapaAtual === '11' && (
