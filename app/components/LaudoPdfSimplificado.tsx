@@ -998,7 +998,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                     <Text style={grauAtual === 'III' ? s.grausTdGrauOk : s.grausTdGrau}>{it.g3}</Text>
                     <Text style={grauAtual === 'II' ? s.grausTdGrauOk : s.grausTdGrau}>{it.g2}</Text>
                     <Text style={grauAtual === 'I' ? s.grausTdGrauOk : s.grausTdGrau}>{it.g1}</Text>
-                    <Text style={s.grausTdPts}>{itemAtual?.pontos ?? '–'}</Text>
+                    <Text style={s.grausTdPts}>{itemAtual ? (gv(itemAtual) || '–') : '–'}</Text>
                   </View>
                 )
               })}
