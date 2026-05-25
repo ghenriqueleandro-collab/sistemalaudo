@@ -1819,9 +1819,6 @@ export function LaudoPdf({
           </View>
         </Page>
       )}
-    </Document>
-  )
-}
         {/* Nota final */}
         <P style={{ fontStyle: 'italic', fontSize: 7, color: '#475569', marginTop: 4 }}>
           * Quando a amplitude do intervalo de confiança ultrapassar 50% não há classificação do resultado quanto à precisão e é necessária justificativa com base no diagnóstico do mercado. (ABNT 14653-2 - 2011 - Item 13.4)
