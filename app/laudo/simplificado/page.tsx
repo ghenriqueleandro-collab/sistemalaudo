@@ -17,6 +17,7 @@ import EtapaGarantiaSimpl from '../../components/formulario/simplificado/EtapaGa
 import EtapaAnexosAssinaturaSimpl from '../../components/formulario/simplificado/EtapaAnexosAssinaturaSimpl'
 import { EtapaIdSimpl } from '../../components/formulario/simplificado/etapas-simplificado'
 import AppShell from '../../components/AppShell'
+import EtapaClienteStatus from '../../components/formulario/EtapaClienteStatus'
 
 
 
@@ -156,7 +157,7 @@ export default function LaudoSimplificadoPage() {
   const [acabamentos, setAcabamentos] = useState([{ ambiente: '', acabamento: '' }])
   const [resumoMercado, setResumoMercado] = useState([{ campo: '', descricao: '' }])
   const [outrosFatoresImovel, setOutrosFatoresImovel] = useState([{ descricao: '', valor: '' }])
-  const [etapaAtual, setEtapaAtual] = useState<EtapaIdSimpl>('1-6')
+  const [etapaAtual, setEtapaAtual] = useState<EtapaIdSimpl>('cliente-status')
   const [laudoId, setLaudoId] = useState('')
   const [editandoLaudoExistente, setEditandoLaudoExistente] = useState(false)
   const [formPronto, setFormPronto] = useState(false)
@@ -572,6 +573,8 @@ export default function LaudoSimplificadoPage() {
 
   function etapaConcluida(etapa: EtapaIdSimpl) {
     switch (etapa) {
+      case 'cliente-status':
+        return true
       case '1-6':
         return Boolean(
           form.endereco.trim() &&
@@ -812,6 +815,14 @@ export default function LaudoSimplificadoPage() {
 
         {/* ── FORMULÁRIO ── */}
         <div className="space-y-6">
+
+          {etapaAtual === 'cliente-status' && (
+            <EtapaClienteStatus
+              form={form}
+              handleChange={handleChange}
+              setForm={setForm}
+            />
+          )}
 
           {etapaAtual === '1-6' && (
             <Etapa01A06Simpl

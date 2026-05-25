@@ -20,6 +20,7 @@ import EtapaGarantia from '../components/formulario/EtapaGarantia'
 import EtapaAnexosAssinatura from '../components/formulario/EtapaAnexosAssinatura'
 import { EtapaId } from '../components/formulario/etapas'
 import AppShell from '../components/AppShell'
+import EtapaClienteStatus from '../components/formulario/EtapaClienteStatus'
 
 
 export default function NovoLaudoPage() {
@@ -130,7 +131,7 @@ export default function NovoLaudoPage() {
   const [resumoMercado, setResumoMercado] = useState([{ campo: '', descricao: '' }])
   const [outrosFatoresImovel, setOutrosFatoresImovel] = useState([{ descricao: '', valor: '' }])
   const [valoresAdicionais, setValoresAdicionais] = useState<{ descricao: string; valor: string }[]>([])
-  const [etapaAtual, setEtapaAtual] = useState<EtapaId>('1-6')
+  const [etapaAtual, setEtapaAtual] = useState<EtapaId>('cliente-status')
   const [laudoId, setLaudoId] = useState('')
   const [editandoLaudoExistente, setEditandoLaudoExistente] = useState(false)
   const [formPronto, setFormPronto] = useState(false)
@@ -562,6 +563,8 @@ export default function NovoLaudoPage() {
 
   function etapaConcluida(etapa: EtapaId) {
     switch (etapa) {
+      case 'cliente-status':
+        return true
       case '1-6':
         return Boolean(
           form.endereco.trim() &&
@@ -846,6 +849,14 @@ export default function NovoLaudoPage() {
 
         {/* ── FORMULÁRIO FULL-WIDTH ── */}
         <form onSubmit={handleSubmit} className="space-y-6">
+
+          {etapaAtual === 'cliente-status' && (
+            <EtapaClienteStatus
+              form={form}
+              handleChange={handleChange}
+              setForm={setForm}
+            />
+          )}
 
           {etapaAtual === '1-6' && (
             <Etapa01A06
