@@ -1395,7 +1395,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                       }
 
                       const linhas = [
-                        r3('Tipo', el.tipo, 'Data', el.data ? formatarDataBR(el.data) : '', 'Empreendimento', el.empreendimento),
+                        r3('Tipo', el.tipo, 'Data', el.data ? formatarData(el.data) : '', 'Empreendimento', el.empreendimento),
                         r1('Logradouro', el.logradouro || el.endereco),
                         r3('Bairro', el.bairro, 'Cidade · UF', cidadeUF, 'Distância', el.distanciaAvaliando || el.distancia),
                         r1('Coordenadas', el.coordenadas, { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }),
@@ -1421,7 +1421,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                               {isEvolutivo ? 'ELEMENTO' : 'ELEMENTO COMPARATIVO'} {String(i + 1).padStart(2, '0')}
                             </span>
                             <span style={{ fontSize: '7.5px', color: '#8fa4c7' }}>
-                              {el.fonte || ''}{el.data ? ` • ${formatarDataBR(el.data)}` : ''}
+                              {el.fonte || ''}{el.data ? ` • ${formatarData(el.data)}` : ''}
                             </span>
                           </div>
                           {/* Corpo: campos + foto lateral */}
@@ -1619,12 +1619,12 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     )}
 
                     {/* Seção de cálculo evolutivo */}
-                    {isEvolutivo && evSnap && evSnap.resultado && (() => {
+                    {isEvolutivo && ev && ev.resultado && (() => {
                       const pnEv = (s: any) => { if (!s && s !== 0) return 0; const n = parseFloat(String(s).replace(/[R$\s]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.')); return isNaN(n) ? 0 : n }
-                      const res = evSnap.resultado
-                      const elems = evSnap.elementos || []
-                      const benfs = (evSnap.benfeitorias || []) as any[]
-                      const area = pnEv(evSnap.avaliando?.area)
+                      const res = ev.resultado
+                      const elems = ev.elementos || []
+                      const benfs = (ev.benfeitorias || []) as any[]
+                      const area = pnEv(ev.avaliando?.area)
                       const vuMed = res.media || 0
                       const tdC: React.CSSProperties = { padding: '3px 5px', fontSize: '7.5px', border: '0.5px solid #C9D3E6', textAlign: 'center' }
                       const tdCHl: React.CSSProperties = { ...tdC, background: '#EAF0FB', fontWeight: 700, color: '#17325C' }
@@ -1647,9 +1647,9 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                             </thead>
                             <tbody>
                               {elems.map((el: any, i: number) => {
-                                const nLocalAv = pnEv(evSnap.avaliando?.notaLocal) || 100
-                                const nTopoAv  = pnEv(evSnap.avaliando?.notaTopo)  || 100
-                                const nVisAv   = pnEv(evSnap.avaliando?.notaVis)   || 100
+                                const nLocalAv = pnEv(ev.avaliando?.notaLocal) || 100
+                                const nTopoAv  = pnEv(ev.avaliando?.notaTopo)  || 100
+                                const nVisAv   = pnEv(ev.avaliando?.notaVis)   || 100
                                 const fLoc  = (pnEv(el.fatorLocal)       || 100) > 0 ? nLocalAv / (pnEv(el.fatorLocal)       || 100) : 1
                                 const fTopo = (pnEv(el.fatorTopografia)  || 100) > 0 ? nTopoAv  / (pnEv(el.fatorTopografia)  || 100) : 1
                                 const fVis  = (pnEv(el.fatorVisibilidade)|| 100) > 0 ? nVisAv   / (pnEv(el.fatorVisibilidade)|| 100) : 1
@@ -1757,7 +1757,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                                     })}
                                     <tr style={{ background: '#1a3564' }}>
                                       <td colSpan={14} style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'right', border: '0.5px solid #333' }}>Total das edificações</td>
-                                      <td style={{ padding: '3px 5px', fontSize: '7.5px', fontWeight: 700, color: '#fff', textAlign: 'center', border: '0.5px solid #333' }}>{formatarMoeda(evSnap.valorBenfeitorias || 0)}</td>
+                                      <td style={{ padding: '3px 5px', fontSize: '7.5px', fontWeight: 700, color: '#fff', textAlign: 'center', border: '0.5px solid #333' }}>{formatarMoeda(ev.valorBenfeitorias || 0)}</td>
                                     </tr>
                                   </tbody>
                                 </table>
