@@ -27,6 +27,7 @@ type Props = {
   onRemoverFoto: (index: number) => void
   onReordenarFotos: (origem: number, destino: number) => void
   onRemoverAnexo?: (campo: 'documentacaoPdf' | 'localizacaoComparativos') => void
+  setForm?: React.Dispatch<React.SetStateAction<any>>
 }
 
 
