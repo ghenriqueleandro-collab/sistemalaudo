@@ -91,6 +91,7 @@ export default function NovoLaudoPage() {
     valorBenfeitorias: '',
     fatorComercializacao: '1,00',
     valorLiquidezForcada: '',
+    fatorLiquidacaoForcada: '',
     garantiaClassificacao: '',
     garantiaObservacoes: '',
     dataLaudo: new Date().toISOString().split('T')[0],
@@ -528,6 +529,14 @@ export default function NovoLaudoPage() {
   const valorFinalImovel =
     subtotalImovel * (_parseBR(form.fatorComercializacao || '1') || 1) + somaValoresAdicionais
 
+  // Calcular valorLiquidezForcada a partir do fator
+  const fatorLiqRaw = (form.fatorLiquidacaoForcada || '').replace(',', '.')
+  const fatorLiqNum = parseFloat(fatorLiqRaw)
+  const valorLiquidezForcadaCalc =
+    !isNaN(fatorLiqNum) && fatorLiqNum > 0 && fatorLiqNum < 1
+      ? String(Math.round(Math.round(valorFinalImovel / 100) * 100 * fatorLiqNum / 100) * 100)
+      : (form.valorLiquidezForcada || '')
+
   function formatarMoeda(valor: number) {
     return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
   }
@@ -731,6 +740,7 @@ export default function NovoLaudoPage() {
 
       const payload = {
         ...form,
+        valorLiquidezForcada: valorLiquidezForcadaCalc,
         tipoLaudo: 'detalhado' as const,  // forçado — laudo detalhado nunca salva como simplificado
         id: laudoUuid,
         croquis: croquisComRef,
@@ -969,6 +979,8 @@ export default function NovoLaudoPage() {
             <EtapaConclusao
               valorFinalImovel={valorFinalImovel}
               formatarMoeda={formatarMoeda}
+              form={form}
+              handleChange={handleChange}
             />
           )}
 
