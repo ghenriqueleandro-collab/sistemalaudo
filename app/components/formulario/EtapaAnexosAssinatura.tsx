@@ -222,23 +222,6 @@ export default function EtapaAnexosAssinatura({
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [fotoAmpliada, setFotoAmpliada] = useState<{ preview: string; legenda: string; index: number } | null>(null)
 
-  async function baixarFoto(preview: string, legenda: string, index: number) {
-    try {
-      const res = await fetch(preview)
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = legenda ? `${legenda.replace(/[^a-z0-9]/gi, '_')}.jpg` : `foto_${index + 1}.jpg`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    } catch {
-      alert('Não foi possível baixar a imagem. Tente abrir em nova aba.')
-    }
-  }
-
 useEffect(() => {
   function handleDragOver(e: DragEvent) {
     const container = containerRef.current
