@@ -96,20 +96,7 @@ export default function EtapaConclusao({
           )}
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1.5">Liquidez do imóvel</label>
-          <select
-            name="liquidez"
-            value={form.liquidez || ''}
-            onChange={handleChange}
-            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400 bg-white transition"
-          >
-            <option value="">Selecione...</option>
-            <option value="alta">Alta</option>
-            <option value="media">Media</option>
-            <option value="baixa">Baixa</option>
-          </select>
-        </div>
+
       </div>
 
       <div className="rounded-xl border border-green-200 bg-green-50 p-5">
