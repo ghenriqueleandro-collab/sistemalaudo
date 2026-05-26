@@ -455,7 +455,7 @@ useEffect(() => {
               <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
                 <span>✓</span>
                 <span className="font-medium">Imagem enviada</span>
-                <button type="button" onClick={() => onRemoverAnexo('localizacaoComparativos')}
+                <button type="button" onClick={() => onRemoverAnexo?.('localizacaoComparativos')}
                   className="ml-auto text-xs text-slate-500 hover:text-red-600">Remover</button>
               </div>
               <img src={form.localizacaoComparativos} alt="Localização dos comparativos"
