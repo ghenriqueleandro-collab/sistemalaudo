@@ -108,6 +108,7 @@ export default function EtapaAnexosAssinatura({
   onRemoverFoto,
   onReordenarFotos,
   onRemoverAnexo,
+  setForm,
 }: Props) {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [gerandoMapa, setGerandoMapa] = useState(false)
