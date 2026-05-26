@@ -1313,7 +1313,7 @@ export function LaudoPdf({
         {/* Mapa de localização — após os elementos */}
         {dados.localizacaoComparativos && (
           <View wrap={false} style={{ marginTop: 6 }}>
-            <Image src={dados.localizacaoComparativos} style={{ width: '100%', height: 200, objectFit: 'cover', borderWidth: 0.5, borderColor: CINZA }} />
+            <Image src={dados.localizacaoComparativos} style={{ width: '100%', objectFit: 'contain', borderWidth: 0.5, borderColor: CINZA }} />
           </View>
         )}
 
