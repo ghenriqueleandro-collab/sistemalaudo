@@ -78,13 +78,13 @@ export async function GET(req: NextRequest) {
 
   // Avaliando — pin vermelho com ícone de casa, tamanho extra-grande
   markers.push(
-    `lonlat:${lng},${lat};type:material;color:%23dc2626;icon:home;size:x-large`
+    `lonlat:${lng},${lat};type:material;color:%23dc2626;icon:home;size:large`
   )
 
   // Comparativos — pins azuis com número (1, 2, 3...), tamanho grande
   comparativos.forEach((p, i) => {
     markers.push(
-      `lonlat:${p.lng},${p.lat};type:material;color:%232563eb;text:${i + 1};size:large`
+      `lonlat:${p.lng},${p.lat};type:material;color:%232563eb;text:${i + 1};size:medium`
     )
   })
 
@@ -102,8 +102,8 @@ export async function GET(req: NextRequest) {
     const maxLat = Math.max(...allLats)
     const minLng = Math.min(...allLngs)
     const maxLng = Math.max(...allLngs)
-    const padLat = Math.max(0.0008, (maxLat - minLat) * 0.18)
-    const padLng = Math.max(0.0008, (maxLng - minLng) * 0.18)
+    const padLat = Math.max(0.005, (maxLat - minLat) * 0.35)
+    const padLng = Math.max(0.005, (maxLng - minLng) * 0.35)
     viewportParams = `area=rect:${minLng - padLng},${minLat - padLat},${maxLng + padLng},${maxLat + padLat}`
   } else {
     const zoom = searchParams.get('zoom') || '17'
