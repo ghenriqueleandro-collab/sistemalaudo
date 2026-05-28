@@ -187,33 +187,42 @@ export default function EtapaFundamentacaoPrecisao({
   const ceEnc = (ativo: boolean) =>
     `border p-2 text-center font-bold ${ativo ? 'bg-blue-600 text-white' : ''}`
 
-  // Tabela de enquadramento (Tabela 4)
+  // Tabela de enquadramento (Tabela 4) — sempre visível como referência
   function TabelaEnquadramento({ enc }: { enc: string }) {
-    if (!enc) return null
+    const pending = !enc
     return (
-      <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
-        <p className="text-sm font-semibold text-blue-800 mb-2">
-          Resultado: Grau de Fundamentação <span className="text-lg font-bold">{enc}</span>
+      <div className={`mt-4 rounded-xl border p-4 ${pending ? 'border-slate-200 bg-slate-50' : 'border-blue-200 bg-blue-50'}`}>
+        <p className={`text-sm font-semibold mb-2 ${pending ? 'text-slate-500' : 'text-blue-800'}`}>
+          {pending
+            ? 'Tabela 4 — Enquadramento (selecione os graus acima para apurar o resultado)'
+            : <>Resultado — Grau de Fundamentação <span className="text-lg font-bold">{enc}</span></>
+          }
         </p>
         <table className="w-full border text-sm border-collapse">
           <tbody>
-            <tr className="bg-slate-50">
+            <tr className="bg-slate-100">
               <td className="border p-2 text-center font-bold w-1/4">Graus</td>
-              <td className={ceEnc(enc === 'III')}>III</td>
-              <td className={ceEnc(enc === 'II')}>II</td>
-              <td className={ceEnc(enc === 'I')}>I</td>
+              <td className={ceEnc(!pending && enc === 'III')}>III</td>
+              <td className={ceEnc(!pending && enc === 'II')}>II</td>
+              <td className={ceEnc(!pending && enc === 'I')}>I</td>
             </tr>
             <tr>
-              <td className="border p-2 text-center bg-slate-50">Pontos mínimos</td>
-              <td className="border p-2 text-center">10</td>
-              <td className="border p-2 text-center">6</td>
-              <td className="border p-2 text-center">4</td>
+              <td className="border p-2 text-center bg-slate-50 text-xs">Pontos mínimos</td>
+              <td className="border p-2 text-center text-xs">10</td>
+              <td className="border p-2 text-center text-xs">6</td>
+              <td className="border p-2 text-center text-xs">4</td>
             </tr>
             <tr>
-              <td className="border p-2 text-center bg-slate-50 align-middle">Itens obrigatórios</td>
-              <td className={`border p-2 text-center text-xs ${enc === 'III' ? 'bg-blue-50' : ''}`}>Itens 2 e 4 no grau III, com os demais no mínimo no grau II</td>
-              <td className={`border p-2 text-center text-xs ${enc === 'II' ? 'bg-blue-50' : ''}`}>Itens 2 e 4, no mínimo no grau II e demais, no mínimo no grau I</td>
-              <td className={`border p-2 text-center text-xs ${enc === 'I' ? 'bg-blue-50' : ''}`}>Todos, no mínimo no grau I</td>
+              <td className="border p-2 text-center bg-slate-50 text-xs align-middle">Itens obrigatórios</td>
+              <td className={`border p-2 text-center text-xs ${!pending && enc === 'III' ? 'bg-blue-100 font-medium' : ''}`}>
+                Itens 2 e 4 grau III, demais no mín. grau II
+              </td>
+              <td className={`border p-2 text-center text-xs ${!pending && enc === 'II' ? 'bg-blue-100 font-medium' : ''}`}>
+                Itens 2 e 4 no mín. grau II, demais grau I
+              </td>
+              <td className={`border p-2 text-center text-xs ${!pending && enc === 'I' ? 'bg-blue-100 font-medium' : ''}`}>
+                Todos no mínimo grau I
+              </td>
             </tr>
           </tbody>
         </table>
