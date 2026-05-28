@@ -1468,9 +1468,32 @@ export function LaudoPdf({
             SEÇÃO 11 — VALOR DO IMÓVEL
         ──────────────────────────────────────────────────── */}
         <H2 id="s-11">11. VALOR DO IMÓVEL</H2>
-        <P>a. <Text style={s.bold}>Valor do Terreno:</Text> {fm(valorTerrenoN)}</P>
-        <P>b. <Text style={s.bold}>Valor das Benfeitorias:</Text> {fm(valorBenfeitoriasN)}</P>
-        <P>c. <Text style={s.bold}>Fator de Comercialização:</Text> {dados.fatorComercializacao || '1,00'}</P>
+        {isEvo ? (
+          // ── Evolutivo: terreno + benfeitorias separados ───────────────────
+          <>
+            <P>a. <Text style={s.bold}>Valor do Terreno:</Text> {fm(valorTerrenoN)}</P>
+            <P>b. <Text style={s.bold}>Valor das Benfeitorias:</Text> {fm(valorBenfeitoriasN)}</P>
+            <P>c. <Text style={s.bold}>Fator de Comercialização:</Text> {dados.fatorComercializacao || '1,00'}</P>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#EAF0FB', borderWidth: 0.5, borderColor: '#C9D3E6', padding: 6, marginBottom: 6, borderRadius: 2 }}>
+              <Text style={{ fontSize: 10, color: '#17325C', fontWeight: 700 }}>Valor Total do Imóvel (Terreno + Benfeitorias × F.Com.)</Text>
+              <Text style={{ fontSize: 12, fontWeight: 700, color: '#17325C' }}>{fm(valorArredondado)}</Text>
+            </View>
+          </>
+        ) : (
+          // ── Comparativo: valor único ──────────────────────────────────────
+          <>
+            {(() => {
+              const modoT = (dados as any).modoValorImovel === 'total'
+              const valorT = cn((dados as any).valorTotal || '')
+              const valComp = modoT && valorT > 0 ? valorT
+                : (cddmData?.mediaSaneada > 0 && cddmData?.avaliando?.area > 0
+                    ? cddmData.mediaSaneada * cddmData.avaliando.area
+                    : valorTerrenoN)
+              return <P>a. <Text style={s.bold}>Valor do Imóvel:</Text> {fm(valComp)}</P>
+            })()}
+            <P>b. <Text style={s.bold}>Fator de Comercialização:</Text> {dados.fatorComercializacao || '1,00'}</P>
+          </>
+        )}
         {(() => {
           const fatoresValidos = (dados.outrosFatoresImovel || []).filter(
             f => f.descricao?.trim() || f.valor?.trim()

@@ -1613,16 +1613,26 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               <div className="mb-8 mt-8">
                 <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.valor}. VALOR DO IMÓVEL</h2>
                 <div className="space-y-3">
-                  {modoTotal ? (
-                    <p>a. <strong>Valor do Imóvel:</strong> {formatarMoeda(valorTotalNumero)}</p>
-                  ) : (
+                  {dados.metodoAvaliacao === 'evolutivo' ? (
+                    // ── Evolutivo: terreno + benfeitorias separados → total ──
                     <>
                       <p>a. <strong>Valor do Terreno:</strong> {formatarMoeda(valorTerrenoNumero)}</p>
                       <p>b. <strong>Valor das Benfeitorias:</strong> {formatarMoeda(valorBenfeitoriasNumero)}</p>
+                      <p>c. <strong>Fator de Comercialização:</strong> {dados.fatorComercializacao || '1,00'}</p>
+                      {produtoOutrosFatores !== 1 && <p><strong>Produto dos outros fatores:</strong> {produtoOutrosFatores.toLocaleString('pt-BR')}</p>}
+                      <div style={{ background: '#EAF0FB', border: '1px solid #C9D3E6', borderRadius: '4px', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                        <span style={{ fontSize: '11px', color: '#17325C', fontWeight: 600 }}>Valor Total do Imóvel (Terreno + Benfeitorias × F.Com.)</span>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(valorArredondadoLaudo)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    // ── Comparativo: valor único (modoTotal do formulário) ──
+                    <>
+                      <p>a. <strong>Valor do Imóvel:</strong> {formatarMoeda(modoTotal ? valorTotalNumero : (cddm?.mediaSaneada && cddm?.avaliando?.area ? cddm.mediaSaneada * cddm.avaliando.area : valorTerrenoNumero))}</p>
+                      <p>b. <strong>Fator de Comercialização:</strong> {dados.fatorComercializacao || '1,00'}</p>
+                      {produtoOutrosFatores !== 1 && <p><strong>Produto dos outros fatores:</strong> {produtoOutrosFatores.toLocaleString('pt-BR')}</p>}
                     </>
                   )}
-                  <p>{modoTotal ? 'b.' : 'c.'} <strong>Fator de Comercialização:</strong> {dados.fatorComercializacao || '1,00'}</p>
-                  {produtoOutrosFatores !== 1 && <p><strong>Produto dos outros fatores:</strong> {produtoOutrosFatores.toLocaleString('pt-BR')}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-4 evitar-quebra">
                   <div className="value-box-dark">
