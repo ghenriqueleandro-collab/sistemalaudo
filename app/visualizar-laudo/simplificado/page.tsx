@@ -7,14 +7,14 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import AppShell from '../../components/AppShell'
-import dynamic from 'next/dynamic'
+import nextDynamic from 'next/dynamic'
 import { obterLaudoAtual, buscarLaudo } from '@/lib/laudos-storage'
 
-const PdfViewer = dynamic(() => import('../../components/PdfViewer'), {
+const PdfViewer = nextDynamic(() => import('../../components/PdfViewer'), {
   ssr: false,
 })
 
-const AnexoPdfPaginado = dynamic(
+const AnexoPdfPaginado = nextDynamic(
   () => import('../../components/AnexoPdfPaginado'),
   { ssr: false }
 )
