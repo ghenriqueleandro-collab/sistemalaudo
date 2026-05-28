@@ -1511,7 +1511,7 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
                     <div className="space-y-1.5 text-xs">
                       {[
                         ['Média saneada', `${fmtMoeda(resultado.mediaSaneada)}/m²`],
-                        ['Limite superior (+30%)', `${fmtMoeda(resultado.limiteInf30)}/m²`],
+                        ['Limite superior (+30%)', `${fmtMoeda(resultado.limiteSup30)}/m²`],
                         ['Limite inferior (-30%)',  `${fmtMoeda(resultado.limiteInf30)}/m²`],
                         ['Desvio padrão', fmt(resultado.desvioPadrao, 2)],
                         ['Coef. de variação', `${fmt(resultado.coefVariacao, 2)}%`],
