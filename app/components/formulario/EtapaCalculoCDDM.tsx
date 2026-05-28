@@ -104,7 +104,8 @@ type ResultElem = {
   fatorAndar: number
   fatorVaga: number
   coefGeral: number
-  vuHomog: number
+  vuHomog: number        // ADITIVO — usado nas estatísticas (media, DP, IC)
+  vuHomogDisplay: number // MULTIPLICATIVO — exibido na tabela de homogeneização
   residuo: number
   saneado: boolean
 }
@@ -452,8 +453,7 @@ function calcularResultado(
     const fVagaAv  = 100
     const fatorVaga = fatores.vaga && fVagaElem > 0 ? fVagaAv / fVagaElem : 1
 
-    // Coef. Geral — fórmula ADITIVA da planilha: 1 + Σ(fi - 1)
-    // Equivale a: soma de todos os fatores menos (n_fatores - 1)
+    // Coef. Geral ADITIVO — fórmula planilha aba Cálculo (para estatísticas)
     const coefGeral = 1
       + (fatorArea   - 1)
       + (fatorLocal  - 1)
@@ -462,12 +462,15 @@ function calcularResultado(
       + (fatorAndar  - 1)
       + (fatorVaga   - 1)
 
-    // V.U. Homogeneizado
+    // VU homog ADITIVO — base para media, DP, IC (planilha aba Cálculo)
     const vuHomog = vu * coefGeral
+
+    // VU homog MULTIPLICATIVO — exibição na tabela Homog. (planilha aba Homog.)
+    const vuHomogDisplay = vu * fatorArea * fatorLocal * fatorPadrao * fatorFOC * fatorAndar * fatorVaga
 
     return {
       vu, fatorArea, fatorLocal, fatorPadrao, fatorFOC,
-      fatorAndar, fatorVaga, coefGeral, vuHomog,
+      fatorAndar, fatorVaga, coefGeral, vuHomog, vuHomogDisplay,
       residuo: 0, saneado: true,
     }
   })
@@ -496,15 +499,16 @@ function calcularResultado(
   const limInf30  = media * 0.70
   const limSup30  = media * 1.30
 
-  // Saneamento: flag visual (✗) mas NÃO exclui da média — todos no cálculo
+  // Saneamento: flag visual apenas — todos incluídos no cálculo
   parciais.forEach(p => { p.saneado = p.vuHomog >= limInf30 && p.vuHomog <= limSup30 })
   const vusSaneados = vus        // todos os elementos, sem exclusão
   const n           = vusSaneados.length
-  const mediaSaneada = media     // média de todos (igual à planilha)
+  const mediaSaneada = media     // média de todos (planilha aba Cálculo)
 
-  // Resíduos relativos = (VU_hom - media_saneada) / media_saneada
+  // Resíduos relativos = (VU_homog / VU_bruto) − 1
+  // Representa a variação causada pelos fatores (fórmula da planilha)
   parciais.forEach(p => {
-    p.residuo = mediaSaneada > 0 ? (p.vuHomog - mediaSaneada) / mediaSaneada : 0
+    p.residuo = p.vu > 0 ? (p.vuHomog / p.vu - 1) : 0
   })
 
   // Desvio padrão amostral
@@ -517,15 +521,15 @@ function calcularResultado(
   // T de Student para 80% de confiança (bilateral), n−1 graus de liberdade
   const tStudent = T_STUDENT[n] ?? 1.533
 
-  // Intervalo de confiança: T × S / sqrt(N-1)  — fórmula planilha
+  // Intervalo de confiança: T × S / sqrt(N-1)
   const resultado = n > 1 ? tStudent * desvioPadrao / Math.sqrt(n - 1) : 0
 
-  // IC total assimétrico H76 = H72 + H74 (células C76/H76 da planilha)
+  // IC total assimétrico H76 = H72 + H74 (células H76 da planilha)
   const _limInfIC = mediaSaneada - resultado
   const _limSupIC = mediaSaneada + resultado
   const _h72 = _limInfIC > 0 ? ((mediaSaneada / _limInfIC) - 1) * 100 : 0
-  const _h74 = mediaSaneada  > 0 ? ((_limSupIC / mediaSaneada) - 1) * 100 : 0
-  const intervaloConfianca = _h72 + _h74   // H76 da planilha
+  const _h74 = mediaSaneada  > 0 ? ((_limSupIC  / mediaSaneada) - 1) * 100 : 0
+  const intervaloConfianca = _h72 + _h74
 
   // Grau de precisão (NBR 14653-2, item 13.4)
   const grauPrecisao: 'III' | 'II' | 'I' | '-' =
@@ -620,11 +624,11 @@ function GraficoResiduos({ resultado }: { resultado: Resultado }) {
 function GraficoScatter({ resultado }: { resultado: Resultado }) {
   const W = 460, H = 220, pad = 50
 
-  const elems = resultado.elementos.filter(r => r.vu > 0 && r.vuHomog > 0)
+  const elems = resultado.elementos.filter(r => r.vu > 0 && (r.vuHomogDisplay ?? r.vuHomog) > 0)
   if (elems.length === 0) return null
 
   const xs = elems.map(r => r.vu)
-  const ys = elems.map(r => r.vuHomog)
+  const ys = elems.map(r => r.vuHomogDisplay ?? r.vuHomog)
   const allV = [...xs, ...ys]
   const minV = Math.min(...allV) * 0.9
   const maxV = Math.max(...allV) * 1.1
@@ -669,9 +673,9 @@ function GraficoScatter({ resultado }: { resultado: Resultado }) {
       {/* Pontos */}
       {elems.map((r, i) => (
         <g key={i}>
-          <circle cx={toX(r.vu)} cy={toY(r.vuHomog)} r={6}
+          <circle cx={toX(r.vu)} cy={toY(r.vuHomogDisplay ?? r.vuHomog)} r={6}
             fill={r.saneado ? '#2563eb' : '#f87171'} opacity={0.85} />
-          <text x={toX(r.vu) + 8} y={toY(r.vuHomog) + 4} fontSize={9} fill="#475569">{i + 1}</text>
+          <text x={toX(r.vu) + 8} y={toY(r.vuHomogDisplay ?? r.vuHomog) + 4} fontSize={9} fill="#475569">{i + 1}</text>
         </g>
       ))}
 
@@ -1494,7 +1498,7 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
                           <td className={`border border-slate-200 px-3 py-2 text-center font-semibold ${
                             r.coefGeral < 0.5 || r.coefGeral > 2.0 ? 'text-red-700' : 'text-slate-700'
                           }`}>{fmt(r.coefGeral, 4)}</td>
-                          <td className="border border-slate-200 px-3 py-2 text-right font-semibold">{fmtMoeda(r.vuHomog)}</td>
+                          <td className="border border-slate-200 px-3 py-2 text-right font-semibold">{fmtMoeda(r.vuHomogDisplay ?? r.vuHomog)}</td>
                           <td className="border border-slate-200 px-3 py-2 text-center">
                             {r.saneado
                               ? <span className="text-emerald-700 font-semibold">✓</span>
