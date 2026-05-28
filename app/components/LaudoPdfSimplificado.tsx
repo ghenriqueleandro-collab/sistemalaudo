@@ -653,7 +653,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
                 return (
                   <View key={`h-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
                     <Text style={[td,{flex:0.6}]}>{i+1}</Text>
-                    <Text style={[td,{flex:1.1}]}>{fm(el.valorUnitarioOferta || 0)}</Text>
+                    <Text style={[td,{flex:1.1}]}>{fm(el.vu || el.valorUnitarioOferta || 0)}</Text>
                     <Text style={[td,{flex:0.8}]}>{(el.fatorLocal||1).toFixed(4).replace('.', ',')}</Text>
                     <Text style={[td,{flex:0.8}]}>{(el.fatorPadrao||1).toFixed(4).replace('.', ',')}</Text>
                     <Text style={[td,{flex:0.8}]}>{(el.fatorFOC||1).toFixed(4).replace('.', ',')}</Text>
