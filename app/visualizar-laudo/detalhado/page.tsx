@@ -1487,7 +1487,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 <CabecalhoLaudo />
                 <div className="mb-8 mt-8">
                   <h2 className="text-2xl font-bold mb-4 titulo-laudo">
-                    {sn.metodologia}.{dados.imagemBenfeitorias ? 2 : 1} HOMOGENEIZAÇÃO
+                    {sn.metodologia}.{dados.localizacaoComparativos ? 2 : 1} HOMOGENEIZAÇÃO
                   </h2>
 
                   {/* Tabela de homogeneização */}

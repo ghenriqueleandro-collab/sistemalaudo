@@ -809,6 +809,7 @@ export function LaudoPdf({
     { txt: '9. GLOSSÁRIO DE TERMOS TÉCNICOS (ABNT NBR 14653-2)',                   sub: false, id: 's-9' },
     { txt: '10. METODOLOGIA, PESQUISAS E CÁLCULOS',                                sub: false, id: 's-10' },
     ...(dados.localizacaoComparativos ? [{ txt: '10.1. LOCALIZAÇÃO DOS ELEMENTOS COMPARATIVOS', sub: true, id: 's-10-1' }] : []),
+    ...(temCddm ? [{ txt: dados.localizacaoComparativos ? '10.2. HOMOGENEIZAÇÃO' : '10.1. HOMOGENEIZAÇÃO', sub: true, id: 's-10-hom' }] : []),
     { txt: '11. VALOR DO IMÓVEL',                                                  sub: false, id: 's-11' },
     ...(temFundamentacao ? [{ txt: '12. DETERMINAÇÃO DO GRAU DE FUNDAMENTAÇÃO',    sub: false, id: 's-12' }]                         : []),
     ...(temPrecisao ? [{ txt: '12.02 GRAU DE PRECISÃO',                            sub: true,  id: 's-12-02' }]                      : []),
@@ -1321,7 +1322,7 @@ export function LaudoPdf({
         {/* ── 9.1. HOMOGENEIZAÇÃO (só comparativo) ────────────────────────── */}
         {temCddm && (
           <>
-            <H3>7.1. Homogeneização</H3>
+            <H3 id="s-10-hom">{dados.localizacaoComparativos ? '10.2.' : '10.1.'} Homogeneização</H3>
             <View style={s.homogTable}>
               <View style={s.homogRowH}>
                 <Text style={[s.homogTh,{flex:0.6}]}>Elem.</Text>
