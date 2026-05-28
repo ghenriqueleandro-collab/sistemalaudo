@@ -837,7 +837,6 @@ export function LaudoPdf({
     { txt: '15. ANEXOS E ASSINATURA RESPONSÁVEL TÉCNICO',                          sub: false, id: 's-15' },
     ...(dados.documentacaoPdf ? [{ txt: '15.1. DOCUMENTAÇÃO',                      sub: true,  id: 's-15-1' }]                       : []),
     ...(dados.fotos && dados.fotos.length > 0 ? [{ txt: '15.2. RELATÓRIO FOTOGRÁFICO', sub: true, id: 's-15-2' }]                    : []),
-    ...(dados.localizacaoComparativos ? [{ txt: '15.3. LOCALIZAÇÃO DOS ELEMENTOS COMPARATIVOS', sub: true, id: 's-15-3' }]           : []),
   ]
 
   return (
@@ -1909,18 +1908,7 @@ export function LaudoPdf({
           </>
         )}
 
-        {/* ────────────────────────────────────────────────────
-            15.3 LOCALIZAÇÃO DOS ELEMENTOS COMPARATIVOS
-        ──────────────────────────────────────────────────── */}
-        {dados.localizacaoComparativos && (
-          <>
-            <H2>15.3. LOCALIZAÇÃO DOS ELEMENTOS COMPARATIVOS</H2>
-            <Image
-              src={dados.localizacaoComparativos}
-              style={{ width: '100%', maxHeight: 220, objectFit: 'contain', border: '0.5pt solid #C9D3E6', borderRadius: 2 }}
-            />
-          </>
-        )}
+
 
 
       </Page>

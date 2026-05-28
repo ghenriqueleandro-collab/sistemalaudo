@@ -2144,15 +2144,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               ))
             ) : null}
 
-            {dados.localizacaoComparativos ? (
-              <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                <CabecalhoLaudo />
-                <div className="mb-8">
-                  <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.anexos}.3. LOCALIZAÇÃO DOS ELEMENTOS COMPARATIVOS</h2>
-                  <div className="border p-3 rounded"><img src={dados.localizacaoComparativos} alt="Localização dos elementos comparativos" className="w-full max-h-[215mm] object-contain rounded" /></div>
-                </div>
-              </Pagina>
-            ) : null}
+
 
             {dados.calculoPdf ? (
               <AnexoPdfPaginado file={dados.calculoPdf} titulo={`${sn.anexos}.4. CÁLCULO`} paginaInicial={Number(proximaPagina())} dataLaudo={dados.dataLaudo} onPageCount={setCalculoNumPages} larguraPagina={620} />
