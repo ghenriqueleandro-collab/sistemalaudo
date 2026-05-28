@@ -317,10 +317,20 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
   const cddm        = (dados as any).dadosCalculoCDDM as any | undefined
   const evSnap      = (dados as any).dadosCalculoEvolutivo as any | undefined
   const isEvolutivo = dados.metodoAvaliacao === 'evolutivo'
-  const elementosCddm   = cddm?.elementos || []
+  const rawCompsSimpl = ((dados as any).elementosComparativos || []) as any[]
+  const elementosCddm: any[] = (() => {
+    const calc = (cddm?.elementos || []) as any[]
+    if (calc.length === 0 && rawCompsSimpl.length === 0) return []
+    const base = calc.length > 0 ? calc : rawCompsSimpl
+    return base.map((el: any, idx: number) => ({
+      ...rawCompsSimpl[idx],
+      ...el,
+      valorUnitarioOferta: el.vu || el.valorUnitarioOferta || rawCompsSimpl[idx]?.valorUnitarioOferta,
+    }))
+  })()
   const elementosEv     = evSnap?.elementos || []
   const elementosExibir = isEvolutivo ? elementosEv : elementosCddm
-  const temCddm    = elementosCddm.length > 0
+  const temCddm    = elementosCddm.some((e: any) => (e.vu || e.valorUnitarioOferta) > 0)
   const temElementos = elementosExibir.length > 0
 
   const capaMetodologia = isEvolutivo ? 'Evolutivo' : dados.metodoAvaliacao==='comparativo' ? 'Comparativo Direto' : dados.metodoAvaliacao||'–'

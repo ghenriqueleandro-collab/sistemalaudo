@@ -718,9 +718,20 @@ function VisualizarLaudoContent() {
   // ────────────────────────────────────────────────────────
 
   // ── Dados CDDM (snapshot salvo pelo EtapaCalculoCDDM) ──────────────────────
-  const cddm       = (dados as any).dadosCalculoCDDM as any | undefined
-  const elemsCddm  = (cddm?.elementos || []) as any[]
-  const temCddm    = elemsCddm.length > 0
+  const cddm          = (dados as any).dadosCalculoCDDM as any | undefined
+  const rawComps      = ((dados as any).elementosComparativos || []) as any[]
+  // Mescla: dados descritivos de elementosComparativos + campos calculados de dadosCalculoCDDM
+  const elemsCddm: any[] = (() => {
+    const calc = (cddm?.elementos || []) as any[]
+    if (calc.length === 0 && rawComps.length === 0) return []
+    const base = calc.length > 0 ? calc : rawComps
+    return base.map((el: any, idx: number) => ({
+      ...rawComps[idx],   // campos descritivos (logradouro, bairro, tipo, etc.)
+      ...el,              // campos calculados sobrescrevem (vu, fatores, vuHomog)
+      valorUnitarioOferta: el.vu || el.valorUnitarioOferta || rawComps[idx]?.valorUnitarioOferta,
+    }))
+  })()
+  const temCddm    = elemsCddm.some((e: any) => (e.vu || e.valorUnitarioOferta) > 0)
   const gruposFotos = chunkArray(dados.fotos || [], 4)
   const paragrafosConsideracoesMercado = dividirTextoEmParagrafos(dados.consideracoesMercado || '')
   const paginasSecao8 = dividirParagrafosEmPaginas(paragrafosConsideracoesMercado, 3200, 8)

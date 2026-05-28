@@ -904,12 +904,22 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               } | undefined
               const ev = (dados as any).dadosCalculoEvolutivo as any | undefined
               const evSnap = ev
-              const elementosCddm = cddm?.elementos || []
+              const rawCompsPage = ((dados as any).elementosComparativos || []) as any[]
+              const elementosCddm: any[] = (() => {
+                const calc = (cddm?.elementos || []) as any[]
+                if (calc.length === 0 && rawCompsPage.length === 0) return []
+                const base = calc.length > 0 ? calc : rawCompsPage
+                return base.map((el: any, idx: number) => ({
+                  ...rawCompsPage[idx],
+                  ...el,
+                  valorUnitarioOferta: el.vu || el.valorUnitarioOferta || rawCompsPage[idx]?.valorUnitarioOferta,
+                }))
+              })()
               const elementosEv = ev?.elementos || []
               // Elementos a mostrar: CDDM para comparativo, evolutivo para método evolutivo
               const isEvolutivo = dados.metodoAvaliacao === 'evolutivo'
               const elementosExibir: any[] = isEvolutivo ? elementosEv : elementosCddm
-              const temCddm = elementosCddm.length > 0
+              const temCddm = elementosCddm.some((e: any) => (e.vu || e.valorUnitarioOferta) > 0)
               const temElementos = elementosExibir.length > 0
               const formatarDataBR = (data?: string) => {
                 if (!data) return ''

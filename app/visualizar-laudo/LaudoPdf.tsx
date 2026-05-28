@@ -571,10 +571,21 @@ export function LaudoPdf({
   const cddmData    = (dados as any).dadosCalculoCDDM as any | undefined
   const evSnapData  = (dados as any).dadosCalculoEvolutivo as any | undefined
   const isEvo       = dados.metodoAvaliacao === 'evolutivo'
-  const elemsCddm   = cddmData?.elementos || []
+  const rawComps    = ((dados as any).elementosComparativos || []) as any[]
+  // Mescla dados descritivos (elementosComparativos) com campos calculados (dadosCalculoCDDM)
+  const elemsCddm: any[] = (() => {
+    const calc = (cddmData?.elementos || []) as any[]
+    if (calc.length === 0 && rawComps.length === 0) return []
+    const base = calc.length > 0 ? calc : rawComps
+    return base.map((el: any, idx: number) => ({
+      ...rawComps[idx],
+      ...el,
+      valorUnitarioOferta: el.vu || el.valorUnitarioOferta || rawComps[idx]?.valorUnitarioOferta,
+    }))
+  })()
   const elemsEv     = evSnapData?.elementos || []
   const elemsExibir = isEvo ? elemsEv : elemsCddm
-  const temCddm     = elemsCddm.length > 0
+  const temCddm     = elemsCddm.some((e: any) => (e.vu || e.valorUnitarioOferta) > 0)
   const temElementos = elemsExibir.length > 0
 
   // ─── Helper: card de elemento (evolutivo e comparativo) ─────────────────────
