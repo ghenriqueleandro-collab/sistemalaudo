@@ -749,8 +749,10 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
     setForm((prev: any) => ({
       ...prev,
       dadosCalculoCDDM: {
-        elementos: resultado.elementos.map(el => ({
-          ...el,
+        // Mescla dados descritivos (logradouro, bairro, tipo, etc.) com campos calculados
+        elementos: resultado.elementos.map((el, idx) => ({
+          ...elementos[idx],          // todos os campos preenchidos pelo usuário
+          ...el,                      // campos calculados sobrescrevem (vu, fatores, etc.)
           valorUnitarioOferta: el.vu,
           vuHomog: el.vuHomogDisplay ?? el.vuHomog,
         })),
