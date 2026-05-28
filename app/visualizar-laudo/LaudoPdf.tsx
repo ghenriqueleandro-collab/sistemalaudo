@@ -571,21 +571,10 @@ export function LaudoPdf({
   const cddmData    = (dados as any).dadosCalculoCDDM as any | undefined
   const evSnapData  = (dados as any).dadosCalculoEvolutivo as any | undefined
   const isEvo       = dados.metodoAvaliacao === 'evolutivo'
-  const rawComps    = ((dados as any).elementosComparativos || []) as any[]
-  // Mescla dados descritivos (elementosComparativos) com campos calculados (dadosCalculoCDDM)
-  const elemsCddm: any[] = (() => {
-    const calc = (cddmData?.elementos || []) as any[]
-    if (calc.length === 0 && rawComps.length === 0) return []
-    const base = calc.length > 0 ? calc : rawComps
-    return base.map((el: any, idx: number) => ({
-      ...rawComps[idx],
-      ...el,
-      valorUnitarioOferta: el.vu || el.valorUnitarioOferta || rawComps[idx]?.valorUnitarioOferta,
-    }))
-  })()
+  const elemsCddm   = cddmData?.elementos || []
   const elemsEv     = evSnapData?.elementos || []
   const elemsExibir = isEvo ? elemsEv : elemsCddm
-  const temCddm     = elemsCddm.some((e: any) => (e.vu || e.valorUnitarioOferta) > 0)
+  const temCddm     = elemsCddm.length > 0
   const temElementos = elemsExibir.length > 0
 
   // ─── Helper: card de elemento (evolutivo e comparativo) ─────────────────────
@@ -819,8 +808,7 @@ export function LaudoPdf({
     ...(temConsideracoes ? [{ txt: '8. CONSIDERAÇÕES SOBRE O MERCADO',                           sub: false, id: 's-8' }]            : []),
     { txt: '9. GLOSSÁRIO DE TERMOS TÉCNICOS (ABNT NBR 14653-2)',                   sub: false, id: 's-9' },
     { txt: '10. METODOLOGIA, PESQUISAS E CÁLCULOS',                                sub: false, id: 's-10' },
-    ...(dados.imagemBenfeitorias ? [{ txt: '10.1 CÁLCULO DAS BENFEITORIAS',        sub: true, id: 's-10-1' }]                        : []),
-    ...((cddmData && cddmData.elementos?.length > 0) ? [{ txt: dados.imagemBenfeitorias ? '10.2 HOMOGENEIZAÇÃO' : '10.1 HOMOGENEIZAÇÃO', sub: true, id: 's-10-homog' }] : []),
+    ...(dados.localizacaoComparativos ? [{ txt: '10.1. LOCALIZAÇÃO DOS ELEMENTOS COMPARATIVOS', sub: true, id: 's-10-1' }] : []),
     { txt: '11. VALOR DO IMÓVEL',                                                  sub: false, id: 's-11' },
     ...(temFundamentacao ? [{ txt: '12. DETERMINAÇÃO DO GRAU DE FUNDAMENTAÇÃO',    sub: false, id: 's-12' }]                         : []),
     ...(temPrecisao ? [{ txt: '12.02 GRAU DE PRECISÃO',                            sub: true,  id: 's-12-02' }]                      : []),
@@ -1322,9 +1310,10 @@ export function LaudoPdf({
         {/* ── Elementos CDDM/Evolutivo inline ─────────────── */}
         {temElementos && elemsExibir.map((el: any, i: number) => renderElemento(el, i))}
 
-        {/* Mapa de localização — após os elementos */}
-        {dados.localizacaoComparativos && (
-          <View wrap={false} style={{ marginTop: 6 }}>
+        {/* ── 10.1 LOCALIZAÇÃO DOS ELEMENTOS COMPARATIVOS ────── */}
+        {dados.localizacaoComparativos && temCddm && (
+          <View wrap={false} style={{ marginTop: 8 }} break>
+            <H2 id="s-10-1">10.1. LOCALIZAÇÃO DOS ELEMENTOS COMPARATIVOS</H2>
             <Image src={dados.localizacaoComparativos} style={{ width: '100%', objectFit: 'contain', borderWidth: 0.5, borderColor: CINZA }} />
           </View>
         )}
@@ -1332,7 +1321,7 @@ export function LaudoPdf({
         {/* ── 9.1. HOMOGENEIZAÇÃO (só comparativo) ────────────────────────── */}
         {temCddm && (
           <>
-            <H2 id="s-10-homog">{dados.imagemBenfeitorias ? '10.2' : '10.1'} HOMOGENEIZAÇÃO</H2>
+            <H3>7.1. Homogeneização</H3>
             <View style={s.homogTable}>
               <View style={s.homogRowH}>
                 <Text style={[s.homogTh,{flex:0.6}]}>Elem.</Text>
@@ -1351,7 +1340,7 @@ export function LaudoPdf({
                 return (
                   <View key={`h-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
                     <Text style={[td,{flex:0.6}]}>{i+1}</Text>
-                    <Text style={[td,{flex:1.1}]}>{fm(el.vu || el.valorUnitarioOferta || 0)}</Text>
+                    <Text style={[td,{flex:1.1}]}>{fm(el.valorUnitarioOferta || 0)}</Text>
                     <Text style={[td,{flex:0.8}]}>{(el.fatorLocal||1).toFixed(4).replace('.', ',')}</Text>
                     <Text style={[td,{flex:0.8}]}>{(el.fatorPadrao||1).toFixed(4).replace('.', ',')}</Text>
                     <Text style={[td,{flex:0.8}]}>{(el.fatorFOC||1).toFixed(4).replace('.', ',')}</Text>
@@ -1468,32 +1457,9 @@ export function LaudoPdf({
             SEÇÃO 11 — VALOR DO IMÓVEL
         ──────────────────────────────────────────────────── */}
         <H2 id="s-11">11. VALOR DO IMÓVEL</H2>
-        {isEvo ? (
-          // ── Evolutivo: terreno + benfeitorias separados ───────────────────
-          <>
-            <P>a. <Text style={s.bold}>Valor do Terreno:</Text> {fm(valorTerrenoN)}</P>
-            <P>b. <Text style={s.bold}>Valor das Benfeitorias:</Text> {fm(valorBenfeitoriasN)}</P>
-            <P>c. <Text style={s.bold}>Fator de Comercialização:</Text> {dados.fatorComercializacao || '1,00'}</P>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#EAF0FB', borderWidth: 0.5, borderColor: '#C9D3E6', padding: 6, marginBottom: 6, borderRadius: 2 }}>
-              <Text style={{ fontSize: 10, color: '#17325C', fontWeight: 700 }}>Valor Total do Imóvel (Terreno + Benfeitorias × F.Com.)</Text>
-              <Text style={{ fontSize: 12, fontWeight: 700, color: '#17325C' }}>{fm(valorArredondado)}</Text>
-            </View>
-          </>
-        ) : (
-          // ── Comparativo: valor único ──────────────────────────────────────
-          <>
-            {(() => {
-              const modoT = (dados as any).modoValorImovel === 'total'
-              const valorT = cn((dados as any).valorTotal || '')
-              const valComp = modoT && valorT > 0 ? valorT
-                : (cddmData?.mediaSaneada > 0 && cddmData?.avaliando?.area > 0
-                    ? cddmData.mediaSaneada * cddmData.avaliando.area
-                    : valorTerrenoN)
-              return <P>a. <Text style={s.bold}>Valor do Imóvel:</Text> {fm(valComp)}</P>
-            })()}
-            <P>b. <Text style={s.bold}>Fator de Comercialização:</Text> {dados.fatorComercializacao || '1,00'}</P>
-          </>
-        )}
+        <P>a. <Text style={s.bold}>Valor do Terreno:</Text> {fm(valorTerrenoN)}</P>
+        <P>b. <Text style={s.bold}>Valor das Benfeitorias:</Text> {fm(valorBenfeitoriasN)}</P>
+        <P>c. <Text style={s.bold}>Fator de Comercialização:</Text> {dados.fatorComercializacao || '1,00'}</P>
         {(() => {
           const fatoresValidos = (dados.outrosFatoresImovel || []).filter(
             f => f.descricao?.trim() || f.valor?.trim()

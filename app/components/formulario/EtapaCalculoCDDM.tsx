@@ -706,7 +706,8 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
   }, [elementos])
 
   // ── Estados editáveis do avaliando (inicializam do form, editáveis no componente) ──
-  const areaAvInit = form.areaTerrenoTotal || form.areaConstruidaTotal || ''
+  // CDDM (comparativo): área construída é a relevante. Terreno é informativo.
+  const areaAvInit = form.areaConstruidaTotal || form.areaConstruidaAverbada || ''
   const [avArea,        setAvArea]        = useState(areaAvInit)
   const [avFatorLocal,  setAvFatorLocal]  = useState(form.fatorLocalAvaliando  || '100')
   const [avFatorAndar,  setAvFatorAndar]  = useState(form.fatorAndarAvaliando  || '100')
@@ -718,7 +719,7 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
     if (!setForm) return
     setForm((prev: any) => ({
       ...prev,
-      areaTerrenoTotal:    avArea,
+      areaConstruidaTotal: avArea,  // CDDM usa área construída como referência
       fatorLocalAvaliando: avFatorLocal,
       fatorAndarAvaliando: avFatorAndar,
       vagasAvaliando:      avVagas,
@@ -769,26 +770,33 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
       },
     }))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resultado])
+  }, [resultado, elementos])
 
   function updateElem(idx: number, campo: keyof ElementoCDDM, val: string) {
     setElementos(prev => prev.map((e, i) => i === idx ? { ...e, [campo]: val } : e))
   }
+
+  // Ref sempre atualizado com a aba ativa — evita closure stale no paste
+  const abaAtivaRef = useRef(abaAtiva)
+  useEffect(() => { abaAtivaRef.current = abaAtiva }, [abaAtiva])
 
   // Paste de imagem (Ctrl+V) para o elemento ativo
   useEffect(() => {
     function handlePaste(ev: ClipboardEvent) {
       const item = Array.from(ev.clipboardData?.items || []).find(i => i.type.startsWith('image/'))
       if (!item) return
+      // Evitar interferir com paste de texto em outros campos
+      const target = ev.target as HTMLElement
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return
       const file = item.getAsFile()
       if (!file) return
       const reader = new FileReader()
-      reader.onload = e2 => updateElem(abaAtiva, 'foto', e2.target?.result as string)
+      reader.onload = e2 => updateElem(abaAtivaRef.current, 'foto', e2.target?.result as string)
       reader.readAsDataURL(file)
     }
     window.addEventListener('paste', handlePaste)
     return () => window.removeEventListener('paste', handlePaste)
-  }, [abaAtiva])
+  }, [])  // registra uma única vez — usa ref para aba atual
 
   function adicionarElemento() {
     if (elementos.length >= 12) return

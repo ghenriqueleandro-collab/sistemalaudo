@@ -1443,14 +1443,6 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               )
             })}
 
-            {/* Mapa de localização */}
-            {dados.localizacaoComparativos && temCddm && (
-              <div className="evitar-quebra" style={{ marginBottom: '8px' }}>
-                <img src={dados.localizacaoComparativos} alt="Mapa de localização dos comparativos"
-                  style={{ width: '100%', borderRadius: '4px', border: '0.5px solid #C9D3E6', objectFit: 'cover', maxHeight: '260px' }} />
-              </div>
-            )}
-
             {dados.imagemBenfeitorias && (
               <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
                 <CabecalhoLaudo />
@@ -1461,6 +1453,20 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               </PaginaFlexivel>
             )}
 
+
+            {/* ── MAPA DE LOCALIZAÇÃO DOS COMPARATIVOS ──────────── */}
+            {dados.localizacaoComparativos && temCddm && (
+              <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
+                <CabecalhoLaudo />
+                <div className="mb-8 mt-8">
+                  <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.metodologia}.1. LOCALIZAÇÃO DOS ELEMENTOS COMPARATIVOS</h2>
+                  <div className="evitar-quebra border rounded p-1">
+                    <img src={dados.localizacaoComparativos} alt="Mapa de localização dos comparativos"
+                      style={{ width: '100%', objectFit: 'contain', borderRadius: '4px' }} />
+                  </div>
+                </div>
+              </PaginaFlexivel>
+            )}
 
             {/* ── HOMOGENEIZAÇÃO CDDM ───────────────────────────────── */}
             {temCddm && cddm && (
