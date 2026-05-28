@@ -545,7 +545,7 @@ function VisualizarLaudoContent() {
 
           setDados({
             ...parsed,
-            dadosCalculoCDDM: dadosCddmResolvido as any,
+            ...(dadosCddmResolvido ? { dadosCalculoCDDM: dadosCddmResolvido } as any : {}),
             // Determina tipoLaudo: usa o campo salvo, mas se houver indicadores de laudo
             // detalhado (croquis, acabamentos, responsavelCpf), força 'detalhado'
             // mesmo que o campo salvo diga 'simplificado' (bug de laudos antigos)
