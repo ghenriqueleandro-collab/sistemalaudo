@@ -452,18 +452,12 @@ function calcularResultado(
     const fVagaAv  = 100
     const fatorVaga = fatores.vaga && fVagaElem > 0 ? fVagaAv / fVagaElem : 1
 
-    // Coef. Geral — fórmula ADITIVA da planilha: 1 + Σ(fi - 1)
-    // Equivale a: soma de todos os fatores menos (n_fatores - 1)
-    const coefGeral = 1
-      + (fatorArea   - 1)
-      + (fatorLocal  - 1)
-      + (fatorPadrao - 1)
-      + (fatorFOC    - 1)
-      + (fatorAndar  - 1)
-      + (fatorVaga   - 1)
+    // V.U. Homogeneizado — fórmula MULTIPLICATIVA (igual à planilha aba Homog.)
+    // VU_homog = VU × F.Área × F.Local × F.Padrão × F.FOC × F.Andar × F.Vaga
+    const vuHomog = vu * fatorArea * fatorLocal * fatorPadrao * fatorFOC * fatorAndar * fatorVaga
 
-    // V.U. Homogeneizado
-    const vuHomog = vu * coefGeral
+    // Coef. Geral derivado (para exibição e validação NORMA 0,5–2,0)
+    const coefGeral = vu > 0 ? vuHomog / vu : 1
 
     return {
       vu, fatorArea, fatorLocal, fatorPadrao, fatorFOC,
@@ -496,14 +490,12 @@ function calcularResultado(
   const limInf30  = media * 0.70
   const limSup30  = media * 1.30
 
-  // Saneamento: remove valores fora de ±30%
+  // Saneamento: marca visualmente (✗) mas NÃO exclui da média — decisão é do usuário
   parciais.forEach(p => { p.saneado = p.vuHomog >= limInf30 && p.vuHomog <= limSup30 })
-  const vusSaneados = parciais.filter(p => p.saneado).map(p => p.vuHomog)
+  const vusSaneados = vus  // todos os elementos, sem exclusão automática
   const n = vusSaneados.length
 
-  const mediaSaneada = n > 0
-    ? vusSaneados.reduce((a, b) => a + b, 0) / n
-    : media
+  const mediaSaneada = media  // média de todos os elementos (igual à planilha)
 
   // Resíduos relativos = (VU_hom - media_saneada) / media_saneada
   parciais.forEach(p => {
