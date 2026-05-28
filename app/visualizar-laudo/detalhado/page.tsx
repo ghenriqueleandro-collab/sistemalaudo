@@ -326,7 +326,8 @@ function converterNumero(valor: string) {
 }
 
 function formatarMoeda(valor: number) {
-  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  const v = Math.round(valor * 100) / 100
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
 // Garante que medidas de área sempre mostrem 2 casas decimais (ex: 900 m² → 900,00 m²)
@@ -430,55 +431,52 @@ function VisualizarLaudoContent() {
   const [calculoNumPages, setCalculoNumPages] = useState(0)
   const [baixandoPdf, setBaixandoPdf] = useState(false)
 
-  async function baixarLaudoPdf() {
+
+  async function baixarLaudoPdfSimplificado() {
     if (!dados) return
     setBaixandoPdf(true)
     try {
-      const [{ pdf }, { LaudoPdf }] = await Promise.all([
+      const [{ pdf }, { default: LaudoPdfSimplificado }] = await Promise.all([
         import('@react-pdf/renderer'),
-        import('../LaudoPdf'),
+        import('../../components/LaudoPdfSimplificado'),
       ])
-      const logoUrl = window.location.origin + '/logo-lesath.png'
-
-      // Pré-renderiza PDFs anexados como imagens para embed no PDF gerado
-      const [documentacaoPdfPaginas] = await Promise.all([
-        dados.documentacaoPdf ? pdfPagesToImages(dados.documentacaoPdf) : Promise.resolve([]),
-      ])
-
-      const dadosComPaginas = {
-        ...dados,
-        documentacaoPdfPaginas,
-      }
-
       const blob = await pdf(
-        React.createElement(LaudoPdf, { dados: dadosComPaginas, logoUrl }) as any
+        React.createElement(LaudoPdfSimplificado, { dados }) as any
       ).toBlob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `laudo-${dados.matricula || 'avaliacao'}.pdf`
+      a.download = `laudo-simplificado-${dados.matricula || 'avaliacao'}.pdf`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     } catch (error) {
       console.error(error)
-      alert('Erro ao gerar o PDF do laudo.')
+      alert('Erro ao gerar o PDF simplificado.')
     } finally {
       setBaixandoPdf(false)
     }
   }
 
-
   useEffect(() => {
     async function carregarLaudo() {
       try {
-        // Prioriza o ID passado na URL (?id=...), fallback para localStorage
+        // Prioriza o ID passado na URL (?id=...), fallback para laudoAtual
         const urlParams = new URL(window.location.href)
         const idParam = urlParams.searchParams.get('id')
-        const parsed = (idParam
-          ? await buscarLaudo(idParam)
-          : await obterLaudoAtual()) as DadosLaudo
+        // Retry: tenta até 5x com intervalo de 1s (resolve race condition com auto-save)
+        let parsed: DadosLaudo | null = null
+        const maxTentativas = idParam ? 5 : 1
+        for (let t = 0; t < maxTentativas; t++) {
+          parsed = (idParam
+            ? await buscarLaudo(idParam)
+            : await obterLaudoAtual()) as DadosLaudo | null
+          if (parsed) break
+          if (t < maxTentativas - 1) {
+            await new Promise(r => setTimeout(r, 1000))
+          }
+        }
         if (parsed) {
 
           async function resolverRef(val: string): Promise<string> {
@@ -520,8 +518,9 @@ function VisualizarLaudoContent() {
               preview: await resolverRef(c.preview),
             }))
           )
-          const [docPdf, locComp, imgBenf] = await Promise.all([
+          const [docPdf, calcPdf, locComp, imgBenf] = await Promise.all([
             resolverRef(parsed.documentacaoPdf || ''),
+            resolverRef(parsed.calculoPdf || ''),
             resolverRef(parsed.localizacaoComparativos || ''),
             resolverRef(parsed.imagemBenfeitorias || ''),
           ])
@@ -547,6 +546,7 @@ function VisualizarLaudoContent() {
             fotos: fotosResolvidas,
             croquis: croquisResolvidos,
             documentacaoPdf: docPdf,
+            calculoPdf: calcPdf,
             localizacaoComparativos: locComp,
             imagemBenfeitorias: imgBenf,
             observacoesTerrenoEncravado: parsed.observacoesTerrenoEncravado || '',
@@ -638,11 +638,8 @@ function VisualizarLaudoContent() {
       <AppShell>
         <section className="mx-auto max-w-4xl px-6 pt-10">
           <div className="bg-white p-8 rounded-2xl shadow text-center">
-            <h1 className="text-2xl font-bold mb-4">Nenhum laudo encontrado</h1>
-            <div className="flex gap-3 justify-center">
-              <Link href="/meus-laudos" className="border px-4 py-2 rounded-xl">Meus laudos</Link>
-              <Link href="/novo-laudo" className="bg-green-600 text-white px-4 py-2 rounded-xl">Novo laudo</Link>
-            </div>
+            <div className="animate-pulse text-slate-400 mb-4">Carregando laudo…</div>
+            <div className="text-sm text-slate-300">Aguarde alguns instantes</div>
           </div>
         </section>
       </AppShell>
@@ -662,16 +659,6 @@ function VisualizarLaudoContent() {
   const valorArredondadoExtenso = numeroPorExtenso(valorArredondadoLaudo)
   const valorLiquidezForcadaNumero = converterNumero(dados.valorLiquidezForcada || '')
   const valorLiquidezForcadaExtenso = valorLiquidezForcadaNumero > 0 ? numeroPorExtenso(valorLiquidezForcadaNumero) : ''
-  // ── Dados CDDM/Evolutivo inline ─────────────────────────────────────
-  const cddm = (dados as any).dadosCalculoCDDM as any | undefined
-  const ev = (dados as any).dadosCalculoEvolutivo as any | undefined
-  const isEvolutivo = dados.metodoAvaliacao === 'evolutivo'
-  const elementosCddm: any[] = cddm?.elementos || []
-  const elementosEv: any[] = ev?.elementos || []
-  const elementosExibir: any[] = isEvolutivo ? elementosEv : elementosCddm
-  const temCddm = elementosCddm.length > 0
-  const temElementos = elementosExibir.length > 0
-
   const fotoFachada = (dados.fotos || []).find((foto) => (foto.legenda || '').trim().toLowerCase() === 'fachada')
   const garantiaTexto = obterTextoGarantia(dados.garantiaClassificacao, dados.garantiaObservacoes)
 
@@ -786,7 +773,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               <Link href="/meus-laudos" className="border px-3 py-2 rounded-xl">Meus laudos</Link>
               <Link
                 href={
-                  laudoId ? `/novo-laudo?id=${laudoId}` : '/novo-laudo'
+                  laudoId ? `/laudo/simplificado?id=${laudoId}` : '/laudo/simplificado'
                 }
                 className="bg-blue-50 px-3 py-2 rounded-xl text-blue-700"
               >
@@ -794,7 +781,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               </Link>
               <button
                 type="button"
-                onClick={baixarLaudoPdf}
+                onClick={baixarLaudoPdfSimplificado}
                 disabled={baixandoPdf}
                 className="rounded-xl bg-emerald-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -840,525 +827,242 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               .value-box-light .vb-ext   { font-size: 9px; color: #5a7090; margin-top: 2px; }
             `}</style>
 
-            {/* Laudo detalhado */}
-            <>
-            <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-              {/* Cabeçalho geométrico — faixas diagonais via skewX, igual ao layout aprovado */}
-              <div className="capa-geo-header relative overflow-hidden bg-[#17325C]" style={{ height: '130px' }}>
-                <div className="absolute" style={{ top: '-10px', right: '11.54%', width: '50%',    height: '180px', background: '#1e4a85',              transform: 'skewX(-18deg)' }} />
-                <div className="absolute" style={{ top: '-10px', right: '1.92%',  width: '28.85%', height: '180px', background: '#2347C6', opacity: 0.55, transform: 'skewX(-18deg)' }} />
-                <div className="absolute" style={{ top: '0',     right: '34.62%', width: '17.31%', height: '180px', background: '#2e5ea3', opacity: 0.6,  transform: 'skewX(-18deg)' }} />
-                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#2347C6]" />
-                <div className="absolute z-10" style={{ top: '18px', left: '28px' }}>
-                  <div className="font-bold text-[15px] leading-tight" style={{ color: '#ffffff' }}>Lesath Engenharia</div>
-                  <div className="text-[9px] mt-0.5 tracking-wide" style={{ color: '#b8cce4' }}>Precisão técnica que gera confiança</div>
-                </div>
-              </div>
-
-              {/* Corpo — sem px em tela (o padding vem do laudo-conteudo); px-10 ativa só na impressão */}
-              <div className="pt-14 pb-12 print:px-10">
-                <div className="text-[9px] font-bold tracking-[0.18em] text-[#8FA4C7] mb-7">NBR 14653</div>
-                <h2
-                  className="font-bold text-[#17325C] leading-[1.1] mb-2 titulo-laudo"
-                  style={{ fontSize: '38px', whiteSpace: 'pre-line' }}
-                >
-                  {'Laudo de\nAvaliação'}
-                </h2>
-                <div className="text-[13px] font-bold text-[#2347C6] tracking-wide mb-12">
-                  {dados.finalidade === 'garantia'
-                    ? 'Avaliação para fins de garantia'
-                    : dados.finalidade === 'execucao'
-                    ? 'Avaliação para fins de execução'
-                    : dados.finalidade || 'Avaliação'}
-                </div>
-
-                <div className="text-[8px] font-bold tracking-[0.18em] text-[#8FA4C7] mb-1.5">LOCALIZAÇÃO DO IMÓVEL</div>
-                <div className="text-[13px] font-bold text-[#17325C]">{extrairCidadeDoEndereco(dados.endereco, dados.cidadePrincipal)}</div>
-
-                <div className="w-8 h-[3px] bg-[#2347C6] mt-6 mb-7 rounded-full" />
-
-                <div className="grid grid-cols-2 gap-x-10 gap-y-6">
-                  {[
-                    { lbl: 'PROPRIETÁRIO',        val: dados.proprietario || '-' },
-                    { lbl: 'SOLICITANTE',          val: dados.solicitante || 'Não informado' },
-                    { lbl: 'FINALIDADE',           val: dados.finalidade === 'garantia' ? 'Avaliação para fins de garantia' : dados.finalidade === 'execucao' ? 'Avaliação para fins de execução' : dados.finalidade || '-' },
-                    { lbl: 'MATRÍCULA',            val: dados.matricula || '-' },
-                    { lbl: 'RESPONSÁVEL TÉCNICO',  val: dados.responsavelNome || '-' },
-                    { lbl: 'DATA DO LAUDO',        val: formatarData(dados.dataLaudo || '') },
-                  ].map((item, i) => (
-                    <div key={i}>
-                      <div className="text-[8px] font-bold tracking-[0.16em] text-[#8FA4C7] mb-1">{item.lbl}</div>
-                      <div className="text-[11.5px] text-slate-800">{item.val}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Pagina>
-
-            {/* ══ CAPA RESUMO ══════════════════════════════════════ */}
-            <div className="mt-10 mb-2 h-[1px] bg-[#C9D3E6]" />
-            <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-              {/* Barra superior */}
-              <div className="cr-bar flex overflow-hidden" style={{ height: '8px', background: '#17325C' }}>
-                <div style={{ flex: 1 }} />
-                <div style={{ width: '45%', background: '#2347C6' }} />
-              </div>
-              {/* Cabeçalho */}
-              <div className="cr-bar flex justify-between items-start gap-4 px-6 py-3" style={{ background: '#17325C' }}>
-                <div>
-                  <div style={{ fontSize: '7px', fontWeight: 700, color: '#8FA4C7', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '2px' }}>NBR 14653</div>
-                  <div style={{ fontSize: '17px', fontWeight: 700, color: '#ffffff', lineHeight: 1.1 }}>Capa Resumo</div>
-                  <div style={{ fontSize: '8px', color: '#b8cce4', marginTop: '2px' }}>Laudo de Avaliação — {extrairCidadeDoEndereco(dados.endereco, dados.cidadePrincipal) || 'Joinville'}</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ display: 'inline-block', fontSize: '7px', fontWeight: 700, letterSpacing: '0.14em', padding: '3px 8px', borderRadius: '3px', marginBottom: '4px', background: '#1a3a6e', color: '#b8cce4' }}>LAUDO DE AVALIAÇÃO</div>
-                  <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#ffffff' }}>Lesath Engenharia</div>
-                  <div style={{ fontSize: '7.5px', color: '#8FA4C7', marginTop: '1px' }}>Precisão técnica que gera confiança</div>
-                </div>
-              </div>
-              {/* Barra de endereço */}
-              <div className="cr-bar flex items-center gap-2 px-6 py-1.5" style={{ background: '#2347C6' }}>
-                <span style={{ fontSize: '6.5px', fontWeight: 700, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.12em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Endereço</span>
-                <span style={{ fontSize: '9px', fontWeight: 700, color: '#ffffff' }}>{dados.endereco}</span>
-              </div>
-              {/* Corpo */}
-              <div className="pt-3 pb-4">
-                {/* Grid: Fachada + Identificação */}
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div className="rounded overflow-hidden" style={{ border: '1px solid #d0daea' }}>
-                    <div className="px-2 py-1" style={{ background: '#17325C' }}>
-                      <span style={{ fontSize: '7px', fontWeight: 700, color: '#ffffff', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Fachada do Imóvel</span>
-                    </div>
-                    {fotoFachada ? (
-                      <img src={fotoFachada.preview} alt="Fachada" className="w-full object-cover" style={{ height: '114px' }} />
-                    ) : (
-                      <div className="flex items-center justify-center" style={{ height: '114px', background: '#c9d8e8', color: '#6b87a8', fontSize: '8px' }}>
-                        Foto da fachada do imóvel avaliando
-                      </div>
-                    )}
-                  </div>
-                  <div className="rounded overflow-hidden" style={{ border: '1px solid #d0daea' }}>
-                    <div className="px-2 py-1" style={{ background: '#17325C' }}>
-                      <span style={{ fontSize: '7px', fontWeight: 700, color: '#ffffff', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Identificação</span>
-                    </div>
-                    <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '7.5px' }}>
-                      <tbody>
-                        {([
-                          ['Objetivo',      'Determinação de Valor de Mercado'],
-                          ['Finalidade',    capaFinalidade],
-                          ['Solicitante',   dados.solicitante || '-'],
-                          ['Proprietário',  dados.proprietario || '-'],
-                          ['Tipo do Imóvel',dados.tipo || '-'],
-                          ['Metodologia',   capaMetodologia],
-                          ['Matrícula',     dados.matricula || '-'],
-                        ] as [string, string][]).map(([label, value], idx) => (
-                          <tr key={idx} style={{ background: idx % 2 === 0 ? '#f5f8fc' : '#ffffff', borderBottom: '0.5px solid #e8eef7' }}>
-                            <td style={{ width: '38%', padding: '3px 8px', fontWeight: 700, color: '#3a5070' }}>{label}</td>
-                            <td style={{ padding: '3px 8px', color: '#17325C' }}>{value}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                {/* Strip de áreas */}
-                <div className="grid grid-cols-3 gap-2 mb-3">
-                  {([
-                    { label: 'ÁREA DE TERRENO',     value: formatarArea(dados.areaTerrenoTotal) || '-', unit: '' },
-                    { label: 'ÁREA CONSTRUÍDA',     value: formatarArea(dados.areaConstruidaTotal) || '0', unit: '' },
-                    { label: 'FATOR DE LIQUIDAÇÃO FORÇADA', value: capaFatorLiquidacao,              unit: capaLiquidezDisplay },
-                  ] as { label: string; value: string; unit: string }[]).map((card, idx) => (
-                    <div key={idx} className="rounded text-center px-3 py-2" style={{ border: '1px solid #d0daea', background: '#f5f8fc' }}>
-                      <div style={{ fontSize: '6px', fontWeight: 700, color: '#8FA4C7', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>{card.label}</div>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#17325C' }}>{card.value}</div>
-                      <div style={{ fontSize: '7.5px', color: '#5a7090', marginTop: '1px' }}>{card.unit}</div>
-                    </div>
-                  ))}
-                </div>
-                {/* Cards de valores */}
-                <div className="grid grid-cols-2 gap-2.5 mb-3">
-                  <div className="value-box-dark">
-                    <div className="vb-label">Valor de Avaliação</div>
-                    <div className="vb-num">{formatarMoeda(valorArredondadoLaudo)}</div>
-                    <div className="vb-ext">{valorArredondadoExtenso.charAt(0).toUpperCase() + valorArredondadoExtenso.slice(1)}</div>
-                  </div>
-                  <div className="value-box-light">
-                    <div className="vb-label">Valor de Liquidez Forçada</div>
-                    {valorLiquidezForcadaNumero > 0 ? (
-                      <>
-                        <div className="vb-num">{formatarMoeda(valorLiquidezForcadaNumero)}</div>
-                        <div className="vb-ext">{valorLiquidezForcadaExtenso.charAt(0).toUpperCase() + valorLiquidezForcadaExtenso.slice(1)}</div>
-                        <div className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded" style={{ fontSize: '7.5px', fontWeight: 700, color: '#2347C6', background: '#fff', border: '0.5px solid #c2d0e8' }}>
-                          Fator {capaFatorLiquidacao} · {capaLiquidezDisplay}
-                        </div>
-                      </>
-                    ) : (
-                      <div style={{ fontSize: '9px', color: '#8FA4C7' }}>Não informado</div>
-                    )}
-                  </div>
-                </div>
-                {/* Strip de especificação */}
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  {([
-                    { label: 'GRAU DE FUNDAMENTAÇÃO', value: capaGrauFund },
-                    { label: 'GRAU DE PRECISÃO',      value: capaGrauPrec },
-                    { label: 'METODOLOGIA APLICADA',  value: capaMetodologia },
-                  ] as { label: string; value: string }[]).map((card, idx) => (
-                    <div key={idx} className="rounded overflow-hidden" style={{ border: '1px solid #d0daea' }}>
-                      <div className="px-2 py-1" style={{ background: '#EAF0FB' }}>
-                        <span style={{ fontSize: '6px', fontWeight: 700, color: '#2347C6', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{card.label}</span>
-                      </div>
-                      <div className="px-2 py-1.5">
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{card.value}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {/* Assinaturas */}
-                <div style={{ borderTop: '1px solid #d0daea', paddingTop: '10px' }}>
-                  <div className="grid grid-cols-2 gap-5">
-                    <div>
-                      <div style={{ height: '24px', borderBottom: '1px solid #17325C', marginBottom: '4px' }} />
-                      <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#17325C' }}>{dados.responsavelNome || 'Responsável Técnico'}</div>
-                      <div style={{ fontSize: '8px', color: '#5a7090', marginTop: '1px' }}>Responsável Técnica</div>
-                      {dados.responsavelRegistro && <div style={{ fontSize: '8px', color: '#5a7090', marginTop: '1px' }}>{dados.responsavelRegistro}</div>}
-                      <div style={{ fontSize: '7.5px', color: '#5a7090', marginTop: '2px', fontStyle: 'italic' }}>Lesath Engenharia – Craveiro, Leandro e Palma Serviços de Engenharia Ltda</div>
-                    </div>
-                    <div>
-                      <div style={{ height: '24px', borderBottom: '1px solid #17325C', marginBottom: '4px' }} />
-                      <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#17325C' }}>Gustavo Hènriqüe A. Leandro</div>
-                      <div style={{ fontSize: '8px', color: '#5a7090', marginTop: '1px' }}>Responsável Legal</div>
-                      <div style={{ fontSize: '8px', color: 'transparent', marginTop: '1px' }}>—</div>
-                      <div style={{ fontSize: '7.5px', color: '#5a7090', marginTop: '2px', fontStyle: 'italic' }}>Lesath Engenharia – Craveiro, Leandro e Palma Serviços de Engenharia Ltda</div>
-                    </div>
-                  </div>
-                  <div className="text-center mt-2.5" style={{ fontSize: '8px', color: '#6b87a8' }}>{capaDataImpressao}</div>
-                </div>
-              </div>
-              {/* Barra inferior */}
-              <div className="cr-bar flex" style={{ height: '5px', background: '#17325C' }}>
-                <div style={{ width: '35%', background: '#2347C6' }} />
-                <div style={{ flex: 1 }} />
-              </div>
-            </Pagina>
-            {/* ══ FIM CAPA RESUMO ═══════════════════════════════════ */}
-
+            {/* Laudo simplificado */}
             {(() => {
-              const ITENS_PRIMEIRA_PAGINA = 35
-              const ITENS_DEMAIS_PAGINAS = 42
-              const chunks: ItemSumario[][] = []
-              if (sumario.length <= ITENS_PRIMEIRA_PAGINA) {
-                chunks.push(sumario)
-              } else {
-                chunks.push(sumario.slice(0, ITENS_PRIMEIRA_PAGINA))
-                let i = ITENS_PRIMEIRA_PAGINA
-                while (i < sumario.length) {
-                  chunks.push(sumario.slice(i, i + ITENS_DEMAIS_PAGINAS))
-                  i += ITENS_DEMAIS_PAGINAS
-                }
-              }
-              return chunks.map((chunk, chunkIndex) => (
-                <Pagina key={`sumario-${chunkIndex}`} pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                  <CabecalhoLaudo />
-                  <div className="space-y-3">
-                    {chunkIndex === 0 ? (
-                      <div>
-                        <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 titulo-laudo">SUMÁRIO</h2>
-                      </div>
-                    ) : (
-                      <div>
-                        <h2 className="text-base font-bold text-slate-400">SUMÁRIO (continuação)</h2>
-                      </div>
-                    )}
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                      <div className="space-y-0 text-[12px] text-slate-700">
-                        {chunk.map((item) => (
-                          <a
-                            key={item.id}
-                            href={`#${item.id}`}
-                            onClick={(e) => {
-                              e.preventDefault()
-                              const el = document.getElementById(item.id)
-                              if (!el) return
-                              const headerOffset = 80
-                              const top = el.getBoundingClientRect().top + window.scrollY - headerOffset
-                              window.scrollTo({ top, behavior: 'smooth' })
-                            }}
-                            className="group flex items-end gap-3 rounded-md px-2 py-[3px] transition hover:bg-slate-100 cursor-pointer"
-                          >
-                            <span className={`shrink-0 ${item.nivel === 2 ? 'pl-5 text-slate-600' : 'font-medium text-slate-800'}`}>{item.titulo}</span>
-                            <span className="mb-[3px] h-px flex-1 border-b border-dotted border-slate-300 group-hover:border-slate-500"></span>
-                            <span className="shrink-0 font-semibold text-slate-900">{item.pagina}</span>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </Pagina>
-              ))
-            })()}
-
-            <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-              <CabecalhoLaudo />
-              <div className="space-y-4">
-                <div>
-                  <h2 className="font-bold text-lg titulo-laudo">1. IMÓVEL</h2>
-                  <p>A presente avaliação tem por objetivo determinar o valor de mercado do imóvel localizado em:</p>
-                  <p>{dados.endereco}.</p>
-                  <p>Trata-se de imóvel caracterizado como {dados.tipo}, conforme características observadas em vistoria.</p>
+              const SecHeader = ({ num, titulo }: { num: string; titulo: string }) => (
+                <div style={{ background: '#17325C', padding: '4px 10px', margin: '10px 0 0' }}>
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {num} — {titulo}
+                  </span>
                 </div>
-                <div>
-                  <h2 className="font-bold text-lg titulo-laudo">2. OBJETIVO</h2>
-                  <p>Trata-se de avaliação para fins de {dados.finalidade === 'garantia' ? 'garantia' : 'execução'}.</p>
-                </div>
-                <div>
-                  <h2 className="font-bold text-lg titulo-laudo">3. PROPRIETÁRIO</h2>
-                  <p>{dados.proprietario || 'Não informado'}.</p>
-                </div>
-                {dados.solicitante?.trim() && (
-                  <div>
-                    <h2 className="font-bold text-lg titulo-laudo">3.1. SOLICITANTE / INTERESSADO</h2>
-                    <p>{dados.solicitante}.</p>
-                  </div>
-                )}
-                <div>
-                  <h2 className="font-bold text-lg titulo-laudo">4. OBSERVAÇÕES PRELIMINARES</h2>
-                  <div className="space-y-4">
-                    <p>Este laudo fundamenta-se no que estabelecem as normas técnicas da ABNT, Avaliação de Bens, registradas como NBR 14653- Parte 1 (Procedimentos Gerais) e Parte 2 (Imóveis Urbanos), e baseia-se:</p>
-                    <ul className="list-disc pl-6 space-y-1">
-                      <li>Na documentação fornecida;</li>
-                      <li>Em informações constatadas &quot;in loco&quot; quando da vistoria ao imóvel.</li>
-                      <li>Em informações obtidas junto a agentes do mercado imobiliário local (vendedores, compradores, intermediários e etc).</li>
-                    </ul>
-                    <p>Na presente avaliação considerou-se a documentação apresentada.</p>
-                    <p>Considerou-se também que o imóvel está livre e desembaraçado de quaisquer ônus, em condições de ser imediatamente comercializado.</p>
-                    <p>Não foram efetuadas investigações quanto a correção dos documentos fornecidos; as observações &quot;in loco&quot; foram feitas sem instrumentos de medição; as informações obtidas foram tomadas como de boa-fé, tanto referente às documentações como às informações obtidas de terceiros. Não foi realizado estudo ambiental e de contaminação para o imóvel avaliando, bem como análises estruturais nas edificações, como ensaios e análises físicas.</p>
-                    <p>A avaliadora signatária não possui qualquer inclinação comercial referente ao imóvel em questão, sendo totalmente isenta de interesses. Não foram disponibilizadas informações contábeis, financeiras ou relativas ao fundo de comércio. O presente laudo desconsidera eventuais ativos intangíveis, marcas, dados financeiros, volume de vendas, carteira de clientes, softwares, investimentos, máquinas, equipamentos, produtos, matériasprimas, entre outros ativos que não estejam diretamente vinculados às edificações e ao terreno.</p>
-                  </div>
-                </div>
-                <div>
-                  <h2 className="font-bold text-lg titulo-laudo">5. CARACTERIZAÇÃO DA REGIÃO</h2>
-                  <p>O imóvel avaliado encontra-se inserido em região com acesso a pontos de referência relevantes da localidade, destacando-se:</p>
-                  <ul className="list-disc pl-6 mt-3 space-y-1">
-                    {dados.referencia1 && dados.distancia1 && <li>Distância até {dados.referencia1}: {dados.distancia1}.</li>}
-                    {dados.referencia2 && dados.distancia2 && <li>Distância até {dados.referencia2}: {dados.distancia2}.</li>}
-                    {dados.referencia3 && dados.distancia3 && <li>Distância até {dados.referencia3}: {dados.distancia3}.</li>}
-                    {dados.referencia4 && dados.distancia4 && <li>Distância até {dados.referencia4}: {dados.distancia4}.</li>}
-                    {dados.referencia5 && dados.distancia5 && <li>Distância até {dados.referencia5}: {dados.distancia5}.</li>}
-                    {dados.cidadePrincipal && dados.distanciaCidadePrincipal && <li>Distância até a cidade de {dados.cidadePrincipal}: {dados.distanciaCidadePrincipal}.</li>}
-                  </ul>
-                  {dados.coordenadasImovel && <p className="mt-4">Coordenadas Geográficas do imóvel avaliando: {dados.coordenadasImovel}</p>}
-                </div>
-              </div>
-            </Pagina>
-
-            <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-              <CabecalhoLaudo />
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold mb-4 titulo-laudo">6. CARACTERIZAÇÃO DO IMÓVEL</h2>
-                <table className="w-full border mt-4 text-sm border-collapse evitar-quebra">
-                  <thead><tr className="bg-[#EAF0FB]"><th colSpan={2} className="border p-2 text-center font-bold">Características principais</th></tr></thead>
-                  <tbody>
-                    <tr><td className="border p-2 font-bold w-1/3">Tipo do Imóvel</td><td className="border p-2">{dados.tipo}</td></tr>
-                    <tr><td className="border p-2 font-bold">Matrícula</td><td className="border p-2">{dados.matricula}</td></tr>
-                    <tr><td className="border p-2 font-bold">Padrão</td><td className="border p-2">{dados.padrao}</td></tr>
-                    <tr><td className="border p-2 font-bold">Idade aparente</td><td className="border p-2">{dados.idadeAparente ? `${dados.idadeAparente} anos` : ''}</td></tr>
-                    <tr><td className="border p-2 font-bold">Estado de Conservação</td><td className="border p-2">{dados.estadoConservacao}</td></tr>
-                    <tr><td className="border p-2 font-bold">IPTU</td><td className="border p-2">{dados.iptu}</td></tr>
-                    <tr><td className="border p-2 font-bold">Especificações de divisões</td><td className="border p-2">{dados.divisoes?.filter((d) => d.quantidade && d.ambiente).map((d) => `${d.quantidade} ${d.ambiente}`).join(', ') || ''}</td></tr>
-                    <tr><td className="border p-2 font-bold">Área construída total</td><td className="border p-2">{formatarArea(dados.areaConstruidaTotal)}</td></tr>
-                    <tr><td className="border p-2 font-bold">Área construída averbada</td><td className="border p-2">{formatarArea(dados.areaConstruidaAverbada)}</td></tr>
-                    <tr><td className="border p-2 font-bold">Área de terreno total</td><td className="border p-2">{formatarArea(dados.areaTerrenoTotal)}</td></tr>
-                    <tr><td className="border p-2 font-bold">Área de terreno averbada</td><td className="border p-2">{formatarArea(dados.areaTerrenoAverbada)}</td></tr>
-                  </tbody>
-                </table>
-                {dados.melhoramentosPublicos && (
-                  <div className="mt-6">
-                    <table className="w-full border text-sm border-collapse evitar-quebra">
-                      <thead><tr className="bg-[#EAF0FB]"><th colSpan={4} className="border p-2 text-center font-bold">Melhoramentos públicos</th></tr></thead>
-                      <tbody>
-                        {[
-                          ['Rede de água', 'redeAgua', 'Rede Elétrica', 'redeEletrica'],
-                          ['Gás canalizado', 'gasCanalizado', 'Rede Telefônica', 'redeTelefonica'],
-                          ['Esgoto Sanitário', 'esgotoSanitario', 'Iluminação Pública', 'iluminacaoPublica'],
-                          ['Esgoto Pluvial', 'esgotoPluvial', 'Pavimentação', 'pavimentacao'],
-                          ['Fossa', 'fossa', 'Passeio', 'passeio'],
-                          ['Coleta de Lixo', 'coletaLixo', 'Guias', 'guias'],
-                          ['Lazer', 'lazer', 'Sarjetas', 'sarjetas'],
-                        ].map(([l1, c1, l2, c2]) => (
-                          <tr key={c1 as string}><td className="border p-2">{l1}</td><td className="border p-2 text-center">{dados.melhoramentosPublicos?.[c1 as string] || '-'}</td><td className="border p-2">{l2}</td><td className="border p-2 text-center">{dados.melhoramentosPublicos?.[c2 as string] || '-'}</td></tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </PaginaFlexivel>
-
-            {/* 6.1. CROQUI — uma página por imagem de croqui */}
-            {dados.croquis && dados.croquis.length > 0 && dados.croquis.map((croqui, index) => (
-              <PaginaFlexivel key={`croqui-${index}`} pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                <CabecalhoLaudo />
-                <div className="mb-8 mt-4">
-                  {index === 0 && <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sec6Croqui}. CROQUI</h2>}
-                  <div className="flex justify-center">
-                    <img
-                      src={croqui.preview}
-                      alt={`Croqui ${index + 1}`}
-                      className="max-w-full max-h-[210mm] object-contain rounded border"
-                    />
-                  </div>
-                </div>
-              </PaginaFlexivel>
-            ))}
-
-            {/* 6.2. TERRENO ENCRAVADO — paginado para não cortar o texto */}
-            {dados.terrenoEncravado && (() => {
-              const paragrafosEncravado = [
-                ...dividirTextoEmParagrafos(TEXTO_PADRAO_TERRENO_ENCRAVADO),
-                ...(dados.observacoesTerrenoEncravado ? [`Observações específicas: ${dados.observacoesTerrenoEncravado}`] : []),
-              ]
-              const paginasEncravado = dividirParagrafosEmPaginas(paragrafosEncravado, 2800, 8)
-              return paginasEncravado.map((chunk, i) => (
-                <PaginaFlexivel key={`encravado-${i}`} pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                  <CabecalhoLaudo />
-                  <div className="mb-8 mt-4 space-y-4">
-                    {i === 0 && (
-                      <>
-                        <h2 className="text-2xl font-bold titulo-laudo">{sec6Encravado}. CONDIÇÕES ESPECÍFICAS DO TERRENO</h2>
-                        <h3 className="text-lg font-bold">Terreno Encravado</h3>
-                      </>
-                    )}
-                    {i > 0 && <h3 className="text-base font-semibold text-slate-400">Terreno Encravado (continuação)</h3>}
-                    <div className="space-y-3 text-justify leading-relaxed">
-                      {chunk.map((paragrafo, j) => <p key={j}>{paragrafo}</p>)}
-                    </div>
-                  </div>
-                </PaginaFlexivel>
-              ))
-            })()}
-
-            {/* 6.3. CONFRONTAÇÃO COM CURSO D'ÁGUA — paginado para não cortar o texto */}
-            {dados.confrontacaoCursoAgua && (() => {
-              const paragrafosAgua = [
-                ...dividirTextoEmParagrafos(TEXTO_PADRAO_CONFRONTACAO_CURSO_AGUA),
-                ...(dados.observacoesConfrontacaoCursoAgua ? [`Observações específicas: ${dados.observacoesConfrontacaoCursoAgua}`] : []),
-              ]
-              const paginasAgua = dividirParagrafosEmPaginas(paragrafosAgua, 2800, 8)
-              return paginasAgua.map((chunk, i) => (
-                <PaginaFlexivel key={`agua-${i}`} pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                  <CabecalhoLaudo />
-                  <div className="mb-8 mt-4 space-y-4">
-                    {i === 0 && (
-                      <>
-                        <h2 className="text-2xl font-bold titulo-laudo">{sec6CursoAgua}. CONDIÇÕES ESPECÍFICAS DO TERRENO</h2>
-                        <h3 className="text-lg font-bold">Confrontação com Curso D&apos;Água</h3>
-                      </>
-                    )}
-                    {i > 0 && <h3 className="text-base font-semibold text-slate-400">Confrontação com Curso D&apos;Água (continuação)</h3>}
-                    <div className="space-y-3 text-justify leading-relaxed">
-                      {chunk.map((paragrafo, j) => <p key={j}>{paragrafo}</p>)}
-                    </div>
-                  </div>
-                </PaginaFlexivel>
-              ))
-            })()}
-
-            {(() => {
-              const acabFiltrados = (dados.acabamentos || []).filter(
-                (a) => a.ambiente?.trim() || a.acabamento?.trim()
               )
-              return acabFiltrados.length > 0 ? (
-                <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                  <CabecalhoLaudo />
-                  <div className="mb-8 mt-8">
-                    <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.acabamentos}. ACABAMENTOS</h2>
-                    <table className="w-full border text-sm border-collapse evitar-quebra">
-                      <thead><tr className="bg-[#EAF0FB]"><th className="border p-2 text-left">Ambientes</th><th className="border p-2 text-left">Acabamentos</th></tr></thead>
-                      <tbody>
-                        {acabFiltrados.map((item, index) => (
-                          <tr key={index}><td className="border p-2">{item.ambiente}</td><td className="border p-2">{item.acabamento}</td></tr>
-                        ))}
-                      </tbody>
-                    </table>
+              const TH = ({ children, style, colSpan }: { children: React.ReactNode; style?: React.CSSProperties; colSpan?: number }) => (
+                <th colSpan={colSpan} style={{ background: '#EAF0FB', border: '0.5px solid #C9D3E6', padding: '3.5px 6px', fontSize: '8px', fontWeight: 700, color: '#17325C', textAlign: 'left', ...style }}>
+                  {children}
+                </th>
+              )
+              const TDL = ({ children }: { children: React.ReactNode }) => (
+                <td style={{ background: '#EAF0FB', border: '0.5px solid #C9D3E6', padding: '3.5px 6px', fontSize: '8px', fontWeight: 700, color: '#17325C', width: '28%' }}>
+                  {children}
+                </td>
+              )
+              const TDV = ({ children, colSpan }: { children: React.ReactNode; colSpan?: number }) => (
+                <td colSpan={colSpan} style={{ border: '0.5px solid #C9D3E6', padding: '3.5px 6px', fontSize: '8px', color: '#1e293b' }}>
+                  {children || '—'}
+                </td>
+              )
+              const DocHeader = () => (
+                <div style={{ background: '#17325C', padding: '8px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#fff' }}>Lesath Engenharia</div>
+                    <div style={{ fontSize: '9px', color: '#8FA4C7', marginTop: '1px' }}>Precisão técnica que gera confiança</div>
                   </div>
-                </PaginaFlexivel>
-              ) : null
-            })()}
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '8px', color: '#8FA4C7', letterSpacing: '1px', textTransform: 'uppercase' }}>LAUDO DE AVALIAÇÃO</div>
+                    {dados.solicitante && <div style={{ fontSize: '8px', color: '#b8cce4', marginTop: '1px' }}>Solicitante: {dados.solicitante}</div>}
+                    {dados.proprietario && <div style={{ fontSize: '8px', color: '#b8cce4', marginTop: '1px' }}>Proponente: {dados.proprietario}</div>}
+                  </div>
+                </div>
+              )
+              const DocFooter = ({ pag }: { pag: string }) => (
+                <div style={{ background: '#17325C', padding: '4px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                  <span style={{ fontSize: '8px', color: '#8FA4C7' }}>www.lesathengenharia.com.br</span>
+                  <span style={{ fontSize: '8px', color: '#8FA4C7' }}>{formatarData(dados.dataLaudo || '')}</span>
+                  <span style={{ fontSize: '8px', fontWeight: 700, color: '#fff' }}>Página {pag}</span>
+                </div>
+              )
 
-            {(paginasSecao8.some(chunk => chunk.length > 0) || dados.liquidez || dados.desempenhoMercado) && (() => {
-              // Garante ao menos uma página para renderizar o cabeçalho + tabela
-              const chunks = paginasSecao8.some(chunk => chunk.length > 0)
-                ? paginasSecao8
-                : [[]]
-              return chunks.map((chunk, i) => (
-              <PaginaFlexivel key={`sec8-${i}`} pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                <CabecalhoLaudo />
-                <div className="mb-6 mt-6">
-                  {i === 0 && <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.consideracoes}. CONSIDERAÇÕES SOBRE O MERCADO</h2>}
+              const endParts = (dados.endereco || '').split(' – ').map((p: string) => p.trim())
+              const logradouro = endParts[0] || ''
+              const bairro     = endParts[1] || ''
+              const cidade     = endParts[2] || ''
+              const uf         = endParts[3] || ''
+              const cepMatch   = (dados.endereco || '').match(/CEP\s*([\d-]+)/)
+              const cep        = cepMatch ? cepMatch[1] : ''
 
-                  {i === 0 && (dados.liquidez || dados.desempenhoMercado) && (
-                    <table className="w-full border text-sm border-collapse mb-4 evitar-quebra">
-                      <thead>
-                        <tr className="bg-[#EAF0FB]">
-                          <th className="border p-2 text-left font-bold w-1/3">Campo</th>
-                          <th className="border p-2 text-left">Descrição</th>
+              const metLabel =
+                dados.metodoAvaliacao === 'comparativo' ? 'Método Comparativo Direto de Dados de Mercado'
+                : dados.metodoAvaliacao === 'evolutivo'  ? 'Método Evolutivo'
+                : dados.metodoAvaliacao || '—'
+
+              const fotoFach = (dados.fotos || []).find((f: any) => (f.legenda || '').toLowerCase().includes('fachada')) || dados.fotos?.[0]
+              const fotosAnexo = dados.fotos || []
+              const divisoesFilt = (dados.divisoes || []).filter((d: any) => d.ambiente?.trim())
+
+              const vlFinal = valorArredondadoLaudo
+              const vlf = valorLiquidezForcadaNumero
+
+              // Dados completos do CDDM (persistidos pelo EtapaCalculoCDDM)
+              const cddm = (dados as any).dadosCalculoCDDM as {
+                elementos: any[]
+                avaliando: { area: number; padraoConstrutivo: string; estadoConservacao: string }
+                media: number; mediaSaneada: number; desvioPadrao: number; coefVariacao: number
+                tStudent: number; intervaloConfianca: number; limiteInferior: number; limiteSuperior: number
+                limiteInf30: number; limiteSup30: number; grauPrecisao: string; valorImovel: number; outliersDescartados: number
+              } | undefined
+              const ev = (dados as any).dadosCalculoEvolutivo as any | undefined
+              const evSnap = ev
+              const elementosCddm = cddm?.elementos || []
+              const elementosEv = ev?.elementos || []
+              // Elementos a mostrar: CDDM para comparativo, evolutivo para método evolutivo
+              const isEvolutivo = dados.metodoAvaliacao === 'evolutivo'
+              const elementosExibir: any[] = isEvolutivo ? elementosEv : elementosCddm
+              const temCddm = elementosCddm.length > 0
+              const temElementos = elementosExibir.length > 0
+              const formatarDataBR = (data?: string) => {
+                if (!data) return ''
+                const [ano, mes, dia] = data.split('-')
+                return `${dia}/${mes}/${ano}`
+              }
+
+              return (
+                <>
+                  {/* ─── PÁGINA 1 ─────────────────────────────────────── */}
+                  <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
+                    <DocHeader />
+                    <div style={{ background: '#2347C6', textAlign: 'center', padding: '5px 12px', margin: '8px 0 6px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff' }}>LAUDO DE AVALIAÇÃO</span>
+                    </div>
+
+                    {/* 1 — Identificação */}
+                    <SecHeader num="1" titulo="Identificação" />
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6' }}>
+                      <tbody>
+                        <tr><TDL>Matrícula</TDL><TDV>{dados.matricula}</TDV></tr>
+                        <tr><TDL>Solicitante</TDL><TDV>{dados.solicitante}</TDV></tr>
+                        <tr><TDL>Proponente</TDL><TDV>{dados.proprietario}</TDV></tr>
+                        <tr><TDL>Logradouro</TDL><TDV>{logradouro}</TDV></tr>
+                        <tr>
+                          <td colSpan={2} style={{ border: '0.5px solid #C9D3E6', padding: 0 }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                              <tbody>
+                                <tr>
+                                  <TDL>CEP</TDL><TDV>{cep}</TDV>
+                                  <TDL>Bairro</TDL><TDV>{bairro}</TDV>
+                                  <TDL>Cidade</TDL><TDV>{cidade}</TDV>
+                                  <TDL>UF</TDL><TDV>{uf}</TDV>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {dados.liquidez && (
-                          <tr>
-                            <td className="border p-2 font-semibold">Liquidez</td>
-                            <td className="border p-2">{dados.liquidez}</td>
-                          </tr>
-                        )}
-                        {dados.desempenhoMercado && (
-                          <tr>
-                            <td className="border p-2 font-semibold">Desempenho do Mercado</td>
-                            <td className="border p-2">{dados.desempenhoMercado}</td>
-                          </tr>
-                        )}
+                        {dados.coordenadasImovel && <tr><TDL>Coordenadas</TDL><TDV>{dados.coordenadasImovel}</TDV></tr>}
                       </tbody>
                     </table>
-                  )}
 
-                  {chunk.length > 0 && (
-                    <div className="space-y-1.5 text-justify leading-relaxed">{chunk.map((paragrafo, j) => <p key={j}>{paragrafo}</p>)}</div>
-                  )}
-                </div>
-              </PaginaFlexivel>
-              ))
-            })()}
+                    {/* Foto fachada */}
+                    {fotoFach && (
+                      <div style={{ height: '130px', margin: '8px 0', overflow: 'hidden', border: '0.5px solid #C9D3E6', borderRadius: '3px' }}>
+                        <img src={fotoFach.preview} alt="Fachada" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                    )}
 
-            {chunkArray(itensGlossario, 18).map((chunk, i) => (
-              <PaginaFlexivel key={`sec9-${i}`} pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                <CabecalhoLaudo />
-                <div className="mb-8 mt-8">
-                  {i === 0 && <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.glossario}. GLOSSÁRIO DE TERMOS TÉCNICOS (ABNT NBR 14653-2)</h2>}
-                  <div className="space-y-3 text-justify leading-relaxed">{chunk.map((item, j) => <p key={j}>{item}</p>)}</div>
-                </div>
-              </PaginaFlexivel>
-            ))}
+                    {/* 2 — Avaliação */}
+                    <SecHeader num="2" titulo="Avaliação" />
+                    <div style={{ display: 'flex', gap: '6px', margin: '6px 0 4px' }}>
+                      <div style={{ flex: 1, background: '#17325C', padding: '8px 10px', borderRadius: '3px' }}>
+                        <div style={{ fontSize: '7.5px', color: '#8FA4C7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>VALOR DA AVALIAÇÃO</div>
+                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff', margin: '3px 0 1px' }}>{formatarMoeda(vlFinal)}</div>
+                        <div style={{ fontSize: '8px', color: '#8FA4C7' }}>({numeroPorExtenso(vlFinal).charAt(0).toUpperCase() + numeroPorExtenso(vlFinal).slice(1)})</div>
+                      </div>
+                      {vlf > 0 && (
+                        <div style={{ flex: 1, background: '#EAF0FB', border: '0.5px solid #C9D3E6', padding: '8px 10px', borderRadius: '3px' }}>
+                          <div style={{ fontSize: '7.5px', color: '#2347C6', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>VALOR DE LIQUIDAÇÃO</div>
+                          <div style={{ fontSize: '16px', fontWeight: 700, color: '#17325C', margin: '3px 0 1px' }}>{formatarMoeda(vlf)}</div>
+                          <div style={{ fontSize: '8px', color: '#5a7090' }}>({numeroPorExtenso(vlf).charAt(0).toUpperCase() + numeroPorExtenso(vlf).slice(1)})</div>
+                        </div>
+                      )}
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginBottom: '6px' }}>
+                      <tbody><tr><TDL>Metodologia</TDL><TDV>{metLabel}</TDV></tr></tbody>
+                    </table>
 
-            <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-              <CabecalhoLaudo />
-              <div className="mb-8 mt-8">
-                <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.metodologia}. METODOLOGIA, PESQUISAS E CÁLCULOS</h2>
-                <div className="space-y-2">
-                  {dados.periodoPesquisaInicio && dados.periodoPesquisaFim && <p>• <strong>Período de abrangência da pesquisa:</strong> {formatarData(dados.periodoPesquisaInicio)} a {formatarData(dados.periodoPesquisaFim)}</p>}
-                  {dados.tipoInformacoesObtidas && <p>• <strong>Tipo de informações obtidas:</strong> {dados.tipoInformacoesObtidas}</p>}
-                  {!temElementos && dados.caracteristicasTerreno && <p>• <strong>Características:</strong> {dados.caracteristicasTerreno}</p>}
-                </div>
-                {!temElementos && (
-                  <div className="mt-4 space-y-2">
-                    <p>Após os tratamentos e homogeneizações, foi desenvolvido um modelo com os seguintes fatores considerados:</p>
-                    <ul className="list-disc pl-6 mt-2">{dados.fatoresSelecionados?.map((fator, index) => <li key={index}>{fator}</li>)}</ul>
-                  </div>
-                )}
+                    {/* 3 — Características e Dimensões do Avaliando (unificado) */}
+                    <SecHeader num="3" titulo="Características e Dimensões do Avaliando" />
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
+                      <tbody>
+                        <tr>
+                          <TDL>Tipo</TDL><TDV>{dados.tipo}</TDV>
+                          <TDL>IPTU</TDL><TDV>{dados.iptu}</TDV>
+                        </tr>
+                        <tr>
+                          <TDL>Área de terreno</TDL><TDV>{formatarArea(dados.areaTerrenoTotal)}</TDV>
+                          <TDL>Área construída total</TDL><TDV>{formatarArea(dados.areaConstruidaTotal)}</TDV>
+                        </tr>
+                        <tr>
+                          <TDL>Área averbada</TDL><TDV>{formatarArea(dados.areaConstruidaAverbada)}</TDV>
+                          <TDL>Área não averbada</TDL><TDV>{formatarArea(dados.areaConstruidaNaoAverbada?.toString())}</TDV>
+                        </tr>
+                        <tr>
+                          <TDL>Padrão construtivo</TDL><TDV>{dados.padrao}</TDV>
+                          <TDL>Idade aparente</TDL><TDV>{dados.idadeAparente ? dados.idadeAparente + ' anos' : '—'}</TDV>
+                        </tr>
+                        <tr>
+                          <TDL>Estado de conservação</TDL><TDV>{dados.estadoConservacao}</TDV>
+                          <TDL>Finalidade</TDL><TDV>{capaFinalidade}</TDV>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <DocFooter pag="1" />
+                  </Pagina>
 
-                {/* ── Elementos CDDM/Evolutivo inline ─────────────────────────────── */}
-                {/* 9 — Pesquisa imobiliária */}
-                    <h2 className="text-xl font-bold mb-2 titulo-laudo mt-4">8. Pesquisa Imobiliária</h2>
+                  {/* ─── PÁGINA 2 ─────────────────────────────────────── */}
+                  <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
+                    <DocHeader />
+
+                    {/* 4 — Documentação (renumerada) */}
+                    <SecHeader num="4" titulo="Documentação Apresentada" />
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
+                      <tbody>
+                        <tr><TDL>Matrícula</TDL><TDV>{dados.matricula}</TDV></tr>
+                        <tr><TDL>Inscrição imobiliária</TDL><TDV>{dados.iptu}</TDV></tr>
+                      </tbody>
+                    </table>
+
+                    {/* 6 — Descrição */}
+                    <SecHeader num="5" titulo="Descrição do Imóvel Avaliando" />
+                    <div style={{ border: '0.5px solid #C9D3E6', padding: '8px', fontSize: '8.5px', lineHeight: '1.55', color: '#1e293b', marginTop: '4px' }}>
+                      <strong style={{ color: '#17325C', fontSize: '8.5px' }}>6.1 — Descrição do imóvel avaliando</strong>
+                      <div style={{ marginTop: '4px' }}>
+                        {dados.consideracoesMercado
+                          ? dados.consideracoesMercado.substring(0, 500) + (dados.consideracoesMercado.length > 500 ? '...' : '')
+                          : `Imóvel do tipo ${dados.tipo || 'residencial'}, localizado em ${dados.endereco}.`}
+                      </div>
+                    </div>
+
+                    {/* 7 — Divisões */}
+                    {divisoesFilt.length > 0 && (
+                      <>
+                        <SecHeader num="6" titulo="Características do Imóvel Avaliando" />
+                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
+                          <thead>
+                            <tr>
+                              <TH style={{ width: '40%' }}>Divisão Interna</TH>
+                              <TH style={{ width: '20%', textAlign: 'center' }}>Qtd.</TH>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {divisoesFilt.map((d: any, i: number) => (
+                              <tr key={i}>
+                                <TDV>{d.ambiente}</TDV>
+                                <td style={{ border: '0.5px solid #C9D3E6', padding: '3.5px 6px', fontSize: '8px', textAlign: 'center', color: '#1e293b' }}>{d.quantidade}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </>
+                    )}
+                    <DocFooter pag="2" />
+                  </Pagina>
+
+                  {/* ─── PÁGINA 3 ─────────────────────────────────────── */}
+                  <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
+                    <DocHeader />
+
+                    
+
+                    {/* 9 — Pesquisa imobiliária */}
+                    <SecHeader num="8" titulo="Pesquisa Imobiliária" />
 
 
                     {/* Cards de elemento — blocos temáticos, até 3 colunas, campos vazios omitidos */}
@@ -1395,7 +1099,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                       }
 
                       const linhas = [
-                        r3('Tipo', el.tipo, 'Data', el.data ? formatarData(el.data) : '', 'Empreendimento', el.empreendimento),
+                        r3('Tipo', el.tipo, 'Data', el.data ? formatarDataBR(el.data) : '', 'Empreendimento', el.empreendimento),
                         r1('Logradouro', el.logradouro || el.endereco),
                         r3('Bairro', el.bairro, 'Cidade · UF', cidadeUF, 'Distância', el.distanciaAvaliando || el.distancia),
                         r1('Coordenadas', el.coordenadas, { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }),
@@ -1421,7 +1125,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                               {isEvolutivo ? 'ELEMENTO' : 'ELEMENTO COMPARATIVO'} {String(i + 1).padStart(2, '0')}
                             </span>
                             <span style={{ fontSize: '7.5px', color: '#8fa4c7' }}>
-                              {el.fonte || ''}{el.data ? ` • ${formatarData(el.data)}` : ''}
+                              {el.fonte || ''}{el.data ? ` • ${formatarDataBR(el.data)}` : ''}
                             </span>
                           </div>
                           {/* Corpo: campos + foto lateral */}
@@ -1445,7 +1149,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                         <img
                           src={dados.localizacaoComparativos}
                           alt="Mapa de localização dos comparativos"
-                          style={{ width: '100%', borderRadius: '6px', border: '0.5px solid #C9D3E6', objectFit: 'contain' }}
+                          style={{ width: '100%', borderRadius: '6px', border: '0.5px solid #C9D3E6', objectFit: 'cover', maxHeight: '260px' }}
                         />
                       </div>
                     )}
@@ -1453,7 +1157,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     {/* 9.1 — Homogeneização */}
                     {temCddm && (
                       <>
-                        <h2 className="text-xl font-bold mb-2 titulo-laudo mt-4">8.1. Homogeneização</h2>
+                        <SecHeader num="8.1" titulo="Homogeneização" />
                         <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px' }}>
                           <thead>
                             <tr style={{ background: '#2347C6' }}>
@@ -1480,7 +1184,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                               return (
                                 <tr key={`h-${i}`}>
                                   <td style={cellStyle}>{i + 1}</td>
-                                  <td style={cellStyle}>{formatarMoeda(el.valorUnitarioOferta || 0)}</td>
+                                  <td style={cellStyle}>{formatarMoeda(el.vu || el.valorUnitarioOferta || 0)}</td>
                                   <td style={cellStyle}>{(el.fatorLocal || 1).toFixed(4).replace('.', ',')}</td>
                                   <td style={cellStyle}>{(el.fatorPadrao || 1).toFixed(4).replace('.', ',')}</td>
                                   <td style={cellStyle}>{(el.fatorFOC || 1).toFixed(4).replace('.', ',')}</td>
@@ -1619,12 +1323,12 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     )}
 
                     {/* Seção de cálculo evolutivo */}
-                    {isEvolutivo && ev && ev.resultado && (() => {
+                    {isEvolutivo && evSnap && evSnap.resultado && (() => {
                       const pnEv = (s: any) => { if (!s && s !== 0) return 0; const n = parseFloat(String(s).replace(/[R$\s]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.')); return isNaN(n) ? 0 : n }
-                      const res = ev.resultado
-                      const elems = ev.elementos || []
-                      const benfs = (ev.benfeitorias || []) as any[]
-                      const area = pnEv(ev.avaliando?.area)
+                      const res = evSnap.resultado
+                      const elems = evSnap.elementos || []
+                      const benfs = (evSnap.benfeitorias || []) as any[]
+                      const area = pnEv(evSnap.avaliando?.area)
                       const vuMed = res.media || 0
                       const tdC: React.CSSProperties = { padding: '3px 5px', fontSize: '7.5px', border: '0.5px solid #C9D3E6', textAlign: 'center' }
                       const tdCHl: React.CSSProperties = { ...tdC, background: '#EAF0FB', fontWeight: 700, color: '#17325C' }
@@ -1632,7 +1336,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                       return (
                         <>
                           {/* 8.1 Homogeneização do terreno */}
-                          <h2 className="text-xl font-bold mb-2 titulo-laudo mt-4">8.1. Homogeneização — terreno</h2>
+                          <SecHeader num="8.1" titulo="Homogeneização — terreno" />
                           <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: 4 }}>
                             <thead>
                               <tr style={{ background: '#2347C6' }}>
@@ -1647,9 +1351,9 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                             </thead>
                             <tbody>
                               {elems.map((el: any, i: number) => {
-                                const nLocalAv = pnEv(ev.avaliando?.notaLocal) || 100
-                                const nTopoAv  = pnEv(ev.avaliando?.notaTopo)  || 100
-                                const nVisAv   = pnEv(ev.avaliando?.notaVis)   || 100
+                                const nLocalAv = pnEv(evSnap.avaliando?.notaLocal) || 100
+                                const nTopoAv  = pnEv(evSnap.avaliando?.notaTopo)  || 100
+                                const nVisAv   = pnEv(evSnap.avaliando?.notaVis)   || 100
                                 const fLoc  = (pnEv(el.fatorLocal)       || 100) > 0 ? nLocalAv / (pnEv(el.fatorLocal)       || 100) : 1
                                 const fTopo = (pnEv(el.fatorTopografia)  || 100) > 0 ? nTopoAv  / (pnEv(el.fatorTopografia)  || 100) : 1
                                 const fVis  = (pnEv(el.fatorVisibilidade)|| 100) > 0 ? nVisAv   / (pnEv(el.fatorVisibilidade)|| 100) : 1
@@ -1719,7 +1423,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                           {/* 8.2 VEIU */}
                           {benfs.length > 0 && (
                             <>
-                              <h2 className="text-xl font-bold mb-2 titulo-laudo mt-4">8.2. Valor das Edificações — CUB R8N Depreciado (VEIU)</h2>
+                              <SecHeader num="8.2" titulo="Valor das Edificações — CUB R8N Depreciado (VEIU)" />
                               <div style={{ overflowX: 'auto', marginTop: 4 }}>
                                 <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '7px' }}>
                                   <thead>
@@ -1757,7 +1461,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                                     })}
                                     <tr style={{ background: '#1a3564' }}>
                                       <td colSpan={14} style={{ padding: '3px 5px', fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'right', border: '0.5px solid #333' }}>Total das edificações</td>
-                                      <td style={{ padding: '3px 5px', fontSize: '7.5px', fontWeight: 700, color: '#fff', textAlign: 'center', border: '0.5px solid #333' }}>{formatarMoeda(ev.valorBenfeitorias || 0)}</td>
+                                      <td style={{ padding: '3px 5px', fontSize: '7.5px', fontWeight: 700, color: '#fff', textAlign: 'center', border: '0.5px solid #333' }}>{formatarMoeda(evSnap.valorBenfeitorias || 0)}</td>
                                     </tr>
                                   </tbody>
                                 </table>
@@ -1768,526 +1472,293 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                         </>
                       )
                     })()}
-              </div>
-            </PaginaFlexivel>
 
-            <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-              <CabecalhoLaudo />
-              <div className="mb-8 mt-8">
-                <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.valor}. VALOR DO IMÓVEL</h2>
-                <div className="space-y-3">
-                  {modoTotal ? (
-                    <p>a. <strong>Valor do Imóvel:</strong> {formatarMoeda(valorTotalNumero)}</p>
-                  ) : (
-                    <>
-                      <p>a. <strong>Valor do Terreno:</strong> {formatarMoeda(valorTerrenoNumero)}</p>
-                      <p>b. <strong>Valor das Benfeitorias:</strong> {formatarMoeda(valorBenfeitoriasNumero)}</p>
-                    </>
-                  )}
-                  <p>{modoTotal ? 'b.' : 'c.'} <strong>Fator de Comercialização:</strong> {dados.fatorComercializacao || '1,00'}</p>
-                  {produtoOutrosFatores !== 1 && <p><strong>Produto dos outros fatores:</strong> {produtoOutrosFatores.toLocaleString('pt-BR')}</p>}
-                </div>
-                <div className="grid grid-cols-2 gap-3 mt-4 evitar-quebra">
-                  <div className="value-box-dark">
-                    <div className="vb-label">Valor de Avaliação</div>
-                    <div className="vb-num">{formatarMoeda(valorArredondadoLaudo)}</div>
-                    <div className="vb-ext">{valorArredondadoExtenso.charAt(0).toUpperCase() + valorArredondadoExtenso.slice(1)}</div>
-                  </div>
-                  <div className="value-box-light">
-                    <div className="vb-label">Valor de Liquidez Forçada</div>
-                    {valorLiquidezForcadaNumero > 0 ? (
-                      <>
-                        <div className="vb-num">{formatarMoeda(valorLiquidezForcadaNumero)}</div>
-                        <div className="vb-ext">{valorLiquidezForcadaExtenso.charAt(0).toUpperCase() + valorLiquidezForcadaExtenso.slice(1)}</div>
-                      </>
-                    ) : (
-                      <div style={{ fontSize: '9px', color: '#8FA4C7' }}>Não informado</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </PaginaFlexivel>
-
-            {(() => {
-              // ─── Dados de fundamentação e precisão salvos no laudo ───────
-              const fund       = dados.fundamentacao            || []
-              const fundInf    = dados.fundamentacaoInferencia  || []
-              const fundEvo    = dados.fundamentacaoEvolutivo   || []
-              const prec       = dados.precisao                 || []
-
-              const metodo     = dados.metodoAvaliacao  || ''
-              const tratamento = dados.tratamentoDados  || ''
-
-              // ─── Valor numérico do grau ──────────────────────────────────
-              const gv = (g?: string) => g === 'III' ? 3 : g === 'II' ? 2 : g === 'I' ? 1 : 0
-
-              // Usa pontos salvo; se for 0 mas grau estiver preenchido, deriva do grau
-              const pts = (i: any) => i?.pontos || gv(i?.grau)
-
-              const somaFund   = fund.reduce   ((s: number, i: any) => s + pts(i), 0)
-              const somaInf    = fundInf.reduce((s: number, i: any) => s + pts(i), 0)
-              const somaEvo    = fundEvo.reduce((s: number, i: any) => s + pts(i), 0)
-
-              // ─── Lógica de exibição por combinação método + tratamento ───
-              const exibirFatores    = !(metodo === 'evolutivo' && tratamento === 'inferencia_estatistica')
-              const exibirEvolutivo  = metodo === 'evolutivo'
-              const exibirInferencia = tratamento === 'inferencia_estatistica'
-
-              // ─── Enquadramento – Fatores ─────────────────────────────────
-              // Grau III: soma≥10 + itens 2 e 4 = III + demais ≥ II
-              // Grau II : soma≥6  + itens 2 e 4 ≥ II + demais ≥ I
-              // Grau I  : soma≥4  + todos ≥ I
-              const encFatores = (() => {
-                const g2 = gv(fund[1]?.grau), g4 = gv(fund[3]?.grau)
-                const outros = [fund[0], fund[2]]
-                if (somaFund >= 10 && g2 >= 3 && g4 >= 3 && outros.every((i: any) => gv(i?.grau) >= 2)) return 'III'
-                if (somaFund >= 6  && g2 >= 2 && g4 >= 2 && outros.every((i: any) => gv(i?.grau) >= 1)) return 'II'
-                if (somaFund >= 4  && fund.every((i: any) => gv(i?.grau) >= 1)) return 'I'
-                return ''
-              })()
-
-              // ─── Enquadramento – Evolutivo ───────────────────────────────
-              // Grau III: soma≥8 + todos ≥ II
-              // Grau II : soma≥5 + itens 1 e 2 ≥ II
-              // Grau I  : soma≥3 + todos ≥ I
-              const encEvolutivo = (() => {
-                if (somaEvo >= 8 && fundEvo.every((i: any) => gv(i?.grau) >= 2)) return 'III'
-                if (somaEvo >= 5 && gv(fundEvo[0]?.grau) >= 2 && gv(fundEvo[1]?.grau) >= 2) return 'II'
-                if (somaEvo >= 3 && fundEvo.every((i: any) => gv(i?.grau) >= 1)) return 'I'
-                return ''
-              })()
-
-              // ─── Enquadramento – Inferência ──────────────────────────────
-              // Grau III: soma≥16 + itens 2,4,5,6 = III + demais ≥ II
-              // Grau II : soma≥10 + itens 2,4,5,6 ≥ II + demais ≥ I
-              // Grau I  : soma≥6  + todos ≥ I
-              const encInferencia = (() => {
-                const man = [fundInf[1], fundInf[3], fundInf[4], fundInf[5]]
-                const oth = [fundInf[0], fundInf[2]]
-                if (somaInf >= 16 && man.every((i: any) => gv(i?.grau) >= 3) && oth.every((i: any) => gv(i?.grau) >= 2)) return 'III'
-                if (somaInf >= 10 && man.every((i: any) => gv(i?.grau) >= 2) && oth.every((i: any) => gv(i?.grau) >= 1)) return 'II'
-                if (somaInf >= 6  && fundInf.every((i: any) => gv(i?.grau) >= 1)) return 'I'
-                return ''
-              })()
-
-              // ─── Estilo de célula ativo ──────────────────────────────────
-              const ca = (cond: boolean) => cond ? 'bg-blue-600 text-white font-bold' : ''
-
-              // ─── Linhas das tabelas ──────────────────────────────────────
-              const linhasFund = [
-                { item: 1, desc: 'Caracterização do imóvel avaliando',                                                                                                    iii: 'Completa quanto a todos os fatores analisados',                                                                                                                ii: 'Completa quanto aos fatores utilizados no tratamento',                                     i: 'Adoção de situação paradigma' },
-                { item: 2, desc: 'Quantidade mínima de dados de mercado efetivamente utilizados',                                                                          iii: '12',                                                                                                                                                   ii: '5',                                                                                        i: '3' },
-                { item: 3, desc: 'Identificação dos dados de mercado',                                                                                                    iii: 'Apresentação das informações relativas a todas as características dos dados analisados, com foto e características observadas pelo autor do laudo',   ii: 'Apresentação das informações relativas a todas as características dos dados analisados',   i: 'Apresentação das informações relativas a todas as características dos dados correspondentes aos fatores utilizados' },
-                { item: 4, desc: 'Intervalo admissível de ajuste para o conjunto de fatores',                                                                              iii: '0,80 a 1,25',                                                                                                                                           ii: '0,5 a 2,00',                                                                               i: '0,40 a 2,50' },
-              ]
-              const linhasEvo = [
-                { item: 1, desc: 'Estimativa do valor do terreno',     iii: 'Grau III de fundamentação no método comparativo ou no involutivo', ii: 'Grau II de fundamentação no método comparativo ou no involutivo', i: 'Grau I de fundamentação no método comparativo ou no involutivo' },
-                { item: 2, desc: 'Estimativa dos Custos de Reedição',  iii: 'Grau III de fundamentação no método da quantificação de custo',   ii: 'Grau II de fundamentação no método da quantificação de custo',   i: 'Grau I de fundamentação no método da quantificação de custo' },
-                { item: 3, desc: 'Fator de Comercialização',           iii: 'Inferido em mercado semelhante',                                  ii: 'Justificado',                                                     i: 'Arbitrado' },
-              ]
-              const linhasInf = [
-                { item: 1, desc: 'Caracterização do imóvel avaliando',                                                                                                                    iii: 'Completa quanto a todas as variáveis analisadas',                                                                                                                                                                                                                        ii: 'Completa quanto às variáveis utilizadas no modelo',                                                                                                                                                                                                             i: 'Adoção da situação paradigma' },
-                { item: 2, desc: 'Quantidade mínima de dados do mercado',                                                                                                                  iii: '6 (k+1), onde k é o número de variáveis independentes',                                                                                                                                                                                                                 ii: '4 (k+1), onde k é o número de variáveis independentes',                                                                                                                                                                                                        i: '3 (k+1), onde k é o número de variáveis independentes' },
-                { item: 3, desc: 'Identificação dos dados de mercado',                                                                                                                    iii: 'Apresentação de informações relativas a todos os dados e variáveis analisados na modelagem, com foto e características observadas no local pelo autor do laudo',                                                                                                      ii: 'Apresentação de informações relativas a todos os dados e variáveis analisadas na modelagem',                                                                                                                                                                   i: 'Apresentação de informações relativas aos dados e variáveis efetivamente utilizados no modelo' },
-                { item: 4, desc: 'Extrapolação',                                                                                                                                          iii: 'Não admitida',                                                                                                                                                                                                                                                          ii: 'Admitida para apenas uma variável, desde que: a) medidas do avaliando não superiores a 100% do limite amostral superior, nem inferiores à metade do inferior; b) valor estimado não ultrapasse 15% do calculado no limite da fronteira amostral, em módulo',   i: 'Admitida para apenas uma variável, desde que: a) medidas do avaliando não superiores a 100% do limite amostral superior, nem inferiores à metade do inferior; b) valor estimado não ultrapasse 20% do calculado no limite da fronteira amostral, em módulo' },
-                { item: 5, desc: 'Nível de significância máximo para rejeição da hipótese nula de cada regressor (teste bicaudal)',                                                        iii: '10%',                                                                                                                                                                                                                                                            ii: '20%',                                                                                                                                                                                                                                                          i: '30%' },
-                { item: 6, desc: 'Nível de significância máximo admitido para rejeição da hipótese nula do modelo (teste F de Snedecor)',                                                 iii: '1%',                                                                                                                                                                                                                                                            ii: '2%',                                                                                                                                                                                                                                                           i: '5%' },
-              ]
-
-              // ─── Tabela principal de fundamentação (genérica) ────────────
-              function TabelaFund({ titulo, linhas, dadosGrau, soma, obs }: {
-                titulo: string
-                linhas: { item: number; desc: string; iii: string; ii: string; i: string }[]
-                dadosGrau: any[]
-                soma: number
-                obs?: string
-              }) {
-                return (
-                  <div className="mb-4">
-                    <p className="mb-2 font-semibold text-[11px]">{titulo}</p>
-                    <table className="w-full border text-[11px] border-collapse table-fixed">
-                      <colgroup>
-                        <col style={{ width: '5%' }} /><col style={{ width: '20%' }} />
-                        <col style={{ width: '20%' }} /><col style={{ width: '20%' }} />
-                        <col style={{ width: '20%' }} /><col style={{ width: '15%' }} />
-                      </colgroup>
-                      <thead>
-                        <tr className="bg-gray-200">
-                          <th rowSpan={2} className="border p-1 text-center align-middle">Item</th>
-                          <th rowSpan={2} className="border p-1 text-center align-middle">Descrição</th>
-                          <th colSpan={3} className="border p-1 text-center">GRAU</th>
-                          <th rowSpan={2} className="border p-1 text-center align-middle">Pontuação</th>
-                        </tr>
-                        <tr className="bg-gray-200">
-                          <th className="border p-1 text-center">III</th>
-                          <th className="border p-1 text-center">II</th>
-                          <th className="border p-1 text-center">I</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {linhas.map((l, idx) => {
-                          const g = dadosGrau[idx]?.grau || ''
-                          return (
-                            <tr key={l.item}>
-                              <td className="border p-1 text-center font-bold align-middle">{l.item}</td>
-                              <td className="border p-1 align-middle text-[10px]">{l.desc}</td>
-                              <td className={`border p-1 text-center text-[10px] align-middle ${ca(g === 'III')}`}>{l.iii}</td>
-                              <td className={`border p-1 text-center text-[10px] align-middle ${ca(g === 'II')}`}>{l.ii}</td>
-                              <td className={`border p-1 text-center text-[10px] align-middle ${ca(g === 'I')}`}>{l.i}</td>
-                              <td className="border p-1 text-center font-bold align-middle">{g ? dadosGrau[idx].pontos : ''}</td>
-                            </tr>
-                          )
-                        })}
-                        <tr>
-                          <td colSpan={5} className="border p-1 text-right font-bold">Somatória</td>
-                          <td className="border p-1 text-center font-bold">{soma}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    {obs && <p className="mt-1 text-[10px]"><strong>Obs:</strong> {obs}</p>}
-                  </div>
-                )
-              }
-
-              // ─── Tabela resultado – Fatores (estilo imagem 2) ────────────
-              function ResultadoFatores({ enc }: { enc: string }) {
-                return (
-                  <div className="mt-3">
-                    <p className="mb-2 text-[11px] font-semibold">Tabela 4 - Enquadramento do laudo segundo seu grau de fundamentação no caso de utilização de tratamento por fatores.</p>
-                    <table className="w-full border text-[11px] border-collapse">
-                      <tbody>
-                        <tr className="bg-gray-100">
-                          <td className="border p-2 text-center font-bold w-1/4">Graus</td>
-                          <td className={`border p-2 text-center font-bold ${ca(enc === 'III')}`}>III</td>
-                          <td className={`border p-2 text-center font-bold ${ca(enc === 'II')}`}>II</td>
-                          <td className={`border p-2 text-center font-bold ${ca(enc === 'I')}`}>I</td>
-                        </tr>
-                        <tr>
-                          <td className="border p-2 text-center bg-gray-50">Pontos mínimos</td>
-                          <td className="border p-2 text-center">10</td>
-                          <td className="border p-2 text-center">6</td>
-                          <td className="border p-2 text-center">4</td>
-                        </tr>
-                        <tr>
-                          <td className="border p-2 text-center bg-gray-50 align-middle">Itens obrigatórios</td>
-                          <td className={`border p-2 text-center text-[10px] align-middle ${ca(enc === 'III')}`}>Itens 2 e 4 no grau III, com os demais no mínimo no grau II</td>
-                          <td className={`border p-2 text-center text-[10px] align-middle ${ca(enc === 'II')}`}>Itens 2 e 4 no grau II, com os demais no mínimo no grau I</td>
-                          <td className={`border p-2 text-center text-[10px] align-middle ${ca(enc === 'I')}`}>Todos, no mínimo no grau I.</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <div className="mt-2 flex justify-end">
-                      <table className="border text-[11px] border-collapse">
+                    {/* 9/10 — Valor final */}
+                    <SecHeader num={isEvolutivo ? '9' : '9'} titulo="Valor Final da Avaliação" />
+                    {isEvolutivo && evSnap && evSnap.resultado ? (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 6, margin: '6px 0' }}>
+                        <div style={{ border: '0.5px solid #C9D3E6', borderRadius: 3, padding: '8px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '7px', color: '#5a7090', marginBottom: 3 }}>Valor do terreno</div>
+                          <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(evSnap.valorTerreno||0)}</div>
+                          <div style={{ fontSize: '7px', color: '#94a3b8', marginTop: 2 }}>{(evSnap.avaliando?.area||0).toLocaleString('pt-BR')} m² × {formatarMoeda(evSnap.resultado?.media||0)}/m²</div>
+                        </div>
+                        <div style={{ border: '0.5px solid #C9D3E6', borderRadius: 3, padding: '8px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '7px', color: '#5a7090', marginBottom: 3 }}>Valor das edificações</div>
+                          <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(evSnap.valorBenfeitorias||0)}</div>
+                          <div style={{ fontSize: '7px', color: '#94a3b8', marginTop: 2 }}>VEIU — CUB R8N depreciado</div>
+                        </div>
+                      </div>
+                    ) : temCddm && cddm ? (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginTop: '4px', marginBottom: '4px' }}>
+                        <thead>
+                          <tr>
+                            <TH style={{ textAlign: 'center', width: '33%' }}>Área</TH>
+                            <TH style={{ textAlign: 'center', width: '33%' }}>Valor/m²</TH>
+                            <TH style={{ textAlign: 'center' }}>Valor Total</TH>
+                          </tr>
+                        </thead>
                         <tbody>
                           <tr>
-                            <td className="border p-2 font-bold bg-slate-100 px-4">Enquadramento Fundamentação</td>
-                            <td className={`border p-2 text-center font-bold px-8 ${enc ? 'bg-blue-600 text-white' : ''}`}>{enc || '-'}</td>
+                            <td style={{ border: '0.5px solid #C9D3E6', padding: '4px 6px', fontSize: '8px', textAlign: 'center' }}>{cddm.avaliando.area.toLocaleString('pt-BR')} m²</td>
+                            <td style={{ border: '0.5px solid #C9D3E6', padding: '4px 6px', fontSize: '8px', textAlign: 'center' }}>{formatarMoeda(cddm.mediaSaneada)}</td>
+                            <td style={{ border: '0.5px solid #C9D3E6', padding: '4px 6px', fontSize: '8.5px', textAlign: 'center', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(cddm.valorImovel)}</td>
                           </tr>
                         </tbody>
                       </table>
+                    ) : null}
+                    <div style={{ display: 'flex', gap: '6px', margin: '6px 0 4px' }}>
+                      <div style={{ flex: 1, background: '#17325C', padding: '8px 10px', borderRadius: '3px' }}>
+                        <div style={{ fontSize: '7.5px', color: '#8FA4C7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>VALOR DA AVALIAÇÃO</div>
+                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff', margin: '3px 0 1px' }}>{formatarMoeda(vlFinal)}</div>
+                        <div style={{ fontSize: '8px', color: '#8FA4C7' }}>({numeroPorExtenso(vlFinal).charAt(0).toUpperCase() + numeroPorExtenso(vlFinal).slice(1)})</div>
+                      </div>
+                      {vlf > 0 && (
+                        <div style={{ flex: 1, background: '#EAF0FB', border: '0.5px solid #C9D3E6', padding: '8px 10px', borderRadius: '3px' }}>
+                          <div style={{ fontSize: '7.5px', color: '#2347C6', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>VALOR DE LIQUIDEZ FORÇADA</div>
+                          <div style={{ fontSize: '16px', fontWeight: 700, color: '#17325C', margin: '3px 0 1px' }}>{formatarMoeda(vlf)}</div>
+                          <div style={{ fontSize: '8px', color: '#5a7090' }}>({numeroPorExtenso(vlf).charAt(0).toUpperCase() + numeroPorExtenso(vlf).slice(1)})</div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )
-              }
 
-              // ─── Tabela resultado – Evolutivo (estilo imagem 3) ──────────
-              function ResultadoEvolutivo({ enc }: { enc: string }) {
-                return (
-                  <div className="mt-3">
-                    <p className="mb-2 text-[11px] font-semibold">Enquadramento do laudo segundo seu grau de fundamentação no caso de utilização do Método Evolutivo</p>
-                    <table className="w-full border text-[11px] border-collapse">
-                      <tbody>
-                        <tr className="bg-gray-100">
-                          <td className="border p-2 text-center font-bold w-1/5">Grau</td>
-                          <td className={`border p-2 text-center font-bold ${ca(enc === 'III')}`}>III</td>
-                          <td className={`border p-2 text-center font-bold ${ca(enc === 'II')}`}>II</td>
-                          <td className={`border p-2 text-center font-bold ${ca(enc === 'I')}`}>I</td>
-                          <td className="border p-2 text-center font-bold bg-gray-100" rowSpan={3}>Enquadramento</td>
-                        </tr>
-                        <tr>
-                          <td className="border p-2 text-center bg-gray-50">Pontos mínimos</td>
-                          <td className="border p-2 text-center">8</td>
-                          <td className="border p-2 text-center">5</td>
-                          <td className="border p-2 text-center">3</td>
-                        </tr>
-                        <tr>
-                          <td className="border p-2 text-center bg-gray-50 align-middle">Itens obrigatórios</td>
-                          <td className={`border p-2 text-center text-[10px] align-middle ${ca(enc === 'III')}`}>1, 2 e 3 no mínimo grau II</td>
-                          <td className={`border p-2 text-center text-[10px] align-middle ${ca(enc === 'II')}`}>1 e 2, no mínimo no grau II</td>
-                          <td className={`border p-2 text-center text-[10px] align-middle ${ca(enc === 'I')}`}>Todos, no mínimo no grau I</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <div className="mt-2 flex justify-end">
-                      <table className="border text-[11px] border-collapse">
-                        <tbody>
-                          <tr>
-                            <td className="border p-2 font-bold bg-slate-100 px-4">Enquadramento Fundamentação</td>
-                            <td className={`border p-2 text-center font-bold px-8 ${enc ? 'bg-blue-600 text-white' : ''}`}>{enc ? `Grau ${enc}` : '-'}</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                    {/* 11 — Graus */}
+                    <SecHeader num="10" titulo="Grau de Fundamentação e Precisão" />
+                    <div style={{ display: 'flex', gap: '6px', margin: '4px 0 6px' }}>
+                      {[
+                        { label: 'Grau de Fundamentação', valor: capaGrauFund },
+                        { label: 'Grau de Precisão',      valor: capaGrauPrec },
+                        { label: 'Metodologia aplicada',  valor: capaMetodologia },
+                      ].map(({ label, valor }) => (
+                        <div key={label} style={{ flex: 1, border: '0.5px solid #C9D3E6' }}>
+                          <div style={{ background: '#EAF0FB', padding: '3px 6px', fontSize: '7.5px', fontWeight: 700, color: '#17325C', textAlign: 'center' }}>{label}</div>
+                          <div style={{ padding: '8px 4px', textAlign: 'center', fontSize: '20px', fontWeight: 700, color: '#2347C6' }}>{valor}</div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                )
-              }
 
-              // ─── Tabela resultado – Inferência (estilo imagem 1) ─────────
-              function ResultadoInferencia({ enc }: { enc: string }) {
-                return (
-                  <div className="mt-3">
-                    <p className="mb-2 text-[11px] font-semibold">Enquadramento do laudo segundo seu grau de fundamentação no caso de utilização de modelos de regressão linear</p>
-                    <table className="w-full border text-[11px] border-collapse">
-                      <tbody>
-                        <tr className="bg-gray-100">
-                          <td className="border p-2 text-center font-bold w-1/5">Grau</td>
-                          <td className={`border p-2 text-center font-bold ${ca(enc === 'III')}`}>III</td>
-                          <td className={`border p-2 text-center font-bold ${ca(enc === 'II')}`}>II</td>
-                          <td className={`border p-2 text-center font-bold ${ca(enc === 'I')}`}>I</td>
-                          <td className="border p-2 text-center font-bold bg-gray-100" rowSpan={3}>Enquadramento</td>
-                        </tr>
-                        <tr>
-                          <td className="border p-2 text-center bg-gray-50">Pontos mínimos</td>
-                          <td className="border p-2 text-center">16</td>
-                          <td className="border p-2 text-center">10</td>
-                          <td className="border p-2 text-center">6</td>
-                        </tr>
-                        <tr>
-                          <td className="border p-2 text-center bg-gray-50 align-middle">Itens obrigatórios</td>
-                          <td className={`border p-2 text-center text-[10px] align-middle ${ca(enc === 'III')}`}>2, 4, 5 e 6 no grau III e os demais no mínimo no grau II</td>
-                          <td className={`border p-2 text-center text-[10px] align-middle ${ca(enc === 'II')}`}>2, 4, 5 e 6 no mínimo no grau II e os demais no mínimo no grau I</td>
-                          <td className={`border p-2 text-center text-[10px] align-middle ${ca(enc === 'I')}`}>Todos, no mínimo no grau I</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <div className="mt-2 flex justify-end">
-                      <table className="border text-[11px] border-collapse">
-                        <tbody>
-                          <tr>
-                            <td className="border p-2 font-bold bg-slate-100 px-4">Enquadramento Fundamentação</td>
-                            <td className={`border p-2 text-center font-bold px-8 ${enc ? 'bg-blue-600 text-white' : ''}`}>{enc ? `Grau ${enc}` : '-'}</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                    {/* 11.1 — Tabela detalhada de Fundamentação (sempre visível) */}
+                    {(() => {
+                      const fund = (dados.fundamentacao || []) as any[]
+                      const itensPadrao = [
+                        { id: '01', desc: 'Caracterização do imóvel avaliando', g3: 'Completa quanto a todos os fatores analisados', g2: 'Completa quanto aos fatores utilizados no tratamento', g1: 'Adoção de situação paradigma' },
+                        { id: '02', desc: 'Quantidade mínima de dados de mercado efetivamente utilizados', g3: '12', g2: '5', g1: '3' },
+                        { id: '03', desc: 'Identificação dos dados de mercado', g3: 'Informações de todas as características com foto e características observadas pelo autor do laudo', g2: 'Informações relativas a todas as características dos dados analisados', g1: 'Informações relativas às características dos fatores utilizados' },
+                        { id: '04', desc: 'Intervalo admissível de ajuste para o conjunto de fatores', g3: '0,80 a 1,25', g2: '0,50 a 2,00', g1: '0,40 a 2,50' },
+                      ]
+                      const somaPts = fund.reduce((acc: number, f: any) => acc + (f?.pontos || 0), 0)
+                      const grauFinal = somaPts >= 10 ? 'III' : somaPts >= 6 ? 'II' : somaPts >= 4 ? 'I' : '-'
+                      const thBase: React.CSSProperties = { fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px 4px', borderRight: '0.5px solid #475e9b' }
+                      const tdBase: React.CSSProperties = { fontSize: '7px', padding: '3px 4px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', lineHeight: 1.3, verticalAlign: 'middle' }
+                      const tdActive: React.CSSProperties = { ...tdBase, background: '#dbeafe', color: '#1a3564', fontWeight: 700 }
+                      const tdPts: React.CSSProperties = { width: '7%', fontSize: '8px', fontWeight: 700, color: '#1a3564', textAlign: 'center', padding: '3px 4px', background: '#EAF0FB', borderRight: 'none' }
+                      return (
+                        <>
+                          <SecHeader num="10.1" titulo="Grau de Fundamentação — Tratamento por Fatores" />
+                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '7px', marginTop: '4px' }}>
+                            <thead>
+                              <tr style={{ background: '#1a3564' }}>
+                                <th style={{ ...thBase, width: '4%' }}>Item</th>
+                                <th style={{ ...thBase, width: '22%', textAlign: 'left', padding: '3px 5px' }}>Descrição</th>
+                                <th style={{ ...thBase, width: '21%' }}>Grau III</th>
+                                <th style={{ ...thBase, width: '21%' }}>Grau II</th>
+                                <th style={{ ...thBase, width: '21%' }}>Grau I</th>
+                                <th style={{ ...thBase, width: '7%', borderRight: 'none' }}>Pontos obtidos</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {itensPadrao.map((it, idx) => {
+                                const grauAtual = fund[idx]?.grau || ''
+                                const pts = fund[idx]?.pontos ?? '-'
+                                return (
+                                  <tr key={it.id} style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                    <td style={{ ...tdBase, width: '4%' }}>{it.id}</td>
+                                    <td style={{ ...tdBase, textAlign: 'left', padding: '3px 5px' }}>{it.desc}</td>
+                                    <td style={grauAtual === 'III' ? tdActive : tdBase}>{it.g3}</td>
+                                    <td style={grauAtual === 'II' ? tdActive : tdBase}>{it.g2}</td>
+                                    <td style={grauAtual === 'I' ? { ...tdActive, borderRight: '0.5px solid #C9D3E6' } : { ...tdBase }}>{it.g1}</td>
+                                    <td style={tdPts}>{pts}</td>
+                                  </tr>
+                                )
+                              })}
+                              {/* Pontos mínimos + itens obrigatórios */}
+                              <tr style={{ borderTop: '0.5px solid #C9D3E6', background: '#EAF0FB' }}>
+                                <td colSpan={1} style={{ fontSize: '7px', fontWeight: 700, color: '#1a3564', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}>Pontos mínimos</td>
+                                <td style={{ fontSize: '7px', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}> </td>
+                                <td style={{ ...tdBase, fontWeight: 700, color: '#1a3564', background: '#EAF0FB' }}>10</td>
+                                <td style={{ ...tdBase, fontWeight: 700, color: '#1a3564', background: '#EAF0FB' }}>6</td>
+                                <td style={{ ...tdBase, fontWeight: 700, color: '#1a3564', background: '#EAF0FB' }}>4</td>
+                                <td style={{ ...tdPts }}>—</td>
+                              </tr>
+                              <tr style={{ borderTop: '0.5px solid #C9D3E6', background: '#EAF0FB' }}>
+                                <td colSpan={1} style={{ fontSize: '7px', fontWeight: 700, color: '#1a3564', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}>Itens obrigatórios</td>
+                                <td style={{ fontSize: '7px', padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}> </td>
+                                <td style={{ fontSize: '6.5px', padding: '3px 4px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', lineHeight: 1.3 }}>2 e 4 no grau III, demais mín. grau II</td>
+                                <td style={{ fontSize: '6.5px', padding: '3px 4px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', lineHeight: 1.3 }}>2 e 4 mín. grau II, demais mín. grau I</td>
+                                <td style={{ fontSize: '6.5px', padding: '3px 4px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', lineHeight: 1.3 }}>Todos mín. grau I</td>
+                                <td style={{ ...tdPts }}>—</td>
+                              </tr>
+                              {/* Somatória */}
+                              <tr style={{ background: '#1a3564', borderTop: '0.5px solid #475e9b' }}>
+                                <td colSpan={5} style={{ fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'right', padding: '3px 8px', borderRight: '0.5px solid #475e9b' }}>Somatória de pontos</td>
+                                <td style={{ fontSize: '10px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '2px 4px' }}>{somaPts}</td>
+                              </tr>
+                              {/* Grau obtido */}
+                              <tr style={{ background: '#2347C6', borderTop: '0.5px solid #3a57d0' }}>
+                                <td colSpan={5} style={{ fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'right', padding: '3px 8px', borderRight: '0.5px solid #3a57d0' }}>Grau de fundamentação obtido</td>
+                                <td style={{ fontSize: '11px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '2px 4px' }}>{grauFinal}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                          <div style={{ marginTop: '3px', fontSize: '7px', fontStyle: 'italic', color: '#475569' }}>
+                            Para menos de 5 dados de mercado, o intervalo admissível de ajuste é de 0,80 a 1,25. (ABNT NBR 14653-2:2011)
+                          </div>
+
+
+                          {/* Tabela evolutivo: aparece quando método é evolutivo */}
+                          {dados.metodoAvaliacao === 'evolutivo' && (() => {
+                            const fundEv = (dados.fundamentacaoEvolutivo || []) as any[]
+                            const gv2 = (i: any) => i.pontos || (i.grau === 'III' ? 3 : i.grau === 'II' ? 2 : i.grau === 'I' ? 1 : 0)
+                            const somaPtsEv = fundEv.reduce((acc: number, f: any) => acc + gv2(f), 0)
+                            const grauFinalEv = somaPtsEv >= 8 ? 'III' : somaPtsEv >= 5 ? 'II' : somaPtsEv >= 3 ? 'I' : '–'
+                            const itensEv = [
+                              { id: '01', desc: 'Estimativa do valor do terreno', g3: 'Grau III no método comparativo ou involutivo', g2: 'Grau II no método comparativo ou involutivo', g1: 'Grau I no método comparativo ou involutivo' },
+                              { id: '02', desc: 'Estimativa dos Custos de Reedição', g3: 'Grau III no método da quantificação de custo', g2: 'Grau II no método da quantificação de custo', g1: 'Grau I no método da quantificação de custo' },
+                              { id: '03', desc: 'Fator de Comercialização', g3: 'Inferido em mercado semelhante', g2: 'Justificado', g1: 'Arbitrado' },
+                            ]
+                            const thBase: React.CSSProperties = { fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '3px 4px', borderRight: '0.5px solid #475e9b' }
+                            const tdBase: React.CSSProperties = { fontSize: '7px', padding: '3px 4px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', lineHeight: 1.3, verticalAlign: 'middle' }
+                            const tdActive: React.CSSProperties = { ...tdBase, background: '#dbeafe', color: '#1a3564', fontWeight: 700 }
+                            const tdPts: React.CSSProperties = { width: '7%', fontSize: '8px', fontWeight: 700, color: '#1a3564', textAlign: 'center', padding: '3px 4px', background: '#EAF0FB', borderRight: 'none' }
+                            return (
+                              <>
+                                <SecHeader num="10.2" titulo="Grau de Fundamentação — Método Evolutivo" />
+                                <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '7px', marginTop: '4px', marginBottom: '6px' }}>
+                                  <thead>
+                                    <tr style={{ background: '#1a3564' }}>
+                                      <th style={{ ...thBase, width: '4%' }}>Item</th>
+                                      <th style={{ ...thBase, width: '22%', textAlign: 'left' }}>Descrição</th>
+                                      <th style={{ ...thBase, width: '22%' }}>Grau III</th>
+                                      <th style={{ ...thBase, width: '22%' }}>Grau II</th>
+                                      <th style={{ ...thBase, width: '22%' }}>Grau I</th>
+                                      <th style={{ ...thBase, width: '8%', borderRight: 'none' }}>Pontos</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {itensEv.map((it, idx) => {
+                                      const grauAtual = fundEv[idx]?.grau || ''
+                                      const pts = gv2(fundEv[idx] || {})
+                                      return (
+                                        <tr key={it.id} style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                          <td style={{ ...tdBase, width: '4%', fontWeight: 700 }}>{it.id}</td>
+                                          <td style={{ ...tdBase, textAlign: 'left' }}>{it.desc}</td>
+                                          <td style={grauAtual === 'III' ? tdActive : tdBase}>{it.g3}</td>
+                                          <td style={grauAtual === 'II'  ? tdActive : tdBase}>{it.g2}</td>
+                                          <td style={grauAtual === 'I'   ? tdActive : tdBase}>{it.g1}</td>
+                                          <td style={tdPts}>{grauAtual ? (pts || '–') : '–'}</td>
+                                        </tr>
+                                      )
+                                    })}
+                                    <tr style={{ borderTop: '0.5px solid #C9D3E6', background: '#EAF0FB' }}>
+                                      <td colSpan={5} style={{ ...tdBase, fontWeight: 700, color: '#1a3564', textAlign: 'right', borderRight: '0.5px solid #C9D3E6' }}>Somatória</td>
+                                      <td style={tdPts}>{somaPtsEv}</td>
+                                    </tr>
+                                    <tr style={{ borderTop: '0.5px solid #C9D3E6', background: '#EAF0FB' }}>
+                                      <td colSpan={5} style={{ ...tdBase, fontWeight: 700, color: '#1a3564', textAlign: 'right', borderRight: '0.5px solid #C9D3E6' }}>Grau de Fundamentação (Evolutivo)</td>
+                                      <td style={{ ...tdPts, fontSize: '9px' }}>{grauFinalEv}</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </>
+                            )
+                          })()}
+
+                          <SecHeader num={dados.metodoAvaliacao === 'evolutivo' ? '10.3' : '10.2'} titulo="Grau de Precisão — Tratamento por Fatores" />
+                          <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '7px', marginTop: '4px' }}>
+                            <thead>
+                              <tr style={{ background: '#1a3564' }}>
+                                <th style={{ ...thBase, width: '8%' }}>Grau</th>
+                                <th style={{ ...thBase, textAlign: 'left', padding: '3px 5px' }}>Amplitude do intervalo de confiança de 80% em torno da estimativa de tendência central</th>
+                                <th style={{ ...thBase, width: '14%', borderRight: 'none' }}>Resultado obtido</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {([
+                                { grau: 'III', limite: '≤ 30%' },
+                                { grau: 'II',  limite: '≤ 40%' },
+                                { grau: 'I',   limite: '≤ 50%' },
+                              ] as const).map(({ grau, limite }) => {
+                                const isOk = capaGrauPrec === grau
+                                const ic = cddm ? `${cddm.intervaloConfianca.toFixed(2).replace('.', ',')}%` : '-'
+                                return (
+                                  <tr key={grau} style={{ borderTop: '0.5px solid #C9D3E6' }}>
+                                    <td style={{ fontWeight: 700, color: '#1a3564', textAlign: 'center', padding: '3px 4px', borderRight: '0.5px solid #C9D3E6' }}>{grau}</td>
+                                    <td style={{ padding: '3px 5px', borderRight: '0.5px solid #C9D3E6' }}>{limite}</td>
+                                    <td style={isOk ? { ...tdActive, borderRight: 'none' } : { ...tdBase, borderRight: 'none' }}>{isOk ? `${ic} ✓` : '—'}</td>
+                                  </tr>
+                                )
+                              })}
+                              <tr style={{ background: '#2347C6', borderTop: '0.5px solid #3a57d0' }}>
+                                <td colSpan={2} style={{ fontSize: '7px', fontWeight: 700, color: '#fff', textAlign: 'right', padding: '3px 8px', borderRight: '0.5px solid #3a57d0' }}>Grau de precisão obtido</td>
+                                <td style={{ fontSize: '9px', fontWeight: 700, color: '#fff', textAlign: 'center', padding: '2px 4px' }}>{capaGrauPrec !== '-' ? `Precisão ${capaGrauPrec}` : '-'}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                          <div style={{ marginTop: '3px', fontSize: '7px', fontStyle: 'italic', color: '#475569' }}>
+                            * Quando a amplitude ultrapassar 50%, não há classificação quanto à precisão e é necessária justificativa. (ABNT NBR 14653-2:2011 — item 13.4)
+                          </div>
+                        </>
+                      )
+                    })()}
+
+                    {/* 12 — Conclusão + Assinatura */}
+                    <SecHeader num="11" titulo="Considerações Finais" />
+                    <div style={{ border: '0.5px solid #C9D3E6', padding: '8px', fontSize: '8.5px', lineHeight: '1.55', color: '#1e293b', marginTop: '4px' }}>
+                      <strong style={{ color: '#17325C' }}>INFORMAÇÕES FINAIS</strong>
+                      <div style={{ marginTop: '4px' }}>
+                        Avaliação para determinação do valor de mercado do imóvel localizado em {dados.endereco},
+                        feita pelo {metLabel}. O presente laudo se enquadra no Grau de Fundamentação {capaGrauFund} e
+                        Grau de Precisão {capaGrauPrec}, atendendo à Norma ABNT NBR 14.653.
+                      </div>
+                      <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <div style={{ width: '180px', height: '0.5px', background: '#334155', marginBottom: '4px' }} />
+                        <div style={{ fontSize: '9px', fontWeight: 700, color: '#17325C' }}>{dados.responsavelNome || 'Responsável Técnico'}</div>
+                        {dados.responsavelRegistro && <div style={{ fontSize: '8px', color: '#475569' }}>CREA/CAU: {dados.responsavelRegistro}</div>}
+                        <div style={{ fontSize: '8px', color: '#475569' }}>Lesath Engenharia – CNPJ: 49.068.717/0001-64</div>
+                        {dados.dataLaudo && (
+                          <div style={{ fontSize: '8px', color: '#475569', marginTop: '4px' }}>{capaDataImpressao}.</div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )
-              }
+                    <DocFooter pag="3" />
+                  </Pagina>
 
-              // ─── Tabela de precisão ──────────────────────────────────────
-              function TabelaPrecisao() {
-                const gp = prec[0]?.grau || ''
-                return (
-                  <div className="mb-4">
-                    <p className="mb-2 font-semibold text-[11px]">Grau de precisão</p>
-                    <table className="w-full border text-[11px] border-collapse table-fixed">
-                      <colgroup>
-                        <col style={{ width: '6%' }} /><col style={{ width: '36%' }} />
-                        <col style={{ width: '19%' }} /><col style={{ width: '19%' }} /><col style={{ width: '20%' }} />
-                      </colgroup>
-                      <thead>
-                        <tr className="bg-gray-200">
-                          <th rowSpan={2} className="border p-1 text-center align-middle">Item</th>
-                          <th rowSpan={2} className="border p-1 text-center align-middle">Descrição</th>
-                          <th colSpan={3} className="border p-1 text-center">GRAU</th>
-                        </tr>
-                        <tr className="bg-gray-200">
-                          <th className="border p-1 text-center">III</th>
-                          <th className="border p-1 text-center">II</th>
-                          <th className="border p-1 text-center">I</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="border p-1 text-center font-bold align-middle">1</td>
-                          <td className="border p-1 align-middle text-[10px]">Amplitude do intervalo de confiança de 80% em torno da estimativa de tendência central</td>
-                          <td className={`border p-1 text-center align-middle ${ca(gp === 'III')}`}>≤ 30%</td>
-                          <td className={`border p-1 text-center align-middle ${ca(gp === 'II')}`}>≤ 40%</td>
-                          <td className={`border p-1 text-center align-middle ${ca(gp === 'I')}`}>≤ 50%</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )
-              }
-
-              // ─── Renderização das páginas ────────────────────────────────
-              const primeiraTabelaExibida = exibirFatores ? 'fatores' : exibirEvolutivo ? 'evolutivo' : 'inferencia'
-
-              return (
-                <>
-                  {/* Fatores: aparece para comparativo+fatores, comparativo+inferência, evolutivo+fatores */}
-                  {exibirFatores && (
-                    <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                      <CabecalhoLaudo />
-                      <div className="mt-3 mb-2">
-                        {primeiraTabelaExibida === 'fatores' && (
-                          <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.fundamentacao}. DETERMINAÇÃO DO GRAU DE FUNDAMENTAÇÃO</h2>
-                        )}
-                        <TabelaFund
-                          titulo="Grau de fundamentação no caso de utilização de fatores – Avaliação do terreno"
-                          linhas={linhasFund}
-                          dadosGrau={fund}
-                          soma={somaFund}
-                          obs="Para menos de 5 dados de mercado, o intervalo deverá ser 0,8 a 1,25."
-                        />
-                        <ResultadoFatores enc={encFatores} />
+                  {/* ─── PÁGINAS DE FOTOS ─────────────────────────────── */}
+                  {fotosAnexo.length > 0 && chunkArray(fotosAnexo, 6).map((grupo: any[], pageIdx: number) => (
+                    <Pagina key={`fotos-simpl-${pageIdx}`} pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
+                      <DocHeader />
+                      <div style={{ background: '#2347C6', padding: '4px 12px', margin: '8px 0 8px' }}>
+                        <span style={{ fontSize: '9px', fontWeight: 700, color: '#fff' }}>ANEXO A | DOCUMENTAÇÃO FOTOGRÁFICA</span>
                       </div>
-                    </PaginaFlexivel>
-                  )}
-
-                  {/* Evolutivo: aparece para evolutivo+fatores e evolutivo+inferência */}
-                  {exibirEvolutivo && (
-                    <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                      <CabecalhoLaudo />
-                      <div className="mt-3 mb-2">
-                        {primeiraTabelaExibida === 'evolutivo' && (
-                          <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.fundamentacao}. DETERMINAÇÃO DO GRAU DE FUNDAMENTAÇÃO</h2>
-                        )}
-                        <TabelaFund
-                          titulo="Grau de fundamentação no caso de utilização do Método Evolutivo"
-                          linhas={linhasEvo}
-                          dadosGrau={fundEvo}
-                          soma={somaEvo}
-                        />
-                        <ResultadoEvolutivo enc={encEvolutivo} />
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {grupo.map((foto: any, i: number) => (
+                          <div key={i} style={{ width: 'calc(50% - 3px)' }}>
+                            <img src={foto.preview} alt={foto.legenda || ''} style={{ width: '100%', height: '110px', objectFit: 'cover', border: '0.5px solid #C9D3E6', display: 'block' }} />
+                            <div style={{ background: '#EAF0FB', padding: '2px 5px', fontSize: '8px', color: '#17325C', border: '0.5px solid #C9D3E6', borderTop: 'none' }}>
+                              {foto.legenda || `Foto ${pageIdx * 6 + i + 1}`}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </PaginaFlexivel>
-                  )}
-
-                  {/* Inferência: aparece para comparativo+inferência e evolutivo+inferência */}
-                  {exibirInferencia && (
-                    <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                      <CabecalhoLaudo />
-                      <div className="mt-3 mb-2">
-                        {primeiraTabelaExibida === 'inferencia' && (
-                          <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.fundamentacao}. DETERMINAÇÃO DO GRAU DE FUNDAMENTAÇÃO</h2>
-                        )}
-                        <TabelaFund
-                          titulo="Grau de fundamentação no caso de utilização de modelos de regressão linear"
-                          linhas={linhasInf}
-                          dadosGrau={fundInf}
-                          soma={somaInf}
-                        />
-                        <ResultadoInferencia enc={encInferencia} />
-                      </div>
-                    </PaginaFlexivel>
-                  )}
-
-                  {/* Fallback: nenhuma combinação reconhecida */}
-                  {!exibirFatores && !exibirEvolutivo && !exibirInferencia && (
-                    <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                      <CabecalhoLaudo />
-                      <div className="mt-3 mb-2">
-                        <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.fundamentacao}. DETERMINAÇÃO DO GRAU DE FUNDAMENTAÇÃO</h2>
-                        <p className="text-sm text-slate-500">Método de avaliação e tratamento de dados não especificados.</p>
-                      </div>
-                    </PaginaFlexivel>
-                  )}
-
-                  {/* 12.02 Precisão — só aparece se preenchida */}
-                  {prec.length > 0 && (
-                    <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                      <CabecalhoLaudo />
-                      <div className="mt-3 mb-2">
-                        <h2 className="text-xl font-bold mb-4 titulo-laudo">{sn.fundamentacao}.02 GRAU DE PRECISÃO</h2>
-                        <TabelaPrecisao />
-                      </div>
-                    </PaginaFlexivel>
-                  )}
+                      <DocFooter pag={String(4 + pageIdx)} />
+                    </Pagina>
+                  ))}
                 </>
               )
             })()}
 
-            <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-              <CabecalhoLaudo />
-              <div className="mb-8 mt-8">
-                <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.conclusao}. CONCLUSÃO</h2>
-                <div className="space-y-3 text-justify">
-                  <p>Fundamentados nos elementos e condições consignados no presente Laudo de Avaliação, atribuímos ao imóvel em questão o seguinte valor de mercado:</p>
-                  <div className="grid grid-cols-2 gap-3 mt-2 evitar-quebra">
-                    <div className="value-box-dark">
-                      <div className="vb-label">Valor de Avaliação</div>
-                      <div className="vb-num">{formatarMoeda(valorArredondadoLaudo)}</div>
-                      <div className="vb-ext">{valorArredondadoExtenso.charAt(0).toUpperCase() + valorArredondadoExtenso.slice(1)}</div>
-                    </div>
-                    {valorLiquidezForcadaNumero > 0 ? (
-                      <div className="value-box-light">
-                        <div className="vb-label">Valor de Liquidez Forçada</div>
-                        <div className="vb-num">{formatarMoeda(valorLiquidezForcadaNumero)}</div>
-                        <div className="vb-ext">{valorLiquidezForcadaExtenso.charAt(0).toUpperCase() + valorLiquidezForcadaExtenso.slice(1)}</div>
-                      </div>
-                    ) : (
-                      <div className="value-box-light">
-                        <div className="vb-label">Subtotal</div>
-                        <div className="vb-num">{formatarMoeda(valorFinalCalculado)}</div>
-                        <div className="vb-ext">Antes do arredondamento</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              {garantiaTexto.titulo && (
-                <div className="mb-8 mt-8">
-                  <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.garantia}. GARANTIA</h2>
-                  <div className="space-y-4 text-justify"><p><strong>{garantiaTexto.titulo}</strong></p><p>{garantiaTexto.texto}</p></div>
-                </div>
-              )}
-              <div className="mb-8 mt-8">
-                <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.anexos}. ANEXOS E ASSINATURA RESPONSÁVEL TÉCNICO</h2>
-                <div className="space-y-3 text-justify border rounded p-4">
-                  <p>{formatarData(dados.dataLaudo || '')}</p>
-                  <p><strong>Responsável Técnico:</strong> {dados.responsavelNome}</p>
-                  <p><strong>CPF:</strong> {dados.responsavelCpf}</p>
-                  <p><strong>CREA/CAU:</strong> {dados.responsavelRegistro}</p>
-                  <p><strong>Empresa:</strong> LESATH ENGENHARIA</p>
-                  <p><strong>CNPJ:</strong> 49.068.717/0001-64</p>
-                </div>
-              </div>
-            </PaginaFlexivel>
-
-            {dados.documentacaoPdf ? (
-              <AnexoPdfPaginado file={dados.documentacaoPdf} titulo={`${sn.anexos}.1. DOCUMENTAÇÃO`} paginaInicial={Number(proximaPagina())} dataLaudo={dados.dataLaudo} onPageCount={setDocumentacaoNumPages} larguraPagina={600} />
-            ) : null}
-
-            {gruposFotos.length > 0 ? (
-              gruposFotos.map((grupo, paginaIndex) => (
-                <Pagina key={`fotos-${paginaIndex}`} pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                  <CabecalhoLaudo />
-                  <div className="mb-4">
-                    {paginaIndex === 0 && <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.anexos}.2. RELATÓRIO FOTOGRÁFICO</h2>}
-                    <div className="grid grid-cols-2 gap-4">
-                      {grupo.map((foto, index) => (
-                        <div key={index} className="border p-2 rounded"><img src={foto.preview} alt={`Foto ${paginaIndex * 4 + index + 1}`} className="w-full h-[95mm] object-cover rounded mb-2" /><p className="text-sm leading-tight"><strong>Legenda:</strong> {foto.legenda || 'Sem legenda'}</p></div>
-                      ))}
-                    </div>
-                  </div>
-                </Pagina>
-              ))
-            ) : null}
-
-            {dados.localizacaoComparativos ? (
-              <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
-                <CabecalhoLaudo />
-                <div className="mb-8">
-                  <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.anexos}.3. LOCALIZAÇÃO DOS ELEMENTOS COMPARATIVOS</h2>
-                  <div className="border p-3 rounded"><img src={dados.localizacaoComparativos} alt="Localização dos elementos comparativos" className="w-full max-h-[215mm] object-contain rounded" /></div>
-                </div>
-              </Pagina>
-            ) : null}
-
-
-
-            {/* Rodapé único ao final do documento */}
-            <div className="mt-10 pt-3">
-              <div className="h-[1px] bg-[#C9D3E6]" />
-              <div className="mt-2 flex items-center justify-between gap-4 text-[11px] text-[#5D6F8F]">
-                <span className="truncate">www.lesathengenharia.com.br</span>
-                <span className="text-center font-medium text-[#17325C]">Lesath Engenharia</span>
-                <span className="text-right">{formatarData(dados.dataLaudo || '')}</span>
-              </div>
-            </div>
-            </>
+            {/* ══════════════════════════════════════════════
+                LAYOUT DETALHADO (apenas para laudos detalhados)
+            ══════════════════════════════════════════════ */}
           </div>
         </div>
       </section>

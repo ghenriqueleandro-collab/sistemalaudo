@@ -105,7 +105,7 @@ type ResultElem = {
   fatorVaga: number
   coefGeral: number
   vuHomog: number        // ADITIVO — usado nas estatísticas (media, DP, IC)
-  vuHomogDisplay: number // MULTIPLICATIVO — exibido na tabela de homogeneização
+  vuHomogDisplay: number // MULTIPLICATIVO — exibido na tabela Homog. e no PDF
   residuo: number
   saneado: boolean
 }
@@ -453,19 +453,12 @@ function calcularResultado(
     const fVagaAv  = 100
     const fatorVaga = fatores.vaga && fVagaElem > 0 ? fVagaAv / fVagaElem : 1
 
-    // Coef. Geral ADITIVO — fórmula planilha aba Cálculo (para estatísticas)
-    const coefGeral = 1
-      + (fatorArea   - 1)
-      + (fatorLocal  - 1)
-      + (fatorPadrao - 1)
-      + (fatorFOC    - 1)
-      + (fatorAndar  - 1)
-      + (fatorVaga   - 1)
-
-    // VU homog ADITIVO — base para media, DP, IC (planilha aba Cálculo)
+    // VU homog ADITIVO — estatísticas (planilha aba Cálculo)
+    const coefGeral = 1 + (fatorArea-1) + (fatorLocal-1) + (fatorPadrao-1)
+                        + (fatorFOC-1)  + (fatorAndar-1) + (fatorVaga-1)
     const vuHomog = vu * coefGeral
 
-    // VU homog MULTIPLICATIVO — exibição na tabela Homog. (planilha aba Homog.)
+    // VU homog MULTIPLICATIVO — tabela de homogeneização e PDF
     const vuHomogDisplay = vu * fatorArea * fatorLocal * fatorPadrao * fatorFOC * fatorAndar * fatorVaga
 
     return {
@@ -505,8 +498,7 @@ function calcularResultado(
   const n           = vusSaneados.length
   const mediaSaneada = media     // média de todos (planilha aba Cálculo)
 
-  // Resíduos relativos = (VU_homog / VU_bruto) − 1
-  // Representa a variação causada pelos fatores (fórmula da planilha)
+  // Resíduos relativos = (VU_homog / VU_bruto) − 1  (variação por fator — igual planilha)
   parciais.forEach(p => {
     p.residuo = p.vu > 0 ? (p.vuHomog / p.vu - 1) : 0
   })
@@ -524,7 +516,7 @@ function calcularResultado(
   // Intervalo de confiança: T × S / sqrt(N-1)
   const resultado = n > 1 ? tStudent * desvioPadrao / Math.sqrt(n - 1) : 0
 
-  // IC total assimétrico H76 = H72 + H74 (células H76 da planilha)
+  // IC total assimétrico H76 = H72 + H74 (fórmula planilha)
   const _limInfIC = mediaSaneada - resultado
   const _limSupIC = mediaSaneada + resultado
   const _h72 = _limInfIC > 0 ? ((mediaSaneada / _limInfIC) - 1) * 100 : 0
@@ -756,6 +748,43 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
     () => calcularResultado(elementos, avaliando, fatores),
     [elementos, avaliando, fatores]
   )
+
+  // ── Snapshot → form: persiste dadosCalculoCDDM para visualização e PDF ──
+  useEffect(() => {
+    if (!setForm || resultado.elementos.length === 0) return
+    setForm((prev: any) => ({
+      ...prev,
+      dadosCalculoCDDM: {
+        // Elementos com vuHomog = multiplicativo (para display na tabela/PDF)
+        elementos: resultado.elementos.map(el => ({
+          ...el,
+          valorUnitarioOferta: el.vu,                    // compatibilidade com page.tsx/PDF
+          vuHomog: el.vuHomogDisplay ?? el.vuHomog,      // multiplicativo para exibição
+          vuHomogEstatistico: el.vuHomog,                // aditivo (estatísticas)
+        })),
+        avaliando: {
+          area:              pn(avaliando.area),
+          padraoConstrutivo: avaliando.padraoConstrutivo,
+          estadoConservacao: avaliando.estadoConservacao,
+        },
+        media:              resultado.media,
+        mediaSaneada:       resultado.mediaSaneada,
+        desvioPadrao:       resultado.desvioPadrao,
+        coefVariacao:       resultado.coefVariacao,
+        tStudent:           resultado.tStudent,
+        resultado:          resultado.resultado,
+        intervaloConfianca: resultado.intervaloConfianca,
+        limiteInferior:     resultado.limiteInferior,
+        limiteSuperior:     resultado.limiteSuperior,
+        limiteInf30:        resultado.limiteInf30,
+        limiteSup30:        resultado.limiteSup30,
+        grauPrecisao:       resultado.grauPrecisao,
+        valorImovel:        resultado.mediaSaneada * pn(avaliando.area),
+        outliersDescartados: resultado.elementos.filter(e => !e.saneado).length,
+      },
+    }))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resultado])
 
   function updateElem(idx: number, campo: keyof ElementoCDDM, val: string) {
     setElementos(prev => prev.map((e, i) => i === idx ? { ...e, [campo]: val } : e))

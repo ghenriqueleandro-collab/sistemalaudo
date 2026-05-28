@@ -809,6 +809,7 @@ export function LaudoPdf({
     { txt: '9. GLOSSÁRIO DE TERMOS TÉCNICOS (ABNT NBR 14653-2)',                   sub: false, id: 's-9' },
     { txt: '10. METODOLOGIA, PESQUISAS E CÁLCULOS',                                sub: false, id: 's-10' },
     ...(dados.imagemBenfeitorias ? [{ txt: '10.1 CÁLCULO DAS BENFEITORIAS',        sub: true, id: 's-10-1' }]                        : []),
+    ...((cddmData && cddmData.elementos?.length > 0) ? [{ txt: dados.imagemBenfeitorias ? '10.2 HOMOGENEIZAÇÃO' : '10.1 HOMOGENEIZAÇÃO', sub: true, id: 's-10-homog' }] : []),
     { txt: '11. VALOR DO IMÓVEL',                                                  sub: false, id: 's-11' },
     ...(temFundamentacao ? [{ txt: '12. DETERMINAÇÃO DO GRAU DE FUNDAMENTAÇÃO',    sub: false, id: 's-12' }]                         : []),
     ...(temPrecisao ? [{ txt: '12.02 GRAU DE PRECISÃO',                            sub: true,  id: 's-12-02' }]                      : []),
@@ -1320,7 +1321,7 @@ export function LaudoPdf({
         {/* ── 9.1. HOMOGENEIZAÇÃO (só comparativo) ────────────────────────── */}
         {temCddm && (
           <>
-            <H3>7.1. Homogeneização</H3>
+            <H2 id="s-10-homog">{dados.imagemBenfeitorias ? '10.2' : '10.1'} HOMOGENEIZAÇÃO</H2>
             <View style={s.homogTable}>
               <View style={s.homogRowH}>
                 <Text style={[s.homogTh,{flex:0.6}]}>Elem.</Text>
@@ -1339,7 +1340,7 @@ export function LaudoPdf({
                 return (
                   <View key={`h-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
                     <Text style={[td,{flex:0.6}]}>{i+1}</Text>
-                    <Text style={[td,{flex:1.1}]}>{fm(el.valorUnitarioOferta || 0)}</Text>
+                    <Text style={[td,{flex:1.1}]}>{fm(el.vu || el.valorUnitarioOferta || 0)}</Text>
                     <Text style={[td,{flex:0.8}]}>{(el.fatorLocal||1).toFixed(4).replace('.', ',')}</Text>
                     <Text style={[td,{flex:0.8}]}>{(el.fatorPadrao||1).toFixed(4).replace('.', ',')}</Text>
                     <Text style={[td,{flex:0.8}]}>{(el.fatorFOC||1).toFixed(4).replace('.', ',')}</Text>
