@@ -8,7 +8,6 @@ export type EtapaId =
   | '9.2'
   | '10'
   | '11'
-  | '12'
   | '13'
   | '14'
 
@@ -22,7 +21,6 @@ export const ETAPAS: { id: EtapaId; titulo: string }[] = [
   { id: '9.2',  titulo: '10.2. Cálculo das benfeitorias' },
   { id: '10',   titulo: '11. Valor do imóvel' },
   { id: '11',   titulo: '12. Grau de fundamentação e precisão' },
-  { id: '12',   titulo: '13. Conclusão' },
   { id: '13',   titulo: '14. Garantia' },
   { id: '14',   titulo: '15. Anexos e assinatura' },
 ]

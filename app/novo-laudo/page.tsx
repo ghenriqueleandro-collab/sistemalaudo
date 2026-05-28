@@ -13,7 +13,6 @@ import EtapaCalculoCDDM from '../components/formulario/EtapaCalculoCDDM'
 import EtapaCalculoEvolutivo from '../components/formulario/EtapaCalculoEvolutivo'
 import EtapaValorImovel from '../components/formulario/EtapaValorImovel'
 import EtapaFundamentacaoPrecisao from '../components/formulario/EtapaFundamentacaoPrecisao'
-import EtapaConclusao from '../components/formulario/EtapaConclusao'
 import EtapaGarantia from '../components/formulario/EtapaGarantia'
 import EtapaAnexosAssinatura from '../components/formulario/EtapaAnexosAssinatura'
 import { EtapaId } from '../components/formulario/etapas'
@@ -630,8 +629,6 @@ export default function NovoLaudoPage() {
             fundamentacaoEvolutivo.some((item) => item.grau) ||
             precisao.some((item) => item.grau)
         )
-      case '12':
-        return valorFinalImovel > 0
       case '13':
         return Boolean(form.garantiaClassificacao)
       case '14':
@@ -648,7 +645,7 @@ export default function NovoLaudoPage() {
 
   function obterStatusLaudo(): 'em_preenchimento' | 'finalizado' {
     const etapasObrigatorias: EtapaId[] = [
-      '1-6', '7', '8', '9', '9.1', '10', '11', '12', '13', '14',
+      '1-6', '7', '8', '9', '9.1', '10', '11', '13', '14',
     ]
     const todasConcluidas = etapasObrigatorias.every((etapa) => etapaConcluida(etapa))
     return todasConcluidas ? 'finalizado' : 'em_preenchimento'
@@ -992,15 +989,6 @@ export default function NovoLaudoPage() {
               somaFundamentacao={somaFundamentacao}
               somaFundamentacaoInferencia={somaFundamentacaoInferencia}
               somaFundamentacaoEvolutivo={somaFundamentacaoEvolutivo}
-            />
-          )}
-
-          {etapaAtual === '12' && (
-            <EtapaConclusao
-              valorFinalImovel={valorFinalImovel}
-              formatarMoeda={formatarMoeda}
-              form={form}
-              handleChange={handleChange}
             />
           )}
 
