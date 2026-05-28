@@ -575,7 +575,7 @@ export function LaudoPdf({
   const valorExtenso = numeroPorExtenso(valorArredondado)
 
   // Liquidação forçada: calcular a partir do fator quando disponível
-  const fatorLiqRaw = cn(dados.fatorLiquidacaoForcada || '0')
+  const fatorLiqRaw = cn((dados as any).fatorLiquidacaoForcada || '0')
   const vlf = fatorLiqRaw > 0 && fatorLiqRaw < 1
     ? arredondar(valorArredondado * fatorLiqRaw)
     : cn(dados.valorLiquidezForcada || '')
