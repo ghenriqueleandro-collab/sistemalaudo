@@ -29,7 +29,8 @@ export default function MenuEtapas({
   const activeRef = useRef<HTMLButtonElement>(null)
 
   const isEvolutivo =
-    metodoAvaliacao === 'evolutivo' && tratamentoDados === 'tratamento_por_fatores'
+    (metodoAvaliacao || 'comparativo') === 'evolutivo' &&
+    (tratamentoDados || 'tratamento_por_fatores') === 'tratamento_por_fatores'
 
   const etapasVisiveis = ETAPAS
     .filter(e => !ETAPAS_SEMPRE_OCULTAS.includes(e.id))

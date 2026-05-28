@@ -50,8 +50,8 @@ export default function NovoLaudoPage() {
     solicitante: '',
     tipo: '',
     finalidade: '',
-    metodoAvaliacao: '',
-    tratamentoDados: '',
+    metodoAvaliacao: 'comparativo',
+    tratamentoDados: 'tratamento_por_fatores',
     areaConstruidaTotal: '',
     areaConstruidaAverbada: '',
     areaTerrenoTotal: '',
@@ -553,13 +553,13 @@ export default function NovoLaudoPage() {
     return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
   }
 
-  // Detecção automática do método a partir dos dados do motor (não depende só dos selects)
+  // Método e tratamento — com fallback automático a partir dos dados do motor
   const _temDadosCddm  = !!(form as any).dadosCalculoCDDM?.mediaSaneada
   const _temDadosEv    = !!(form as any).dadosCalculoEvolutivo?.valorFinal
   const _metodo        = form.metodoAvaliacao
-    || (_temDadosEv ? 'evolutivo' : _temDadosCddm ? 'comparativo' : '')
+    || (_temDadosEv ? 'evolutivo' : 'comparativo')  // detalhado sempre tem método
   const _tratamento    = form.tratamentoDados
-    || (_temDadosCddm || _temDadosEv ? 'tratamento_por_fatores' : '')
+    || 'tratamento_por_fatores'  // detalhado sempre usa tratamento por fatores como padrão
 
   // Tabela Fatores Terreno: comparativo+fatores OU evolutivo+fatores
   const exibirTabelaFatoresTerreno =
@@ -598,8 +598,8 @@ export default function NovoLaudoPage() {
             (form.solicitante || '').trim() &&
             form.tipo.trim() &&
             form.finalidade.trim() &&
-            form.metodoAvaliacao.trim() &&
-            form.tratamentoDados.trim()
+            (form.metodoAvaliacao || 'comparativo').trim() &&
+            (form.tratamentoDados || 'tratamento_por_fatores').trim()
         )
       case '7':
         return acabamentos.some((item) => item.acabamento.trim())
