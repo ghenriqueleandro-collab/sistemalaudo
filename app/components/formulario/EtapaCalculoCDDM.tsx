@@ -452,11 +452,18 @@ function calcularResultado(
     const fVagaAv  = 100
     const fatorVaga = fatores.vaga && fVagaElem > 0 ? fVagaAv / fVagaElem : 1
 
-    // V.U. Homogeneizado — fórmula MULTIPLICATIVA (igual à planilha aba Homog.)
-    const vuHomog = vu * fatorArea * fatorLocal * fatorPadrao * fatorFOC * fatorAndar * fatorVaga
+    // Coef. Geral — fórmula ADITIVA da planilha: 1 + Σ(fi - 1)
+    // Equivale a: soma de todos os fatores menos (n_fatores - 1)
+    const coefGeral = 1
+      + (fatorArea   - 1)
+      + (fatorLocal  - 1)
+      + (fatorPadrao - 1)
+      + (fatorFOC    - 1)
+      + (fatorAndar  - 1)
+      + (fatorVaga   - 1)
 
-    // Coef. Geral derivado (para exibição e validação NORMA 0,5–2,0)
-    const coefGeral = vu > 0 ? vuHomog / vu : 1
+    // V.U. Homogeneizado
+    const vuHomog = vu * coefGeral
 
     return {
       vu, fatorArea, fatorLocal, fatorPadrao, fatorFOC,
@@ -489,12 +496,11 @@ function calcularResultado(
   const limInf30  = media * 0.70
   const limSup30  = media * 1.30
 
-  // Saneamento: marca visualmente (✗) mas NÃO exclui da média — decisão é do usuário
+  // Saneamento: flag visual (✗) mas NÃO exclui da média — todos no cálculo
   parciais.forEach(p => { p.saneado = p.vuHomog >= limInf30 && p.vuHomog <= limSup30 })
-  const vusSaneados = vus  // todos os elementos, sem exclusão automática
-  const n = vusSaneados.length
-
-  const mediaSaneada = media  // média de todos os elementos (igual à planilha)
+  const vusSaneados = vus        // todos os elementos, sem exclusão
+  const n           = vusSaneados.length
+  const mediaSaneada = media     // média de todos (igual à planilha)
 
   // Resíduos relativos = (VU_hom - media_saneada) / media_saneada
   parciais.forEach(p => {
@@ -511,22 +517,21 @@ function calcularResultado(
   // T de Student para 80% de confiança (bilateral), n−1 graus de liberdade
   const tStudent = T_STUDENT[n] ?? 1.533
 
-  // Intervalo de confiança: fórmula da planilha = T × S / sqrt(N-1)
+  // Intervalo de confiança: T × S / sqrt(N-1)  — fórmula planilha
   const resultado = n > 1 ? tStudent * desvioPadrao / Math.sqrt(n - 1) : 0
 
-  // IC total (assimétrico) — fórmula H76 da planilha: H72 + H74
-  // H72 = (media / limInf - 1) × 100  |  H74 = (limSup / media - 1) × 100
+  // IC total assimétrico H76 = H72 + H74 (células C76/H76 da planilha)
   const _limInfIC = mediaSaneada - resultado
   const _limSupIC = mediaSaneada + resultado
   const _h72 = _limInfIC > 0 ? ((mediaSaneada / _limInfIC) - 1) * 100 : 0
-  const _h74 = mediaSaneada > 0 ? ((_limSupIC / mediaSaneada) - 1) * 100 : 0
-  const intervaloConfianca = _h72 + _h74
+  const _h74 = mediaSaneada  > 0 ? ((_limSupIC / mediaSaneada) - 1) * 100 : 0
+  const intervaloConfianca = _h72 + _h74   // H76 da planilha
 
-  // Grau de precisão (NBR 14653-2, item 13.4) — usando IC total H76
+  // Grau de precisão (NBR 14653-2, item 13.4)
   const grauPrecisao: 'III' | 'II' | 'I' | '-' =
     intervaloConfianca <= 30 ? 'III' :
-    intervaloConfianca <= 40 ? 'II' :
-    intervaloConfianca <= 50 ? 'I'  : '-'
+    intervaloConfianca <= 40 ? 'II'  :
+    intervaloConfianca <= 50 ? 'I'   : '-'
 
   return {
     elementos: parciais, media, mediaSaneada, desvioPadrao, coefVariacao,
