@@ -122,7 +122,8 @@ function formatarArea(valor?: string): string {
 }
 
 function arredondar(valor: number) {
-  return Math.round(valor / 100) * 100
+  // Arredonda para o múltiplo de 1.000 mais próximo (ex: 842.700 → 843.000)
+  return Math.round(valor / 1000) * 1000
 }
 
 // Extrai a cidade do campo endereço (formato: "Rua – Bairro – Cidade – Estado – CEP ...")
@@ -555,11 +556,29 @@ export function LaudoPdf({
   const prodOutros = (dados.outrosFatoresImovel || []).reduce(
     (t, i) => t * (cn(i.valor) || 1), 1
   )
-  const subtotal = (valorTerrenoN + valorBenfeitoriasN) * fatorComerc
-  const valorFinal = subtotal * prodOutros
+  // Usar valor do motor CDDM/Evolutivo quando disponível (campos manuais ficam vazios)
+  const _cddmVal = (dados as any).dadosCalculoCDDM?.valorImovel
+  const _evVal   = (dados as any).dadosCalculoEvolutivo?.valorFinal
+  const isEvoLaudo = dados.metodoAvaliacao === 'evolutivo'
+  const baseValor  = isEvoLaudo && _evVal > 0
+    ? _evVal
+    : !isEvoLaudo && _cddmVal > 0
+    ? _cddmVal
+    : valorTerrenoN + valorBenfeitoriasN
+
+  const somaAdicionais = ((dados as any).valoresAdicionais || []).reduce(
+    (s: number, i: any) => s + cn(i.valor), 0
+  )
+  const subtotal = baseValor * fatorComerc
+  const valorFinal = subtotal * prodOutros + somaAdicionais
   const valorArredondado = arredondar(valorFinal)
   const valorExtenso = numeroPorExtenso(valorArredondado)
-  const vlf = cn(dados.valorLiquidezForcada || '')
+
+  // Liquidação forçada: calcular a partir do fator quando disponível
+  const fatorLiqRaw = cn(dados.fatorLiquidacaoForcada || '0')
+  const vlf = fatorLiqRaw > 0 && fatorLiqRaw < 1
+    ? arredondar(valorArredondado * fatorLiqRaw)
+    : cn(dados.valorLiquidezForcada || '')
   const vlfExtenso = vlf > 0 ? numeroPorExtenso(vlf) : ''
   const fotoFachada = (dados.fotos || []).find(
     (f) => f.legenda?.trim().toLowerCase() === 'fachada'
@@ -1387,10 +1406,7 @@ export function LaudoPdf({
                 <Text style={[s.memorialLbl,{flex:2,fontFamily:'Helvetica-Bold'}]}>Intervalo de confiança</Text>
                 <Text style={[s.memorialVal,{flex:1.1,textAlign:'center'}]}>{cddmData.intervaloConfianca.toFixed(2).replace('.',',')}%</Text>
               </View>
-              <View style={s.memorialRowL}>
-                <Text style={[s.memorialLbl,{flex:2,fontFamily:'Helvetica-Bold',backgroundColor:AZUL,color:BRANCO}]}>GRAU DE PRECISÃO</Text>
-                <Text style={[s.memorialVal,{flex:1.1,textAlign:'center',backgroundColor:'#dbeafe',fontSize:9}]}>{cddmData.grauPrecisao || '–'}</Text>
-              </View>
+
             </View>
             <View style={{ flex: 1, borderWidth: 0.5, borderColor: CINZA }}>
               <View style={{ backgroundColor: AZUL, paddingVertical: 3, paddingHorizontal: 5 }}>
@@ -1421,7 +1437,6 @@ export function LaudoPdf({
               {[
                 ['Desvio padrão', `R$ ${cddmData.desvioPadrao.toFixed(2).replace('.',',')}`],
                 ['Coef. variação', `${cddmData.coefVariacao.toFixed(2).replace('.',',')}%`],
-                ['Grau de precisão', cddmData.grauPrecisao || '—'],
                 ['IC 80%', `${cddmData.intervaloConfianca.toFixed(2).replace('.',',')}%`],
               ].map(([lbl,val]) => (
                 <View key={lbl} style={{ flex:1, backgroundColor:AZULLT, borderWidth:0.5, borderColor:CINZA, marginRight:4, padding:5, alignItems:'center' }}>

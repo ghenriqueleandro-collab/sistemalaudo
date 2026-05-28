@@ -369,7 +369,8 @@ function obterTextoGarantia(classificacao?: string, observacoes?: string) {
 }
 
 function arredondarValorLaudo(valor: number) {
-  return Math.round(valor / 100) * 100
+  // Arredonda para múltiplos de 1.000 (ex: 842.700 → 843.000)
+  return Math.round(valor / 1000) * 1000
 }
 
 function numeroPorExtenso(valor: number) {
@@ -674,12 +675,27 @@ function VisualizarLaudoContent() {
   const modoTotal = dados.modoValorImovel === 'total'
   const fatorComercializacaoNumero = converterNumero(dados.fatorComercializacao)
   const produtoOutrosFatores = (dados.outrosFatoresImovel || []).reduce((total, item) => total * (converterNumero(item.valor) || 1), 1)
-  const baseCalculo = modoTotal ? valorTotalNumero : (valorTerrenoNumero + valorBenfeitoriasNumero)
+  // Usar motor CDDM/Evolutivo quando disponível
+  const _cddmVal = (dados as any).dadosCalculoCDDM?.valorImovel
+  const _evVal   = (dados as any).dadosCalculoEvolutivo?.valorFinal
+  const isEvoLaudo = dados.metodoAvaliacao === 'evolutivo'
+  const baseMotor  = isEvoLaudo && _evVal > 0
+    ? _evVal
+    : !isEvoLaudo && _cddmVal > 0
+    ? _cddmVal
+    : null
+  const baseCalculo = baseMotor ?? (modoTotal ? valorTotalNumero : (valorTerrenoNumero + valorBenfeitoriasNumero))
+  const somaAdicionais = ((dados as any).valoresAdicionais || []).reduce((s: number, i: any) => s + converterNumero(i.valor), 0)
   const subtotalImovel = baseCalculo * fatorComercializacaoNumero
-  const valorFinalCalculado = subtotalImovel * produtoOutrosFatores
+  const valorFinalCalculado = subtotalImovel * produtoOutrosFatores + somaAdicionais
   const valorArredondadoLaudo = arredondarValorLaudo(valorFinalCalculado)
   const valorArredondadoExtenso = numeroPorExtenso(valorArredondadoLaudo)
-  const valorLiquidezForcadaNumero = converterNumero(dados.valorLiquidezForcada || '')
+
+  // Liquidação forçada: calcular a partir do fator
+  const fatorLiqRaw = converterNumero((dados as any).fatorLiquidacaoForcada || '0')
+  const valorLiquidezForcadaNumero = fatorLiqRaw > 0 && fatorLiqRaw < 1
+    ? arredondarValorLaudo(valorArredondadoLaudo * fatorLiqRaw)
+    : converterNumero(dados.valorLiquidezForcada || '')
   const valorLiquidezForcadaExtenso = valorLiquidezForcadaNumero > 0 ? numeroPorExtenso(valorLiquidezForcadaNumero) : ''
   const fotoFachada = (dados.fotos || []).find((foto) => (foto.legenda || '').trim().toLowerCase() === 'fachada')
   const garantiaTexto = obterTextoGarantia(dados.garantiaClassificacao, dados.garantiaObservacoes)
@@ -1551,10 +1567,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                           <span style={{ flex: 2, fontWeight: 700 }}>Intervalo de confiança</span>
                           <span style={{ flex: 1, textAlign: 'right', fontWeight: 700, color: '#2347C6' }}>{cddm.intervaloConfianca.toFixed(2).replace('.', ',')}%</span>
                         </div>
-                        <div style={{ display: 'flex', background: '#17325C', padding: '3px 6px', marginTop: '4px' }}>
-                          <span style={{ flex: 2, fontWeight: 700, color: '#fff' }}>GRAU DE PRECISÃO</span>
-                          <span style={{ flex: 1, textAlign: 'right', fontWeight: 700, color: '#93c5fd', fontSize: '14px' }}>{cddm.grauPrecisao || '—'}</span>
-                        </div>
+
                       </div>
                     </div>
 
@@ -1583,11 +1596,10 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                   </div>
 
                   {/* Estatísticas + tabela de valores */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '6px', marginBottom: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '6px', marginBottom: '8px' }}>
                     {[
                       ['Desvio padrão', formatarMoeda(cddm.desvioPadrao)],
                       ['Coef. variação', cddm.coefVariacao.toFixed(2).replace('.', ',') + '%'],
-                      ['Grau de precisão', cddm.grauPrecisao || '—'],
                       ['IC 80%', cddm.intervaloConfianca.toFixed(2).replace('.', ',') + '%'],
                     ].map(([l, v]) => (
                       <div key={String(l)} style={{ background: '#EAF0FB', border: '0.5px solid #C9D3E6', borderRadius: '3px', padding: '6px', textAlign: 'center' }}>
