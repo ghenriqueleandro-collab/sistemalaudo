@@ -262,6 +262,18 @@ export default function NovoLaudoPage() {
           resolverRef(laudoSalvo.imagemBenfeitorias || ''),
         ])
 
+        // Resolver fotos dos elementos CDDM salvas como __ref__:
+        let dadosCddmResolvido = laudoSalvo.dadosCalculoCDDM
+        if (dadosCddmResolvido?.elementos) {
+          const elementosResolvidos = await Promise.all(
+            dadosCddmResolvido.elementos.map(async (el: any) => ({
+              ...el,
+              foto: el.foto ? await resolverRef(el.foto) : '',
+            }))
+          )
+          dadosCddmResolvido = { ...dadosCddmResolvido, elementos: elementosResolvidos }
+        }
+
         setForm((prev) => ({
           ...prev,
           ...laudoSalvo,
@@ -270,6 +282,7 @@ export default function NovoLaudoPage() {
           documentacaoPdf: docPdf,
             localizacaoComparativos: locComp,
           imagemBenfeitorias: imgBenf,
+          dadosCalculoCDDM: dadosCddmResolvido,
           // Guarda as refs originais para não re-salvar no próximo save
           _refDocPdf:  laudoSalvo.documentacaoPdf?.startsWith('__ref__:') ? laudoSalvo.documentacaoPdf : undefined,
           _refLocComp: laudoSalvo.localizacaoComparativos?.startsWith('__ref__:') ? laudoSalvo.localizacaoComparativos : undefined,
@@ -755,8 +768,24 @@ export default function NovoLaudoPage() {
       const locComp = await salvarCampo(form._refLocComp, `anexo:${laudoUuid}:localizacaoComparativos`, form.localizacaoComparativos || '')
       const imgBenf = await salvarCampo(form._refImgBenf, `anexo:${laudoUuid}:imagemBenfeitorias`,      form.imagemBenfeitorias || '')
 
+      // ── Extrair fotos dos elementos CDDM para salvar como anexos separados ──
+      // Evita que o payload principal ultrapasse o limite de 1MB do Redis
+      let dadosCalculoCDDMSemFotos = (form as any).dadosCalculoCDDM
+      if (dadosCalculoCDDMSemFotos?.elementos) {
+        const elementosComRefs = await Promise.all(
+          dadosCalculoCDDMSemFotos.elementos.map(async (el: any, idx: number) => {
+            if (!el.foto || !el.foto.startsWith('data:')) return el
+            const chave = `anexo:${laudoUuid}:cddm:foto:${idx}`
+            const ref = await salvarBinario(chave, el.foto)
+            return { ...el, foto: ref }
+          })
+        )
+        dadosCalculoCDDMSemFotos = { ...dadosCalculoCDDMSemFotos, elementos: elementosComRefs }
+      }
+
       const payload = {
         ...form,
+        dadosCalculoCDDM: dadosCalculoCDDMSemFotos,
         valorLiquidezForcada: valorLiquidezForcadaCalc,
         tipoLaudo: 'detalhado' as const,  // forçado — laudo detalhado nunca salva como simplificado
         id: laudoUuid,
