@@ -1473,9 +1473,22 @@ export function LaudoPdf({
             SEÇÃO 11 — VALOR DO IMÓVEL
         ──────────────────────────────────────────────────── */}
         <H2 id="s-11">11. VALOR DO IMÓVEL</H2>
-        <P>a. <Text style={s.bold}>Valor do Terreno:</Text> {fm(valorTerrenoN)}</P>
-        <P>b. <Text style={s.bold}>Valor das Benfeitorias:</Text> {fm(valorBenfeitoriasN)}</P>
-        <P>c. <Text style={s.bold}>Fator de Comercialização:</Text> {dados.fatorComercializacao || '1,00'}</P>
+        {/* Terreno e benfeitorias: só exibir no evolutivo ou quando preenchidos manualmente */}
+        {isEvoLaudo ? (
+          <>
+            <P>a. <Text style={s.bold}>Valor do Terreno:</Text> {fm(valorTerrenoN)}</P>
+            <P>b. <Text style={s.bold}>Valor das Benfeitorias:</Text> {fm(valorBenfeitoriasN)}</P>
+          </>
+        ) : (valorTerrenoN > 0 || valorBenfeitoriasN > 0) ? (
+          <>
+            {valorTerrenoN > 0    && <P>a. <Text style={s.bold}>Valor do Terreno:</Text> {fm(valorTerrenoN)}</P>}
+            {valorBenfeitoriasN > 0 && <P>b. <Text style={s.bold}>Valor das Benfeitorias:</Text> {fm(valorBenfeitoriasN)}</P>}
+          </>
+        ) : null}
+        {/* Fator de comercialização: só exibir se diferente de 1 */}
+        {(() => { const fc = parseFloat((dados.fatorComercializacao || '1').replace(',','.')); return fc !== 1 && !isNaN(fc) ? (
+          <P>{isEvoLaudo ? 'c.' : valorTerrenoN > 0 || valorBenfeitoriasN > 0 ? 'c.' : 'a.'} <Text style={s.bold}>Fator de Comercialização:</Text> {dados.fatorComercializacao}</P>
+        ) : null })()}
         {(() => {
           const fatoresValidos = (dados.outrosFatoresImovel || []).filter(
             f => f.descricao?.trim() || f.valor?.trim()
