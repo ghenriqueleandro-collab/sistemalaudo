@@ -1357,6 +1357,89 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               </div>
             </PaginaFlexivel>
 
+
+            {/* ── CARDS DE ELEMENTOS COMPARATIVOS ──────────────────────── */}
+            {elemsCddm.length > 0 && elemsCddm.map((el: any, i: number) => {
+              const fm = (v: number) => v > 0 ? formatarMoeda(v) : ''
+              const ok = (v: any) => { const s = String(v ?? '').trim(); return s && s !== '0' && s !== '-' ? s : '' }
+              const fOf = parseFloat(String(el.fatorOferta || '').replace(',', '.')) || 1
+              const vOf = el.valorOferta > 0 ? formatarMoeda(el.valorOferta) : ''
+              const vLiq = el.valorOferta > 0 ? formatarMoeda(el.valorOferta * fOf) : ''
+              const vuOf = el.vu > 0 ? formatarMoeda(el.vu) : (el.valorUnitarioOferta > 0 ? formatarMoeda(el.valorUnitarioOferta) : '')
+              const cidadeUF = [el.cidade, el.uf].filter(Boolean).join(' · ')
+
+              const LBL: React.CSSProperties = { background: '#EAF0FB', padding: '3px 6px', fontSize: '8px', fontWeight: 700, color: '#1a3564', borderRight: '0.5px solid #C9D3E6', whiteSpace: 'nowrap', width: '18%' }
+              const VAL: React.CSSProperties = { padding: '3px 6px', fontSize: '8px', color: '#1e293b' }
+              const brd: React.CSSProperties = { borderTop: '0.5px solid #C9D3E6' }
+              const R: React.CSSProperties = { borderRight: '0.5px solid #C9D3E6' }
+
+              const r1 = (l: string, v: any, extra?: React.CSSProperties) => {
+                const a = ok(v); if (!a) return null
+                return <tr style={brd}><td style={{ ...LBL }}>{l}</td><td style={{ ...VAL, ...extra }}>{a}</td></tr>
+              }
+              const r2 = (l1: string, v1: any, l2: string, v2: any) => {
+                const a = ok(v1), b = ok(v2); if (!a && !b) return null
+                if (!b) return r1(l1, a); if (!a) return r1(l2, b)
+                return <tr style={brd}><td style={LBL}>{l1}</td><td style={{ ...VAL, width: '32%', ...R }}>{a}</td><td style={{ ...LBL, ...R }}>{l2}</td><td style={VAL}>{b}</td></tr>
+              }
+              const r3 = (l1: string, v1: any, l2: string, v2: any, l3: string, v3: any) => {
+                const a = ok(v1), b = ok(v2), c = ok(v3); if (!a && !b && !c) return null
+                if (!c) return r2(l1, a, l2, b); if (!b && !a) return r1(l3, c)
+                if (!a) return r2(l2, b, l3, c); if (!b) return r2(l1, a, l3, c)
+                return <tr style={brd}><td style={{ ...LBL, width: '14%' }}>{l1}</td><td style={{ ...VAL, width: '19%', ...R }}>{a}</td><td style={{ ...LBL, width: '14%', ...R }}>{l2}</td><td style={{ ...VAL, width: '19%', ...R }}>{b}</td><td style={{ ...LBL, width: '14%', ...R }}>{l3}</td><td style={VAL}>{c}</td></tr>
+              }
+
+              const linhas = [
+                r3('Tipo', el.tipo, 'Data', el.data ? formatarData(el.data) : '', 'Empreendimento', el.empreendimento),
+                r1('Logradouro', el.logradouro || el.endereco),
+                r3('Bairro', el.bairro, 'Cidade · UF', cidadeUF, 'Distância', el.distanciaAvaliando || el.distancia),
+                r1('Coordenadas', el.coordenadas, { fontSize: '7px', wordBreak: 'break-all' }),
+                r1('Fonte', el.fonte),
+                r3('Conservação', el.estadoConservacao, 'Idade', el.idadeAparente > 0 ? `${el.idadeAparente} anos` : (el.idade ? `${el.idade} anos` : ''), 'Andar', el.andar > 0 ? String(el.andar) : ''),
+                r2('Área terreno', el.areaTerreno > 0 ? `${Number(el.areaTerreno).toLocaleString('pt-BR')} m²` : '', 'Área constr./útil', el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : ''),
+                r2('Padrão constr.', el.padraoConstrutivo, 'FOC', el.foc ? String(el.foc).replace('.', ',') : ''),
+                r3('Dormitórios', el.dormitorios > 0 ? String(el.dormitorios) : '', 'Suítes', el.suites > 0 ? String(el.suites) : '', 'Vagas', el.vagas > 0 ? String(el.vagas) : ''),
+                r3('Valor oferta', vOf, 'Valor líquido', vLiq !== vOf ? vLiq : '', 'V.U./m²', vuOf),
+                r3('F. Oferta', ok(el.fatorOferta), 'F. Local', ok(el.fatorLocal), 'F. Andar', ok(el.fatorAndar)),
+                r3('Tipo oferta', el.tipoOferta, 'Status', el.status, 'Telefone', el.telefone),
+                el.link ? <tr key="lnk" style={brd}><td style={LBL}>Link</td><td style={{ ...VAL, fontSize: '7px', color: '#2347C6', wordBreak: 'break-all' }}>{String(el.link)}</td></tr> : null,
+                r1('Obs.', el.observacoes),
+              ].filter(Boolean)
+
+              if (linhas.length === 0) return null
+
+              return (
+                <div key={`elem-${i}`} className="evitar-quebra" style={{ marginBottom: '8px', border: '1px solid #b8c4d8', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{ background: '#1a3564', padding: '4px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
+                      ELEMENTO COMPARATIVO {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <span style={{ fontSize: '8px', color: '#8fa4c7' }}>
+                      {el.fonte || ''}{el.data ? ` • ${formatarData(el.data)}` : ''}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex' }}>
+                    <table style={{ flex: 1, borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', borderTop: 'none', borderRight: el.foto ? '0.5px solid #C9D3E6' : 'none' }}>
+                      <tbody>{linhas}</tbody>
+                    </table>
+                    {el.foto && (
+                      <div style={{ width: '110px', flexShrink: 0, borderTop: 'none', borderLeft: '0.5px solid #C9D3E6', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8f9fc' }}>
+                        <img src={el.foto} alt={`Elemento ${i + 1}`} style={{ width: '110px', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* Mapa de localização */}
+            {dados.localizacaoComparativos && temCddm && (
+              <div className="evitar-quebra" style={{ marginBottom: '8px' }}>
+                <img src={dados.localizacaoComparativos} alt="Mapa de localização dos comparativos"
+                  style={{ width: '100%', borderRadius: '4px', border: '0.5px solid #C9D3E6', objectFit: 'cover', maxHeight: '260px' }} />
+              </div>
+            )}
+
             {dados.imagemBenfeitorias && (
               <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
                 <CabecalhoLaudo />
