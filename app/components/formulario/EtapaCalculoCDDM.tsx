@@ -104,8 +104,8 @@ type ResultElem = {
   fatorAndar: number
   fatorVaga: number
   coefGeral: number
-  vuHomog: number        // ADITIVO — usado nas estatísticas (media, DP, IC)
-  vuHomogDisplay: number // MULTIPLICATIVO — exibido na tabela Homog. e no PDF
+  vuHomog: number        // ADITIVO — estatísticas
+  vuHomogDisplay: number // MULTIPLICATIVO — display na tabela e PDF
   residuo: number
   saneado: boolean
 }
@@ -457,8 +457,7 @@ function calcularResultado(
     const coefGeral = 1 + (fatorArea-1) + (fatorLocal-1) + (fatorPadrao-1)
                         + (fatorFOC-1)  + (fatorAndar-1) + (fatorVaga-1)
     const vuHomog = vu * coefGeral
-
-    // VU homog MULTIPLICATIVO — tabela de homogeneização e PDF
+    // VU homog MULTIPLICATIVO — display na tabela Homog. e PDF
     const vuHomogDisplay = vu * fatorArea * fatorLocal * fatorPadrao * fatorFOC * fatorAndar * fatorVaga
 
     return {
@@ -492,13 +491,13 @@ function calcularResultado(
   const limInf30  = media * 0.70
   const limSup30  = media * 1.30
 
-  // Saneamento: flag visual apenas — todos incluídos no cálculo
+  // Saneamento: flag visual — todos incluídos no cálculo
   parciais.forEach(p => { p.saneado = p.vuHomog >= limInf30 && p.vuHomog <= limSup30 })
-  const vusSaneados = vus        // todos os elementos, sem exclusão
+  const vusSaneados = vus
   const n           = vusSaneados.length
-  const mediaSaneada = media     // média de todos (planilha aba Cálculo)
+  const mediaSaneada = media
 
-  // Resíduos relativos = (VU_homog / VU_bruto) − 1  (variação por fator — igual planilha)
+  // Resíduos: variação por fator vs VU bruto (fórmula planilha)
   parciais.forEach(p => {
     p.residuo = p.vu > 0 ? (p.vuHomog / p.vu - 1) : 0
   })
@@ -513,17 +512,12 @@ function calcularResultado(
   // T de Student para 80% de confiança (bilateral), n−1 graus de liberdade
   const tStudent = T_STUDENT[n] ?? 1.533
 
-  // Intervalo de confiança: T × S / sqrt(N-1)
   const resultado = n > 1 ? tStudent * desvioPadrao / Math.sqrt(n - 1) : 0
-
-  // IC total assimétrico H76 = H72 + H74 (fórmula planilha)
-  const _limInfIC = mediaSaneada - resultado
-  const _limSupIC = mediaSaneada + resultado
-  const _h72 = _limInfIC > 0 ? ((mediaSaneada / _limInfIC) - 1) * 100 : 0
-  const _h74 = mediaSaneada  > 0 ? ((_limSupIC  / mediaSaneada) - 1) * 100 : 0
+  const _li = mediaSaneada - resultado
+  const _ls = mediaSaneada + resultado
+  const _h72 = _li > 0 ? ((mediaSaneada / _li) - 1) * 100 : 0
+  const _h74 = mediaSaneada > 0 ? ((_ls / mediaSaneada) - 1) * 100 : 0
   const intervaloConfianca = _h72 + _h74
-
-  // Grau de precisão (NBR 14653-2, item 13.4)
   const grauPrecisao: 'III' | 'II' | 'I' | '-' =
     intervaloConfianca <= 30 ? 'III' :
     intervaloConfianca <= 40 ? 'II'  :
@@ -749,37 +743,26 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
     [elementos, avaliando, fatores]
   )
 
-  // ── Snapshot → form: persiste dadosCalculoCDDM para visualização e PDF ──
+  // Persiste dadosCalculoCDDM para visualização e PDF
   useEffect(() => {
     if (!setForm || resultado.elementos.length === 0) return
     setForm((prev: any) => ({
       ...prev,
       dadosCalculoCDDM: {
-        // Elementos com vuHomog = multiplicativo (para display na tabela/PDF)
         elementos: resultado.elementos.map(el => ({
           ...el,
-          valorUnitarioOferta: el.vu,                    // compatibilidade com page.tsx/PDF
-          vuHomog: el.vuHomogDisplay ?? el.vuHomog,      // multiplicativo para exibição
-          vuHomogEstatistico: el.vuHomog,                // aditivo (estatísticas)
+          valorUnitarioOferta: el.vu,
+          vuHomog: el.vuHomogDisplay ?? el.vuHomog,
         })),
-        avaliando: {
-          area:              pn(avaliando.area),
-          padraoConstrutivo: avaliando.padraoConstrutivo,
-          estadoConservacao: avaliando.estadoConservacao,
-        },
-        media:              resultado.media,
-        mediaSaneada:       resultado.mediaSaneada,
-        desvioPadrao:       resultado.desvioPadrao,
-        coefVariacao:       resultado.coefVariacao,
-        tStudent:           resultado.tStudent,
-        resultado:          resultado.resultado,
+        avaliando: { area: pn(avaliando.area), padraoConstrutivo: avaliando.padraoConstrutivo, estadoConservacao: avaliando.estadoConservacao },
+        media: resultado.media, mediaSaneada: resultado.mediaSaneada,
+        desvioPadrao: resultado.desvioPadrao, coefVariacao: resultado.coefVariacao,
+        tStudent: resultado.tStudent, resultado: resultado.resultado,
         intervaloConfianca: resultado.intervaloConfianca,
-        limiteInferior:     resultado.limiteInferior,
-        limiteSuperior:     resultado.limiteSuperior,
-        limiteInf30:        resultado.limiteInf30,
-        limiteSup30:        resultado.limiteSup30,
-        grauPrecisao:       resultado.grauPrecisao,
-        valorImovel:        resultado.mediaSaneada * pn(avaliando.area),
+        limiteInferior: resultado.limiteInferior, limiteSuperior: resultado.limiteSuperior,
+        limiteInf30: resultado.limiteInf30, limiteSup30: resultado.limiteSup30,
+        grauPrecisao: resultado.grauPrecisao,
+        valorImovel: resultado.mediaSaneada * pn(avaliando.area),
         outliersDescartados: resultado.elementos.filter(e => !e.saneado).length,
       },
     }))
