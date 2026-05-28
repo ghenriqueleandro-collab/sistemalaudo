@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react'
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 
 // ─── Haversine: distância em linha reta entre duas coordenadas ─────────────
 function parseCoord(s: string): [number, number] | null {
