@@ -244,6 +244,7 @@ export default function EtapaFundamentacaoPrecisao({
         </div>
       )}
       {exibirTabelaFatoresTerreno && (
+      <>
       <div className="rounded-xl border border-slate-200 bg-white p-5">
         <p className="text-sm font-semibold text-slate-700 mb-4">Grau de fundamentação — Tratamento por Fatores</p>
 
@@ -342,11 +343,13 @@ export default function EtapaFundamentacaoPrecisao({
         </div>
 
         <p className="mt-4 text-xs text-slate-400"><strong>Obs:</strong> Para menos de 5 dados de mercado, o intervalo deverá ser 0,80 a 1,25.</p>
-        <TabelaEnquadramento enc={encFatores} />
       </div>
+      <TabelaEnquadramento enc={encFatores} />
+      </>
       )}
 
       {exibirTabelaMetodoEvolutivo && (
+      <>
       <div className="rounded-xl border border-slate-200 bg-white p-5">
         <p className="text-sm font-semibold text-slate-700 mb-4">Grau de fundamentação — Método Evolutivo</p>
 
@@ -443,11 +446,13 @@ export default function EtapaFundamentacaoPrecisao({
             </tbody>
           </table>
         </div>
-        <TabelaEnquadramento enc={encEvolutivo} />
       </div>
+      <TabelaEnquadramento enc={encEvolutivo} />
+      </>
       )}
 
       {exibirTabelaInferencia && (
+      <>
       <div className="rounded-xl border border-slate-200 bg-white p-5">
         <p className="text-sm font-semibold text-slate-700 mb-4">Grau de fundamentação — Inferência Estatística</p>
 
@@ -546,8 +551,9 @@ export default function EtapaFundamentacaoPrecisao({
             </tbody>
           </table>
         </div>
-        <TabelaEnquadramento enc={encInferencia} />
       </div>
+      <TabelaEnquadramento enc={encInferencia} />
+      </>
       )}
 
       <div className="rounded-xl border border-slate-200 bg-white p-5">
