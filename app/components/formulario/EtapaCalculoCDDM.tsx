@@ -453,7 +453,6 @@ function calcularResultado(
     const fatorVaga = fatores.vaga && fVagaElem > 0 ? fVagaAv / fVagaElem : 1
 
     // V.U. Homogeneizado — fórmula MULTIPLICATIVA (igual à planilha aba Homog.)
-    // VU_homog = VU × F.Área × F.Local × F.Padrão × F.FOC × F.Andar × F.Vaga
     const vuHomog = vu * fatorArea * fatorLocal * fatorPadrao * fatorFOC * fatorAndar * fatorVaga
 
     // Coef. Geral derivado (para exibição e validação NORMA 0,5–2,0)
@@ -514,9 +513,16 @@ function calcularResultado(
 
   // Intervalo de confiança: fórmula da planilha = T × S / sqrt(N-1)
   const resultado = n > 1 ? tStudent * desvioPadrao / Math.sqrt(n - 1) : 0
-  const intervaloConfianca = mediaSaneada > 0 ? (resultado / mediaSaneada) * 100 : 0
 
-  // Grau de precisão (NBR 14653-2, item 13.4)
+  // IC total (assimétrico) — fórmula H76 da planilha: H72 + H74
+  // H72 = (media / limInf - 1) × 100  |  H74 = (limSup / media - 1) × 100
+  const _limInfIC = mediaSaneada - resultado
+  const _limSupIC = mediaSaneada + resultado
+  const _h72 = _limInfIC > 0 ? ((mediaSaneada / _limInfIC) - 1) * 100 : 0
+  const _h74 = mediaSaneada > 0 ? ((_limSupIC / mediaSaneada) - 1) * 100 : 0
+  const intervaloConfianca = _h72 + _h74
+
+  // Grau de precisão (NBR 14653-2, item 13.4) — usando IC total H76
   const grauPrecisao: 'III' | 'II' | 'I' | '-' =
     intervaloConfianca <= 30 ? 'III' :
     intervaloConfianca <= 40 ? 'II' :
@@ -1533,9 +1539,9 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Valor do imóvel</p>
                     <div className="space-y-2 text-xs mb-4">
                       {[
-                        ['Mínimo', fmtMoeda(resultado.mediaSaneada * pn(avaliando.area) * 0.97)],
-                        ['Médio', fmtMoeda(resultado.mediaSaneada * pn(avaliando.area))],
-                        ['Máximo', fmtMoeda(resultado.mediaSaneada * pn(avaliando.area) * 1.03)],
+                        ['Mínimo', fmtMoeda(resultado.limiteInferior * pn(avaliando.area))],
+                        ['Médio',  fmtMoeda(resultado.mediaSaneada   * pn(avaliando.area))],
+                        ['Máximo', fmtMoeda(resultado.limiteSuperior * pn(avaliando.area))],
                         ['Limite inferior (−30%)', fmtMoeda(resultado.limiteInf30 * pn(avaliando.area))],
                         ['Limite superior (+30%)', fmtMoeda(resultado.limiteSup30 * pn(avaliando.area))],
                       ].map(([l, v]) => (
