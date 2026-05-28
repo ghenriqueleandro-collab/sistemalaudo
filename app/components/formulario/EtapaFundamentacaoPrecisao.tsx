@@ -128,7 +128,7 @@ const linhaPrecisao = {
 }
 
 function classeCelulaSelecionada(ativo: boolean) {
-  return ativo ? 'bg-blue-600 text-white font-bold' : 'bg-white'
+  return ativo ? 'bg-blue-600 text-white font-semibold' : 'bg-white hover:bg-blue-50 transition-colors cursor-pointer'
 }
 
 function classeBotaoSelecionado() {
@@ -191,26 +191,26 @@ export default function EtapaFundamentacaoPrecisao({
   function TabelaEnquadramento({ enc }: { enc: string }) {
     if (!enc) return null
     return (
-      <div className="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
+      <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
         <p className="text-sm font-semibold text-blue-800 mb-2">
           Resultado: Grau de Fundamentação <span className="text-lg font-bold">{enc}</span>
         </p>
         <table className="w-full border text-sm border-collapse">
           <tbody>
-            <tr className="bg-gray-100">
+            <tr className="bg-slate-50">
               <td className="border p-2 text-center font-bold w-1/4">Graus</td>
               <td className={ceEnc(enc === 'III')}>III</td>
               <td className={ceEnc(enc === 'II')}>II</td>
               <td className={ceEnc(enc === 'I')}>I</td>
             </tr>
             <tr>
-              <td className="border p-2 text-center bg-gray-50">Pontos mínimos</td>
+              <td className="border p-2 text-center bg-slate-50">Pontos mínimos</td>
               <td className="border p-2 text-center">10</td>
               <td className="border p-2 text-center">6</td>
               <td className="border p-2 text-center">4</td>
             </tr>
             <tr>
-              <td className="border p-2 text-center bg-gray-50 align-middle">Itens obrigatórios</td>
+              <td className="border p-2 text-center bg-slate-50 align-middle">Itens obrigatórios</td>
               <td className={`border p-2 text-center text-xs ${enc === 'III' ? 'bg-blue-50' : ''}`}>Itens 2 e 4 no grau III, com os demais no mínimo no grau II</td>
               <td className={`border p-2 text-center text-xs ${enc === 'II' ? 'bg-blue-50' : ''}`}>Itens 2 e 4, no mínimo no grau II e demais, no mínimo no grau I</td>
               <td className={`border p-2 text-center text-xs ${enc === 'I' ? 'bg-blue-50' : ''}`}>Todos, no mínimo no grau I</td>
@@ -225,22 +225,18 @@ export default function EtapaFundamentacaoPrecisao({
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-bold">12. Grau de fundamentação e precisão</h2>
-        <p className="text-sm text-slate-500 mt-1">
-          O tipo de tabela exibida é determinado pelo <strong>Método de avaliação</strong> e <strong>Tratamento dos dados</strong> selecionados na etapa 1–6.
-        </p>
+        <h2 className="text-2xl font-bold text-slate-900">12. Grau de fundamentação e precisão</h2>
+        <p className="text-sm text-slate-500 mt-1">As tabelas são exibidas automaticamente conforme o método e tratamento selecionados na etapa 1–6, ou detectados pelo motor de cálculo.</p>
       </div>
 
       {!exibirTabelaFatoresTerreno && !exibirTabelaMetodoEvolutivo && !exibirTabelaInferencia && (
-        <div className="border border-amber-300 bg-amber-50 rounded p-4 text-sm text-amber-800">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           ⚠ Nenhum método de avaliação foi selecionado. Volte à etapa <strong>1–6 (Identificação)</strong> e selecione o <strong>Método de avaliação</strong> para que as tabelas de fundamentação sejam exibidas aqui.
         </div>
       )}
       {exibirTabelaFatoresTerreno && (
-  <div className="border rounded p-4 bg-white">
-    <p className="mb-4 font-semibold">
-      Grau de fundamentação no caso de utilização de fatores – Avaliação do terreno
-    </p>
+      <div className="rounded-xl border border-slate-200 bg-white p-5">
+        <p className="text-sm font-semibold text-slate-700 mb-4">Grau de fundamentação — Tratamento por Fatores</p>
 
         <div className="overflow-x-auto">
           <table className="w-full border text-sm border-collapse table-fixed">
@@ -254,7 +250,7 @@ export default function EtapaFundamentacaoPrecisao({
             </colgroup>
 
             <thead>
-              <tr className="bg-gray-200">
+              <tr className="bg-slate-100">
                 <th rowSpan={2} className="border p-2 text-center align-middle">
                   Item
                 </th>
@@ -268,7 +264,7 @@ export default function EtapaFundamentacaoPrecisao({
                   Pontuação
                 </th>
               </tr>
-              <tr className="bg-gray-200">
+              <tr className="bg-slate-100">
                 <th className="border p-2 text-center">III</th>
                 <th className="border p-2 text-center">II</th>
                 <th className="border p-2 text-center">I</th>
@@ -336,18 +332,14 @@ export default function EtapaFundamentacaoPrecisao({
           </table>
         </div>
 
-        <p className="mt-4 text-sm">
-      <strong>Obs:</strong> Para menos de 5 dados de mercado, o intervalo deverá ser 0,8 a 1,25.
-    </p>
+        <p className="mt-4 text-xs text-slate-400"><strong>Obs:</strong> Para menos de 5 dados de mercado, o intervalo deverá ser 0,80 a 1,25.</p>
         <TabelaEnquadramento enc={encFatores} />
-  </div>
-)}
+      </div>
+      )}
 
       {exibirTabelaMetodoEvolutivo && (
-  <div className="border rounded p-4 bg-white">
-    <p className="mb-4 font-semibold">
-      Grau de fundamentação no caso de utilização do Método Evolutivo
-    </p>
+      <div className="rounded-xl border border-slate-200 bg-white p-5">
+        <p className="text-sm font-semibold text-slate-700 mb-4">Grau de fundamentação — Método Evolutivo</p>
 
         <div className="overflow-x-auto">
           <table className="w-full border text-sm border-collapse table-fixed">
@@ -361,7 +353,7 @@ export default function EtapaFundamentacaoPrecisao({
             </colgroup>
 
             <thead>
-              <tr className="bg-gray-200">
+              <tr className="bg-slate-100">
                 <th rowSpan={2} className="border p-2 text-center align-middle">
                   Item
                 </th>
@@ -375,7 +367,7 @@ export default function EtapaFundamentacaoPrecisao({
                   Pontuação
                 </th>
               </tr>
-              <tr className="bg-gray-200">
+              <tr className="bg-slate-100">
                 <th className="border p-2 text-center">III</th>
                 <th className="border p-2 text-center">II</th>
                 <th className="border p-2 text-center">I</th>
@@ -447,10 +439,8 @@ export default function EtapaFundamentacaoPrecisao({
       )}
 
       {exibirTabelaInferencia && (
-  <div className="border rounded p-4 bg-white">
-    <p className="mb-4 font-semibold">
-      Grau de fundamentação no caso de utilização de modelos de regressão linear
-    </p>
+      <div className="rounded-xl border border-slate-200 bg-white p-5">
+        <p className="text-sm font-semibold text-slate-700 mb-4">Grau de fundamentação — Inferência Estatística</p>
 
         <div className="overflow-x-auto">
           <table className="w-full border text-sm border-collapse table-fixed">
@@ -464,7 +454,7 @@ export default function EtapaFundamentacaoPrecisao({
             </colgroup>
 
             <thead>
-              <tr className="bg-gray-200">
+              <tr className="bg-slate-100">
                 <th rowSpan={2} className="border p-2 text-center align-middle">
                   Item
                 </th>
@@ -478,7 +468,7 @@ export default function EtapaFundamentacaoPrecisao({
                   Pontuação
                 </th>
               </tr>
-              <tr className="bg-gray-200">
+              <tr className="bg-slate-100">
                 <th className="border p-2 text-center">III</th>
                 <th className="border p-2 text-center">II</th>
                 <th className="border p-2 text-center">I</th>
@@ -551,10 +541,8 @@ export default function EtapaFundamentacaoPrecisao({
       </div>
       )}
 
-      <div className="border rounded p-4 bg-white">
-        <p className="mb-4 font-semibold">
-          Grau de precisão
-        </p>
+      <div className="rounded-xl border border-slate-200 bg-white p-5">
+        <p className="text-sm font-semibold text-slate-700 mb-4">Grau de precisão</p>
 
         <div className="overflow-x-auto">
           <table className="w-full border text-sm border-collapse table-fixed">
@@ -567,7 +555,7 @@ export default function EtapaFundamentacaoPrecisao({
             </colgroup>
 
             <thead>
-              <tr className="bg-gray-200">
+              <tr className="bg-slate-100">
                 <th rowSpan={2} className="border p-2 text-center align-middle">
                   Item
                 </th>
@@ -578,7 +566,7 @@ export default function EtapaFundamentacaoPrecisao({
                   GRAU
                 </th>
               </tr>
-              <tr className="bg-gray-200">
+              <tr className="bg-slate-100">
                 <th className="border p-2 text-center">III</th>
                 <th className="border p-2 text-center">II</th>
                 <th className="border p-2 text-center">I</th>

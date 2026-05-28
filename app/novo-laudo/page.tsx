@@ -553,16 +553,24 @@ export default function NovoLaudoPage() {
     return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
   }
 
-  // Tabela Fatores Terreno: comparativo+fatores OU evolutivo+fatores (para avaliação do terreno)
+  // Detecção automática do método a partir dos dados do motor (não depende só dos selects)
+  const _temDadosCddm  = !!(form as any).dadosCalculoCDDM?.mediaSaneada
+  const _temDadosEv    = !!(form as any).dadosCalculoEvolutivo?.valorFinal
+  const _metodo        = form.metodoAvaliacao
+    || (_temDadosEv ? 'evolutivo' : _temDadosCddm ? 'comparativo' : '')
+  const _tratamento    = form.tratamentoDados
+    || (_temDadosCddm || _temDadosEv ? 'tratamento_por_fatores' : '')
+
+  // Tabela Fatores Terreno: comparativo+fatores OU evolutivo+fatores
   const exibirTabelaFatoresTerreno =
-    form.tratamentoDados === 'tratamento_por_fatores' &&
-    (form.metodoAvaliacao === 'comparativo' || form.metodoAvaliacao === 'evolutivo')
-  // Tabela Inferência: comparativo+inferência OU evolutivo+inferência (para avaliação do terreno)
+    _tratamento === 'tratamento_por_fatores' &&
+    (_metodo === 'comparativo' || _metodo === 'evolutivo')
+  // Tabela Inferência: comparativo+inferência OU evolutivo+inferência
   const exibirTabelaInferencia =
-    form.tratamentoDados === 'inferencia_estatistica' &&
-    (form.metodoAvaliacao === 'comparativo' || form.metodoAvaliacao === 'evolutivo')
+    _tratamento === 'inferencia_estatistica' &&
+    (_metodo === 'comparativo' || _metodo === 'evolutivo')
   // Tabela Método Evolutivo: sempre que o método for evolutivo
-  const exibirTabelaMetodoEvolutivo = form.metodoAvaliacao === 'evolutivo'
+  const exibirTabelaMetodoEvolutivo = _metodo === 'evolutivo'
 
   const somaFundamentacao = fundamentacao.reduce((acc, f) => {
     const map: Record<string, number> = { III: 3, II: 2, I: 1 }
