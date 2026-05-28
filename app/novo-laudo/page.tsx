@@ -518,7 +518,19 @@ export default function NovoLaudoPage() {
 
   const _parseBR = (s: string) => parseFloat((s || '0').replace(/\./g, '').replace(',', '.')) || 0
 
-  const subtotalImovel = form.modoValorImovel === 'total'
+  // Valor base automático do motor CDDM ou Evolutivo
+  const _cddm = (form as any).dadosCalculoCDDM
+  const _ev   = (form as any).dadosCalculoEvolutivo
+  const _isEvo = form.metodoAvaliacao === 'evolutivo'
+  const _baseAuto = _isEvo && _ev?.valorFinal > 0
+    ? _ev.valorFinal
+    : !_isEvo && _cddm?.mediaSaneada > 0
+    ? _cddm.valorImovel
+    : null
+
+  const subtotalImovel = _baseAuto != null
+    ? _baseAuto * produtoOutrosFatores
+    : form.modoValorImovel === 'total'
     ? _parseBR(form.valorTotal || '0') * produtoOutrosFatores
     : (_parseBR(form.valorTerreno) + _parseBR(form.valorBenfeitorias)) * produtoOutrosFatores
 
