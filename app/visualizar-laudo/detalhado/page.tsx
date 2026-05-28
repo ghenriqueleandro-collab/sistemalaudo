@@ -531,8 +531,21 @@ function VisualizarLaudoContent() {
             resolverRef(parsed.imagemBenfeitorias || ''),
           ])
 
+          // Resolver fotos dos elementos CDDM salvas como __ref__:
+          let dadosCddmResolvido = parsed.dadosCalculoCDDM
+          if (dadosCddmResolvido?.elementos) {
+            const elementosResolvidos = await Promise.all(
+              dadosCddmResolvido.elementos.map(async (el: any) => ({
+                ...el,
+                foto: el.foto ? await resolverRef(el.foto) : '',
+              }))
+            )
+            dadosCddmResolvido = { ...dadosCddmResolvido, elementos: elementosResolvidos }
+          }
+
           setDados({
             ...parsed,
+            dadosCalculoCDDM: dadosCddmResolvido,
             // Determina tipoLaudo: usa o campo salvo, mas se houver indicadores de laudo
             // detalhado (croquis, acabamentos, responsavelCpf), força 'detalhado'
             // mesmo que o campo salvo diga 'simplificado' (bug de laudos antigos)
