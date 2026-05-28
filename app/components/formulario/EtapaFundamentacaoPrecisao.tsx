@@ -187,45 +187,67 @@ export default function EtapaFundamentacaoPrecisao({
   const ceEnc = (ativo: boolean) =>
     `border p-2 text-center font-bold ${ativo ? 'bg-blue-600 text-white' : ''}`
 
-  // Tabela de enquadramento (Tabela 4) — sempre visível como referência
+  // Tabela 4 — Enquadramento: mesmo estilo dos outros cards (sempre visível)
   function TabelaEnquadramento({ enc }: { enc: string }) {
-    const pending = !enc
+    const ativo = (g: string) => enc === g
     return (
-      <div className={`mt-4 rounded-xl border p-4 ${pending ? 'border-slate-200 bg-slate-50' : 'border-blue-200 bg-blue-50'}`}>
-        <p className={`text-sm font-semibold mb-2 ${pending ? 'text-slate-500' : 'text-blue-800'}`}>
-          {pending
-            ? 'Tabela 4 — Enquadramento (selecione os graus acima para apurar o resultado)'
-            : <>Resultado — Grau de Fundamentação <span className="text-lg font-bold">{enc}</span></>
-          }
-        </p>
-        <table className="w-full border text-sm border-collapse">
-          <tbody>
-            <tr className="bg-slate-100">
-              <td className="border p-2 text-center font-bold w-1/4">Graus</td>
-              <td className={ceEnc(!pending && enc === 'III')}>III</td>
-              <td className={ceEnc(!pending && enc === 'II')}>II</td>
-              <td className={ceEnc(!pending && enc === 'I')}>I</td>
-            </tr>
-            <tr>
-              <td className="border p-2 text-center bg-slate-50 text-xs">Pontos mínimos</td>
-              <td className="border p-2 text-center text-xs">10</td>
-              <td className="border p-2 text-center text-xs">6</td>
-              <td className="border p-2 text-center text-xs">4</td>
-            </tr>
-            <tr>
-              <td className="border p-2 text-center bg-slate-50 text-xs align-middle">Itens obrigatórios</td>
-              <td className={`border p-2 text-center text-xs ${!pending && enc === 'III' ? 'bg-blue-100 font-medium' : ''}`}>
-                Itens 2 e 4 grau III, demais no mín. grau II
-              </td>
-              <td className={`border p-2 text-center text-xs ${!pending && enc === 'II' ? 'bg-blue-100 font-medium' : ''}`}>
-                Itens 2 e 4 no mín. grau II, demais grau I
-              </td>
-              <td className={`border p-2 text-center text-xs ${!pending && enc === 'I' ? 'bg-blue-100 font-medium' : ''}`}>
-                Todos no mínimo grau I
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div className="rounded-xl border border-slate-200 bg-white p-5">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-semibold text-slate-700">Tabela 4 — Enquadramento</p>
+          {enc ? (
+            <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white">
+              Grau {enc}
+            </span>
+          ) : (
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-400">
+              Selecione os graus acima
+            </span>
+          )}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full border text-sm border-collapse table-fixed">
+            <colgroup>
+              <col className="w-[25%]" />
+              <col className="w-[25%]" />
+              <col className="w-[25%]" />
+              <col className="w-[25%]" />
+            </colgroup>
+            <thead>
+              <tr className="bg-slate-100">
+                <th className="border p-2 text-center font-semibold">Critério</th>
+                <th className={`border p-2 text-center font-semibold ${ativo('III') ? 'bg-blue-600 text-white' : ''}`}>
+                  Grau III
+                </th>
+                <th className={`border p-2 text-center font-semibold ${ativo('II') ? 'bg-blue-600 text-white' : ''}`}>
+                  Grau II
+                </th>
+                <th className={`border p-2 text-center font-semibold ${ativo('I') ? 'bg-blue-600 text-white' : ''}`}>
+                  Grau I
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="border p-2 text-center bg-slate-50 text-xs font-medium">Pontos mínimos</td>
+                <td className={`border p-2 text-center text-sm font-semibold ${ativo('III') ? 'bg-blue-50' : ''}`}>10</td>
+                <td className={`border p-2 text-center text-sm font-semibold ${ativo('II') ? 'bg-blue-50' : ''}`}>6</td>
+                <td className={`border p-2 text-center text-sm font-semibold ${ativo('I') ? 'bg-blue-50' : ''}`}>4</td>
+              </tr>
+              <tr>
+                <td className="border p-2 text-center bg-slate-50 text-xs font-medium">Itens obrigatórios</td>
+                <td className={`border p-2 text-center text-xs ${ativo('III') ? 'bg-blue-50' : ''}`}>
+                  Itens 2 e 4 no grau III; demais no mín. grau II
+                </td>
+                <td className={`border p-2 text-center text-xs ${ativo('II') ? 'bg-blue-50' : ''}`}>
+                  Itens 2 e 4 no mín. grau II; demais no mín. grau I
+                </td>
+                <td className={`border p-2 text-center text-xs ${ativo('I') ? 'bg-blue-50' : ''}`}>
+                  Todos no mínimo grau I
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     )
   }
