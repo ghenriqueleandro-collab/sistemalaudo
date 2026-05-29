@@ -599,9 +599,13 @@ export function LaudoPdf({
   // ─── Helper: card de elemento (evolutivo e comparativo) ─────────────────────
   const renderElemento = (el: any, i: number) => {
     const ok = (v: any) => { const sv = String(v ?? '').trim(); return sv && sv !== '0' && sv !== '-' ? sv : '' }
-    const vOf  = el.valorOferta > 0 ? fm(el.valorOferta) : ''
-    const fOf  = parseFloat(String(el.fatorOferta||'').replace(',','.')) || 1
-    const vLiq = el.valorOferta > 0 ? fm(el.valorOferta * fOf) : ''
+    // valorOferta pode chegar como string ('1.300.000,00') ou number
+    const pnEl = (v: any) => { if (!v) return 0; const s = String(v).replace(/\./g,'').replace(',','.'); return parseFloat(s) || 0 }
+    const vOfNum = pnEl(el.valorOferta)
+    const fOf  = pnEl(el.fatorOferta) || 0.9
+    const vLiqNum = vOfNum > 0 ? vOfNum * fOf : 0
+    const vOf  = vOfNum > 0 ? fm(vOfNum) : ''
+    const vLiq = vLiqNum > 0 && Math.abs(vLiqNum - vOfNum) > 1 ? fm(vLiqNum) : ''
     const vuOf = el.valorUnitarioOferta > 0 ? fm(el.valorUnitarioOferta) : (el.vuTerreno > 0 ? fm(el.vuTerreno) : '')
     const cidadeUF = [el.cidade, el.uf].filter(Boolean).join(' · ')
     const foto = el.foto || ''
