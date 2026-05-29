@@ -1402,9 +1402,13 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
             {elemsCddm.length > 0 && elemsCddm.map((el: any, i: number) => {
               const fm = (v: number) => v > 0 ? formatarMoeda(v) : ''
               const ok = (v: any) => { const s = String(v ?? '').trim(); return s && s !== '0' && s !== '-' ? s : '' }
-              const fOf = parseFloat(String(el.fatorOferta || '').replace(',', '.')) || 1
-              const vOf = el.valorOferta > 0 ? formatarMoeda(el.valorOferta) : ''
-              const vLiq = el.valorOferta > 0 ? formatarMoeda(el.valorOferta * fOf) : ''
+              // valorOferta pode chegar como string ('1.300.000,00') ou number
+              const pnEl = (v: any) => { if (!v) return 0; const s = String(v).replace(/\./g,'').replace(',','.'); return parseFloat(s) || 0 }
+              const vOfNum = pnEl(el.valorOferta)
+              const fOf    = pnEl(el.fatorOferta) || 0.9
+              const vLiqNum = vOfNum > 0 ? vOfNum * fOf : 0
+              const vOf  = vOfNum > 0 ? fm(vOfNum) : ''
+              const vLiq = vLiqNum > 0 && Math.abs(vLiqNum - vOfNum) > 1 ? fm(vLiqNum) : ''
               const vuOf = el.vu > 0 ? formatarMoeda(el.vu) : (el.valorUnitarioOferta > 0 ? formatarMoeda(el.valorUnitarioOferta) : '')
               const cidadeUF = [el.cidade, el.uf].filter(Boolean).join(' · ')
 
@@ -1439,7 +1443,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 r2('Área terreno', el.areaTerreno > 0 ? `${Number(el.areaTerreno).toLocaleString('pt-BR')} m²` : '', 'Área constr./útil', el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : ''),
                 r2('Padrão constr.', el.padraoConstrutivo, 'FOC', el.foc ? String(el.foc).replace('.', ',') : ''),
                 r3('Dormitórios', el.dormitorios > 0 ? String(el.dormitorios) : '', 'Suítes', el.suites > 0 ? String(el.suites) : '', 'Vagas', el.vagas > 0 ? String(el.vagas) : ''),
-                r3('Valor oferta', vOf, 'Valor líquido', vLiq !== vOf ? vLiq : '', 'V.U./m²', vuOf),
+                r3('Valor oferta', vOf, 'Vl. líquido', vLiq, 'V.U./m²', vuOf),
                 r3('F. Oferta', ok(el.fatorOferta), 'F. Local', ok(el.fatorLocal), 'F. Andar', ok(el.fatorAndar)),
                 r3('Tipo oferta', el.tipoOferta, 'Status', el.status, 'Telefone', el.telefone),
                 el.link ? <tr key="lnk" style={brd}><td style={LBL}>Link</td><td style={{ ...VAL, fontSize: '7px', color: '#2347C6', wordBreak: 'break-all' }}>{String(el.link)}</td></tr> : null,
