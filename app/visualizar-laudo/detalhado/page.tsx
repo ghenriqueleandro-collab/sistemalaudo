@@ -1402,6 +1402,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
             {elemsCddm.length > 0 && elemsCddm.map((el: any, i: number) => {
               const fm = (v: number) => v > 0 ? formatarMoeda(v) : ''
               const ok = (v: any) => { const s = String(v ?? '').trim(); return s && s !== '0' && s !== '-' ? s : '' }
+              const focLabel = (v: any) => ({ A: 'A – Novo', B: 'B – Entre novo e regular', C: 'C – Regular', D: 'D – Entre regular e reparos simples', E: 'E – Reparos simples', F: 'F – Entre reparos simples e importantes', G: 'G – Reparos importantes', H: 'H – Entre reparos importantes e sem valor', I: 'I – Sem valor' }[(String(v||'')).toUpperCase()] || ok(v))
               // valorOferta pode chegar como string ('1.300.000,00') ou number
               const pnEl = (v: any) => { if (!v) return 0; const s = String(v).replace(/\./g,'').replace(',','.'); return parseFloat(s) || 0 }
               const vOfNum = pnEl(el.valorOferta)
@@ -1439,7 +1440,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 r3('Bairro', el.bairro, 'Cidade · UF', cidadeUF, 'Distância', el.distanciaAvaliando || el.distancia),
                 r1('Coordenadas', el.coordenadas, { fontSize: '7px', wordBreak: 'break-all' }),
                 r1('Fonte', el.fonte),
-                r3('Conservação', el.estadoConservacao, 'Idade', el.idadeAparente > 0 ? `${el.idadeAparente} anos` : (el.idade ? `${el.idade} anos` : ''), 'Andar', el.andar > 0 ? String(el.andar) : ''),
+                r3('Conservação', focLabel(el.estadoConservacao), 'Idade', el.idadeAparente > 0 ? `${el.idadeAparente} anos` : (el.idade ? `${el.idade} anos` : ''), 'Andar', el.andar > 0 ? String(el.andar) : ''),
                 r2('Área terreno', el.areaTerreno > 0 ? `${Number(el.areaTerreno).toLocaleString('pt-BR')} m²` : '', 'Área constr./útil', el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : ''),
                 r2('Padrão constr.', el.padraoConstrutivo, 'FOC', el.foc ? String(el.foc).replace('.', ',') : ''),
                 r3('Dormitórios', el.dormitorios > 0 ? String(el.dormitorios) : '', 'Suítes', el.suites > 0 ? String(el.suites) : '', 'Vagas', el.vagas > 0 ? String(el.vagas) : ''),
