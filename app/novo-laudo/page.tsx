@@ -263,6 +263,9 @@ export default function NovoLaudoPage() {
         ])
 
         // Resolver fotos dos elementos CDDM salvas como __ref__:
+        // IMPORTANTE: resolver em AMBOS os campos —
+        //   dadosCalculoCDDM.elementos: usado pela visualização e PDF
+        //   elementosComparativos: usado pelo EtapaCalculoCDDM (inicialização do estado interno)
         let dadosCddmResolvido = laudoSalvo.dadosCalculoCDDM
         if (dadosCddmResolvido?.elementos) {
           const elementosResolvidos = await Promise.all(
@@ -274,6 +277,17 @@ export default function NovoLaudoPage() {
           dadosCddmResolvido = { ...dadosCddmResolvido, elementos: elementosResolvidos }
         }
 
+        // Resolver fotos em elementosComparativos (estado interno do EtapaCalculoCDDM)
+        let elementosComparativosResolvidos = laudoSalvo.elementosComparativos
+        if (Array.isArray(elementosComparativosResolvidos)) {
+          elementosComparativosResolvidos = await Promise.all(
+            elementosComparativosResolvidos.map(async (el: any) => ({
+              ...el,
+              foto: el.foto ? await resolverRef(el.foto) : '',
+            }))
+          )
+        }
+
         setForm((prev) => ({
           ...prev,
           ...laudoSalvo,
@@ -283,6 +297,7 @@ export default function NovoLaudoPage() {
             localizacaoComparativos: locComp,
           imagemBenfeitorias: imgBenf,
           dadosCalculoCDDM: dadosCddmResolvido,
+          elementosComparativos: elementosComparativosResolvidos ?? laudoSalvo.elementosComparativos,
           // Guarda as refs originais para não re-salvar no próximo save
           _refDocPdf:  laudoSalvo.documentacaoPdf?.startsWith('__ref__:') ? laudoSalvo.documentacaoPdf : undefined,
           _refLocComp: laudoSalvo.localizacaoComparativos?.startsWith('__ref__:') ? laudoSalvo.localizacaoComparativos : undefined,
@@ -786,6 +801,8 @@ export default function NovoLaudoPage() {
       const payload = {
         ...form,
         dadosCalculoCDDM: dadosCalculoCDDMSemFotos,
+        // Manter elementosComparativos em sync com as refs das fotos
+        elementosComparativos: dadosCalculoCDDMSemFotos?.elementos ?? (form as any).elementosComparativos,
         valorLiquidezForcada: valorLiquidezForcadaCalc,
         tipoLaudo: 'detalhado' as const,  // forçado — laudo detalhado nunca salva como simplificado
         id: laudoUuid,
