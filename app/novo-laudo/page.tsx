@@ -165,6 +165,15 @@ export default function NovoLaudoPage() {
           : await obterLaudoAtual()
 
         if (!laudoSalvo) {
+          if (idParam) {
+            // Laudo existe (há ID na URL) mas não carregou — NÃO habilitar autosave
+            // Mostrar erro para não sobrescrever dados com form vazio
+            console.error('[carregarLaudo] Laudo não encontrado para id:', idParam)
+            setAutoSaveStatus('error')
+            // formPronto permanece false → autosave não dispara → dados no Redis preservados
+            return
+          }
+          // Novo laudo (sem id): ok habilitar
           setEditandoLaudoExistente(false)
           setLaudoId('')
           setFormPronto(true)
@@ -689,6 +698,15 @@ export default function NovoLaudoPage() {
   }
 
   async function executarSave(silencioso = false) {
+    // Proteção anti-perda: não salvar se form parece vazio mas estamos editando laudo existente
+    // Isso evita sobrescrever dados reais com form não-carregado
+    const formParecePronto = form.endereco?.trim() || form.proprietario?.trim() ||
+      form.matricula?.trim() || (form as any).dadosCalculoCDDM?.mediaSaneada
+    if (editandoLaudoExistente && !formParecePronto) {
+      console.warn('[executarSave] Bloqueado: form aparenta vazio mas editandoLaudoExistente=true')
+      setAutoSaveStatus('idle')
+      return
+    }
     setSalvando(true)
     setAutoSaveStatus('saving')
     try {
@@ -884,8 +902,15 @@ export default function NovoLaudoPage() {
   }, [])
 
   // ── Salva ao desmontar (navegação interna Next.js) ────────────────────────
+  // Ref para o estado formPronto — usada no cleanup para evitar save com form vazio
+  const formProntoRef = useRef(false)
+  useEffect(() => { formProntoRef.current = formPronto }, [formPronto])
+
   useEffect(() => {
-    return () => { saveRef.current(true) }
+    return () => {
+      // Só salva ao desmontar se o form foi efetivamente carregado
+      if (formProntoRef.current) saveRef.current(true)
+    }
   }, [])
 
   // ─── RENDER ───────────────────────────────────────────────────────────────────
