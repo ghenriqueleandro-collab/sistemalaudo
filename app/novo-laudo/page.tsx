@@ -323,7 +323,6 @@ export default function NovoLaudoPage() {
             localizacaoComparativos: locComp,
           imagemBenfeitorias: imgBenf,
           dadosCalculoCDDM: dadosCddmResolvido,
-          dadosCalculoEvolutivo: dadosEvRaw,
           elementosComparativos: elementosComparativosResolvidos ?? (Array.isArray(elemsCompRaw) ? elemsCompRaw : laudoSalvo.elementosComparativos),
           dadosCalculoEvolutivo: dadosEvRaw ?? laudoSalvo.dadosCalculoEvolutivo,
           // Guarda as refs originais para não re-salvar no próximo save
