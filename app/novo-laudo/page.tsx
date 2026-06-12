@@ -272,11 +272,27 @@ export default function NovoLaudoPage() {
           resolverRef(laudoSalvo.imagemBenfeitorias || ''),
         ])
 
-        // Resolver fotos dos elementos CDDM salvas como __ref__:
-        // IMPORTANTE: resolver em AMBOS os campos —
-        //   dadosCalculoCDDM.elementos: usado pela visualização e PDF
-        //   elementosComparativos: usado pelo EtapaCalculoCDDM (inicialização do estado interno)
-        let dadosCddmResolvido = laudoSalvo.dadosCalculoCDDM
+        // Resolver dadosCalculoCDDM / Evolutivo / elementosComparativos de refs separadas
+        let dadosCddmRaw: any = laudoSalvo.dadosCalculoCDDM
+        if (typeof dadosCddmRaw === 'string' && dadosCddmRaw.startsWith('__ref__:')) {
+          const ch = dadosCddmRaw.replace('__ref__:', '')
+          const r = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(ch)}`)
+          if (r.ok) { const { dado } = await r.json(); dadosCddmRaw = dado ? JSON.parse(dado) : undefined }
+        }
+        let dadosEvRaw: any = laudoSalvo.dadosCalculoEvolutivo
+        if (typeof dadosEvRaw === 'string' && dadosEvRaw.startsWith('__ref__:')) {
+          const ch = dadosEvRaw.replace('__ref__:', '')
+          const r = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(ch)}`)
+          if (r.ok) { const { dado } = await r.json(); dadosEvRaw = dado ? JSON.parse(dado) : undefined }
+        }
+        let elemsCompRaw: any = laudoSalvo.elementosComparativos
+        if (typeof elemsCompRaw === 'string' && elemsCompRaw.startsWith('__ref__:')) {
+          const ch = elemsCompRaw.replace('__ref__:', '')
+          const r = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(ch)}`)
+          if (r.ok) { const { dado } = await r.json(); elemsCompRaw = dado ? JSON.parse(dado) : [] }
+        }
+
+        let dadosCddmResolvido: any = dadosCddmRaw
         if (dadosCddmResolvido?.elementos) {
           const elementosResolvidos = await Promise.all(
             dadosCddmResolvido.elementos.map(async (el: any) => ({
@@ -307,7 +323,9 @@ export default function NovoLaudoPage() {
             localizacaoComparativos: locComp,
           imagemBenfeitorias: imgBenf,
           dadosCalculoCDDM: dadosCddmResolvido,
-          elementosComparativos: elementosComparativosResolvidos ?? laudoSalvo.elementosComparativos,
+          dadosCalculoEvolutivo: dadosEvRaw,
+          elementosComparativos: elementosComparativosResolvidos ?? (Array.isArray(elemsCompRaw) ? elemsCompRaw : laudoSalvo.elementosComparativos),
+          dadosCalculoEvolutivo: dadosEvRaw ?? laudoSalvo.dadosCalculoEvolutivo,
           // Guarda as refs originais para não re-salvar no próximo save
           _refDocPdf:  laudoSalvo.documentacaoPdf?.startsWith('__ref__:') ? laudoSalvo.documentacaoPdf : undefined,
           _refLocComp: laudoSalvo.localizacaoComparativos?.startsWith('__ref__:') ? laudoSalvo.localizacaoComparativos : undefined,
@@ -798,8 +816,10 @@ export default function NovoLaudoPage() {
       const locComp = await salvarCampo(form._refLocComp, `anexo:${laudoUuid}:localizacaoComparativos`, form.localizacaoComparativos || '')
       const imgBenf = await salvarCampo(form._refImgBenf, `anexo:${laudoUuid}:imagemBenfeitorias`,      form.imagemBenfeitorias || '')
 
-      // ── Extrair fotos dos elementos CDDM para salvar como anexos separados ──
-      // Evita que o payload principal ultrapasse o limite de 1MB do Redis
+      // ── Salvar dadosCalculoCDDM e dadosCalculoEvolutivo em chaves Redis separadas ──
+      // Isso garante que o payload principal nunca ultrapasse 4.5MB do Vercel
+
+      // Processar fotos dos elementos CDDM
       let dadosCalculoCDDMSemFotos = (form as any).dadosCalculoCDDM
       if (dadosCalculoCDDMSemFotos?.elementos) {
         const elementosComRefs = await Promise.all(
@@ -813,6 +833,31 @@ export default function NovoLaudoPage() {
         dadosCalculoCDDMSemFotos = { ...dadosCalculoCDDMSemFotos, elementos: elementosComRefs }
       }
 
+      // Salvar dadosCalculoCDDM em chave separada se existir
+      let refDadosCddm: string | undefined
+      if (dadosCalculoCDDMSemFotos) {
+        const jsonCddm = JSON.stringify(dadosCalculoCDDMSemFotos)
+        const ok = await salvarChunk(`laudo:${laudoUuid}:dadosCalculoCDDM`, jsonCddm)
+        refDadosCddm = ok ? `__ref__:laudo:${laudoUuid}:dadosCalculoCDDM` : undefined
+      }
+
+      // Salvar dadosCalculoEvolutivo em chave separada se existir
+      const dadosEv = (form as any).dadosCalculoEvolutivo
+      let refDadosEv: string | undefined
+      if (dadosEv) {
+        const jsonEv = JSON.stringify(dadosEv)
+        const ok = await salvarChunk(`laudo:${laudoUuid}:dadosCalculoEvolutivo`, jsonEv)
+        refDadosEv = ok ? `__ref__:laudo:${laudoUuid}:dadosCalculoEvolutivo` : undefined
+      }
+
+      // Salvar elementosComparativos em chave separada se for grande
+      const elemsComp = elementosComparativosParaSalvar
+      let refElemsComp: any[] | string = elemsComp
+      if (JSON.stringify(elemsComp).length > 50_000) {
+        const ok = await salvarChunk(`laudo:${laudoUuid}:elementosComparativos`, JSON.stringify(elemsComp))
+        refElemsComp = ok ? `__ref__:laudo:${laudoUuid}:elementosComparativos` : elemsComp
+      }
+
       // Substituir fotos base64 de elementosComparativos pelas refs já salvas
       const elementosComparativosParaSalvar = ((form as any).elementosComparativos || []).map((el: any, idx: number) => {
         const refFoto = dadosCalculoCDDMSemFotos?.elementos?.[idx]?.foto
@@ -824,7 +869,8 @@ export default function NovoLaudoPage() {
 
       const payload = {
         ...form,
-        dadosCalculoCDDM: dadosCalculoCDDMSemFotos,
+        dadosCalculoCDDM: refDadosCddm ?? dadosCalculoCDDMSemFotos,
+        dadosCalculoEvolutivo: refDadosEv ?? (form as any).dadosCalculoEvolutivo,
         elementosComparativos: elementosComparativosParaSalvar,
         valorLiquidezForcada: valorLiquidezForcadaCalc,
         tipoLaudo: 'detalhado' as const,  // forçado — laudo detalhado nunca salva como simplificado
@@ -865,15 +911,22 @@ export default function NovoLaudoPage() {
       }
       const safePayload = stripBase64Deep(payload)
 
-      // Log de tamanho para diagnóstico (remover após confirmar)
-      const payloadSize = JSON.stringify(safePayload).length
-      if (payloadSize > 500_000) {
-        console.warn(`[save] payload grande: ${(payloadSize/1024).toFixed(0)}KB`)
-        Object.entries(safePayload as any).forEach(([k, v]) => {
-          const s = JSON.stringify(v).length
-          if (s > 10_000) console.warn(`  campo '${k}': ${(s/1024).toFixed(0)}KB`)
-        })
+      // Diagnóstico obrigatório: identificar campo responsável pelo tamanho
+      const payloadStr = JSON.stringify(safePayload)
+      const payloadSize = payloadStr.length
+      const camposGrandes: string[] = []
+      Object.entries(safePayload as any).forEach(([k, v]) => {
+        const s = JSON.stringify(v)?.length ?? 0
+        if (s > 10_000) camposGrandes.push(`${k}:${(s/1024).toFixed(0)}KB`)
+      })
+      if (payloadSize > 3_000_000) {
+        // Payload ainda muito grande mesmo após strip — lançar erro descritivo
+        throw new Error(
+          `Payload ${(payloadSize/1024/1024).toFixed(1)}MB excede limite. ` +
+          `Campos grandes: ${camposGrandes.join(', ') || 'nenhum base64 detectado — dados muito grandes'}`
+        )
       }
+      console.log(`[save] payload: ${(payloadSize/1024).toFixed(0)}KB${camposGrandes.length ? ' | grandes: '+camposGrandes.join(',') : ''}`)
 
       const idSalvo = await salvarLaudo(safePayload)
 
