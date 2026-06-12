@@ -135,6 +135,7 @@ export default function NovoLaudoPage() {
   const [formPronto, setFormPronto] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [erroSaveMsg, setErroSaveMsg] = useState<string>('')
   const [laudoUuid, setLaudoUuid] = useState(() => crypto.randomUUID())
 
   // Sincroniza as divisões internas com a lista de acabamentos
@@ -704,7 +705,10 @@ export default function NovoLaudoPage() {
       const status = obterStatusLaudo()
 
       // ── Helper: salva binário em chave Redis separada usando chunks ──────────
-      const CHUNK_KB = 900  // cada chunk < 1MB (limite Upstash free)
+      // Upstash limit = 1MB por valor armazenado.
+      // 700KB raw → 700*1024*(4/3) ≈ 955KB base64 → dentro do limite.
+      // NUNCA use 900: 900*1024*(4/3) ≈ 1.17MB → EXCEDE o limite e falha silenciosamente.
+      const CHUNK_KB = 700
 
       async function salvarChunk(chave: string, dado: string): Promise<boolean> {
         try {
@@ -726,7 +730,9 @@ export default function NovoLaudoPage() {
         if (tamanho <= chunkSize) {
           // Pequeno o suficiente para um único chunk
           const ok = await salvarChunk(chave, dado)
-          return ok ? `__ref__:${chave}` : dado
+          // NÃO retornar 'dado' (base64 bruto) em caso de falha — causaria
+          // o payload principal a ultrapassar 1MB e falhar em cascata.
+          return ok ? `__ref__:${chave}` : ''
         }
 
         // Grande: divide em chunks
@@ -854,7 +860,9 @@ export default function NovoLaudoPage() {
       setAutoSaveStatus('saved')
       setTimeout(() => setAutoSaveStatus('idle'), 3000)
     } catch (error) {
-      console.error('Erro ao salvar laudo:', error)
+      const msg = error instanceof Error ? error.message : String(error)
+      console.error('Erro ao salvar laudo:', msg)
+      setErroSaveMsg(msg)
       setAutoSaveStatus('error')
       if (!silencioso) {
         const msg = error instanceof Error ? error.message : String(error)
@@ -960,7 +968,7 @@ export default function NovoLaudoPage() {
             autoSaveStatus === 'saved'  ? 'bg-green-50 text-green-700' :
             'bg-red-50 text-red-700'
           }`}>
-            {autoSaveStatus === 'saving' ? '⏳ Salvando…' : autoSaveStatus === 'saved' ? '✓ Salvo automaticamente' : '✗ Erro ao salvar'}
+            {autoSaveStatus === 'saving' ? '⏳ Salvando…' : autoSaveStatus === 'saved' ? '✓ Salvo automaticamente' : `✗ Erro ao salvar${erroSaveMsg ? ': ' + erroSaveMsg.slice(0,60) : ''}`}
           </div>
         )}
 
