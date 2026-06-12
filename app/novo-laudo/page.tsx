@@ -849,14 +849,6 @@ export default function NovoLaudoPage() {
         refDadosEv = ok ? `__ref__:laudo:${laudoUuid}:dadosCalculoEvolutivo` : undefined
       }
 
-      // Salvar elementosComparativos em chave separada se for grande
-      const elemsComp = elementosComparativosParaSalvar
-      let refElemsComp: any[] | string = elemsComp
-      if (JSON.stringify(elemsComp).length > 50_000) {
-        const ok = await salvarChunk(`laudo:${laudoUuid}:elementosComparativos`, JSON.stringify(elemsComp))
-        refElemsComp = ok ? `__ref__:laudo:${laudoUuid}:elementosComparativos` : elemsComp
-      }
-
       // Substituir fotos base64 de elementosComparativos pelas refs já salvas
       const elementosComparativosParaSalvar = ((form as any).elementosComparativos || []).map((el: any, idx: number) => {
         const refFoto = dadosCalculoCDDMSemFotos?.elementos?.[idx]?.foto
@@ -865,6 +857,13 @@ export default function NovoLaudoPage() {
         const fotoFinal = el.foto?.startsWith('data:') ? (refFoto || '') : (el.foto || '')
         return { ...el, foto: fotoFinal }
       })
+
+      // Salvar elementosComparativos em chave separada se for grande
+      let refElemsComp: any[] | string = elementosComparativosParaSalvar
+      if (JSON.stringify(elementosComparativosParaSalvar).length > 50_000) {
+        const ok = await salvarChunk(`laudo:${laudoUuid}:elementosComparativos`, JSON.stringify(elementosComparativosParaSalvar))
+        refElemsComp = ok ? `__ref__:laudo:${laudoUuid}:elementosComparativos` : elementosComparativosParaSalvar
+      }
 
       const payload = {
         ...form,
