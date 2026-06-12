@@ -807,10 +807,19 @@ export default function NovoLaudoPage() {
         dadosCalculoCDDMSemFotos = { ...dadosCalculoCDDMSemFotos, elementos: elementosComRefs }
       }
 
+      // Substituir fotos base64 de elementosComparativos pelas refs já salvas
+      const elementosComparativosParaSalvar = ((form as any).elementosComparativos || []).map((el: any, idx: number) => {
+        const refFoto = dadosCalculoCDDMSemFotos?.elementos?.[idx]?.foto
+        if (!refFoto && !el.foto) return el
+        // Se a foto ainda é base64, usar a ref salva (ou remover se ainda não foi salva)
+        const fotoFinal = el.foto?.startsWith('data:') ? (refFoto || '') : (el.foto || '')
+        return { ...el, foto: fotoFinal }
+      })
+
       const payload = {
         ...form,
         dadosCalculoCDDM: dadosCalculoCDDMSemFotos,
-        // elementosComparativos: gerenciado pelo EtapaCalculoCDDM via setForm
+        elementosComparativos: elementosComparativosParaSalvar,
         valorLiquidezForcada: valorLiquidezForcadaCalc,
         tipoLaudo: 'detalhado' as const,  // forçado — laudo detalhado nunca salva como simplificado
         id: laudoUuid,
