@@ -849,7 +849,33 @@ export default function NovoLaudoPage() {
         atualizadoEm: new Date().toISOString(),
       }
 
-      const idSalvo = await salvarLaudo(payload)
+      // ── Safety strip: garantia final de que nenhum base64 vai no payload ──
+      // Se qualquer campo ainda tiver base64 após todo o processamento,
+      // ele é removido aqui. Previne 413 causado por campos não mapeados.
+      function stripBase64Deep(val: any): any {
+        if (typeof val === 'string' && val.startsWith('data:') && val.length > 5_000) {
+          console.warn('[save] base64 residual removido do payload (field não mapeado)')
+          return ''
+        }
+        if (Array.isArray(val)) return val.map(stripBase64Deep)
+        if (val && typeof val === 'object') {
+          return Object.fromEntries(Object.entries(val).map(([k, v]) => [k, stripBase64Deep(v)]))
+        }
+        return val
+      }
+      const safePayload = stripBase64Deep(payload)
+
+      // Log de tamanho para diagnóstico (remover após confirmar)
+      const payloadSize = JSON.stringify(safePayload).length
+      if (payloadSize > 500_000) {
+        console.warn(`[save] payload grande: ${(payloadSize/1024).toFixed(0)}KB`)
+        Object.entries(safePayload as any).forEach(([k, v]) => {
+          const s = JSON.stringify(v).length
+          if (s > 10_000) console.warn(`  campo '${k}': ${(s/1024).toFixed(0)}KB`)
+        })
+      }
+
+      const idSalvo = await salvarLaudo(safePayload)
 
       if (!idSalvo) {
         alert('Verifique sua conexão e tente novamente.')
