@@ -169,8 +169,8 @@ export default function NovoLaudoPage() {
             // Laudo existe (há ID na URL) mas não carregou — NÃO habilitar autosave
             // Mostrar erro para não sobrescrever dados com form vazio
             console.error('[carregarLaudo] Laudo não encontrado para id:', idParam)
-            setAutoSaveStatus('error')
-            // formPronto permanece false → autosave não dispara → dados no Redis preservados
+            // NÃO usar setAutoSaveStatus('error') — isso mostra mensagem enganosa de save
+            // formPronto permanece false → autosave não dispara → dados preservados no Redis
             return
           }
           // Novo laudo (sem id): ok habilitar
@@ -698,15 +698,6 @@ export default function NovoLaudoPage() {
   }
 
   async function executarSave(silencioso = false) {
-    // Proteção anti-perda: não salvar se form parece vazio mas estamos editando laudo existente
-    // Isso evita sobrescrever dados reais com form não-carregado
-    const formParecePronto = form.endereco?.trim() || form.proprietario?.trim() ||
-      form.matricula?.trim() || (form as any).dadosCalculoCDDM?.mediaSaneada
-    if (editandoLaudoExistente && !formParecePronto) {
-      console.warn('[executarSave] Bloqueado: form aparenta vazio mas editandoLaudoExistente=true')
-      setAutoSaveStatus('idle')
-      return
-    }
     setSalvando(true)
     setAutoSaveStatus('saving')
     try {
@@ -819,8 +810,7 @@ export default function NovoLaudoPage() {
       const payload = {
         ...form,
         dadosCalculoCDDM: dadosCalculoCDDMSemFotos,
-        // Manter elementosComparativos em sync com as refs das fotos
-        elementosComparativos: dadosCalculoCDDMSemFotos?.elementos ?? (form as any).elementosComparativos,
+        // elementosComparativos: gerenciado pelo EtapaCalculoCDDM via setForm
         valorLiquidezForcada: valorLiquidezForcadaCalc,
         tipoLaudo: 'detalhado' as const,  // forçado — laudo detalhado nunca salva como simplificado
         id: laudoUuid,
