@@ -67,50 +67,67 @@ export default function EtapaValorImovel({
     <div className="space-y-5">
       <h2 className="text-2xl font-bold text-slate-900">11. Valor do imóvel</h2>
 
-      {/* ── Base de cálculo automática ─────────────────────────────────────── */}
-      {(temCddm || temEv) ? (
+      {/* ── Bloco Evolutivo — sempre visível quando isEvo, mesmo sem dados calculados ── */}
+      {isEvo && (
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-3">
           <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
-            {temCddm ? 'Base de cálculo — Método Comparativo Direto (CDDM)' : 'Base de cálculo — Método Evolutivo'}
+            Base de cálculo — Método Evolutivo
           </p>
-          {temCddm && (
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <span className={LBL + ' text-blue-600'}>VU médio saneado (R$/m²)</span>
-                <div className={INP_RO}>{fmt(vuAuto)}</div>
-              </div>
-              <div>
-                <span className={LBL + ' text-blue-600'}>Área do avaliando (m²)</span>
-                <div className={INP_RO}>{fmt(areaAuto)}</div>
-              </div>
-              <div>
-                <span className={LBL + ' text-blue-600'}>Valor base (VU × Área)</span>
-                <div className="w-full border border-blue-300 rounded-xl px-3 py-2.5 text-sm bg-white font-semibold text-blue-900">
-                  {formatarMoeda(valorCddmAuto)}
-                </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <span className={LBL + ' text-blue-600'}>Valor do terreno</span>
+              <div className={INP_RO}>
+                {temEv ? formatarMoeda(evObj!.valorTerreno ?? 0) : '—'}
               </div>
             </div>
-          )}
-          {temEv && (
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <span className={LBL + ' text-blue-600'}>Valor do terreno</span>
-                <div className={INP_RO}>{formatarMoeda(evObj?.valorTerreno ?? 0)}</div>
-              </div>
-              <div>
-                <span className={LBL + ' text-blue-600'}>Valor das benfeitorias</span>
-                <div className={INP_RO}>{formatarMoeda(evObj?.valorBenfeitorias ?? 0)}</div>
-              </div>
-              <div>
-                <span className={LBL + ' text-blue-600'}>Valor base</span>
-                <div className="w-full border border-blue-300 rounded-xl px-3 py-2.5 text-sm bg-white font-semibold text-blue-900">
-                  {formatarMoeda(valorEvAuto)}
-                </div>
+            <div>
+              <span className={LBL + ' text-blue-600'}>Valor das benfeitorias</span>
+              <div className={INP_RO}>
+                {temEv ? formatarMoeda(evObj!.valorBenfeitorias ?? 0) : '—'}
               </div>
             </div>
+            <div>
+              <span className={LBL + ' text-blue-600'}>Valor base</span>
+              <div className="w-full border border-blue-300 rounded-xl px-3 py-2.5 text-sm bg-white font-semibold text-blue-900">
+                {temEv ? formatarMoeda(valorEvAuto) : '—'}
+              </div>
+            </div>
+          </div>
+          {!temEv && (
+            <p className="text-xs text-amber-600">
+              ⚠ Preencha o motor Evolutivo na etapa 10 para calcular automaticamente.
+            </p>
           )}
         </div>
-      ) : (
+      )}
+
+      {/* ── Bloco CDDM — visível para comparativo com dados do motor ─────── */}
+      {temCddm && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-3">
+          <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+            Base de cálculo — Método Comparativo Direto (CDDM)
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <span className={LBL + ' text-blue-600'}>VU médio saneado (R$/m²)</span>
+              <div className={INP_RO}>{fmt(vuAuto)}</div>
+            </div>
+            <div>
+              <span className={LBL + ' text-blue-600'}>Área do avaliando (m²)</span>
+              <div className={INP_RO}>{fmt(areaAuto)}</div>
+            </div>
+            <div>
+              <span className={LBL + ' text-blue-600'}>Valor base (VU × Área)</span>
+              <div className="w-full border border-blue-300 rounded-xl px-3 py-2.5 text-sm bg-white font-semibold text-blue-900">
+                {formatarMoeda(valorCddmAuto)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bloco manual — só para comparativo sem dados do motor ─────────── */}
+      {!isEvo && !temCddm && (
         /* ── Entrada manual quando não há dados do motor ─────────────────── */
         <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
           <p className="text-xs text-slate-400">
@@ -212,11 +229,11 @@ export default function EtapaValorImovel({
       {/* ── Resumo final ───────────────────────────────────────────────────── */}
       <div className="rounded-xl border border-green-200 bg-green-50 p-5 space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-green-600 mb-3">Valor final calculado</p>
-        {(temCddm || temEv) && (
+        {(temCddm || temEv || isEvo) && (
           <>
             <div className="flex justify-between text-sm text-slate-600">
               <span>Valor base</span>
-              <span className="font-medium">{formatarMoeda(temCddm ? valorCddmAuto : valorEvAuto)}</span>
+              <span className="font-medium">{formatarMoeda(temCddm ? valorCddmAuto : temEv ? valorEvAuto : 0)}</span>
             </div>
             {fc !== 1 && (
               <div className="flex justify-between text-sm text-slate-600">
