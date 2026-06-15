@@ -15,7 +15,8 @@ type MenuEtapasProps = {
 // 9.2 sempre oculto — benfeitorias agora calculadas dentro do motor CDDM/Evolutivo
 const ETAPAS_SEMPRE_OCULTAS: EtapaId[] = ['9.2']
 // 10 (Valor do imóvel) oculto no método evolutivo
-const ETAPAS_APENAS_COMPARATIVO: EtapaId[] = ['10']
+// Etapa '10' (Valor do imóvel) habilitada para AMBOS os métodos — inclui liquidação forçada
+const ETAPAS_APENAS_COMPARATIVO: EtapaId[] = []
 
 export default function MenuEtapas({
   etapaAtual,
