@@ -967,8 +967,6 @@ export default function NovoLaudoPage() {
   // ── Auto-save com debounce de 2s (campos gerais) ─────────────────────────
   useEffect(() => {
     if (!formPronto || !laudoUuid) return
-    // Não autosalvar se o usuário não fez nenhuma alteração
-    if (!laudoModificado) return
     const timer = setTimeout(() => { saveRef.current(true) }, 2000)
     return () => clearTimeout(timer)
   }, [form, fotos, divisoes, acabamentos, fundamentacao, fundamentacaoInferencia,
@@ -1001,23 +999,14 @@ export default function NovoLaudoPage() {
   useEffect(() => { formProntoRef.current = formPronto }, [formPronto])
   useEffect(() => { laudoModificadoRef.current = laudoModificado }, [laudoModificado])
 
-  // Rastrear modificações via mudanças no form state
-  // formLoadTimeRef: timestamp de quando o carregamento completou
+  // formLoadTimeRef: mantido para compatibilidade
   const formLoadTimeRef = useRef(0)
-  // Monitora QUALQUER mudança no form após carregamento (inclui setForm de componentes)
-  useEffect(() => {
-    if (!formProntoRef.current) return // ainda carregando
-    if (Date.now() - formLoadTimeRef.current < 1000) return // dentro da janela de carregamento
-    laudoModificadoRef.current = true
-    setLaudoModificado(true)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, fotos])
 
   useEffect(() => {
     return () => {
       // Só salva ao desmontar se: form foi carregado E usuário realmente modificou algo
       // Previne sobrescrever dados de outro usuário que está editando simultaneamente
-      if (formProntoRef.current && laudoModificadoRef.current) saveRef.current(true)
+      if (formProntoRef.current) saveRef.current(true)
     }
   }, [])
 
