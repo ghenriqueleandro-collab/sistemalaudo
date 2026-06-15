@@ -532,8 +532,18 @@ function VisualizarLaudoContent() {
             resolverRef(parsed.imagemBenfeitorias || ''),
           ])
 
-          // Resolver fotos dos elementos CDDM salvas como __ref__:
-          let dadosCddmResolvido = (parsed as any).dadosCalculoCDDM
+          // Resolver dadosCalculoCDDM — pode ser __ref__: (chave separada) ou objeto direto
+          const resolverJsonRef = async (val: any) => {
+            if (!val) return val
+            if (typeof val !== 'string' || !val.startsWith('__ref__:')) return val
+            const ch = val.replace('__ref__:', '')
+            const r = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(ch)}`)
+            if (!r.ok) return val
+            const { dado } = await r.json()
+            return dado ? (typeof dado === 'string' ? JSON.parse(dado) : dado) : val
+          }
+
+          let dadosCddmResolvido = await resolverJsonRef((parsed as any).dadosCalculoCDDM)
           if (dadosCddmResolvido?.elementos) {
             const elementosResolvidos = await Promise.all(
               dadosCddmResolvido.elementos.map(async (el: any) => ({
@@ -544,9 +554,25 @@ function VisualizarLaudoContent() {
             dadosCddmResolvido = { ...dadosCddmResolvido, elementos: elementosResolvidos }
           }
 
+          // Resolver dadosCalculoEvolutivo — pode ser __ref__:
+          const dadosEvResolvido = await resolverJsonRef((parsed as any).dadosCalculoEvolutivo)
+
+          // Resolver elementosComparativos — pode ser __ref__: ou array direto
+          let elemsCompResolvido = await resolverJsonRef((parsed as any).elementosComparativos)
+          if (Array.isArray(elemsCompResolvido)) {
+            elemsCompResolvido = await Promise.all(
+              elemsCompResolvido.map(async (el: any) => ({
+                ...el,
+                foto: el.foto ? await resolverRef(el.foto) : '',
+              }))
+            )
+          }
+
           setDados({
             ...parsed,
             ...(dadosCddmResolvido ? { dadosCalculoCDDM: dadosCddmResolvido } as any : {}),
+            ...(dadosEvResolvido ? { dadosCalculoEvolutivo: dadosEvResolvido } as any : {}),
+            ...(elemsCompResolvido ? { elementosComparativos: elemsCompResolvido } as any : {}),
             // Determina tipoLaudo: usa o campo salvo, mas se houver indicadores de laudo
             // detalhado (croquis, acabamentos, responsavelCpf), força 'detalhado'
             // mesmo que o campo salvo diga 'simplificado' (bug de laudos antigos)
