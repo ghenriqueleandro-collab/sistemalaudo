@@ -136,6 +136,10 @@ export default function NovoLaudoPage() {
   const [salvando, setSalvando] = useState(false)
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [erroSaveMsg, setErroSaveMsg] = useState<string>('')
+  // Flag: true apenas quando o usuário realmente alterou algum campo
+  // Impede que abrir o laudo sem editar sobrescreva dados de outro usuário
+  const [laudoModificado, setLaudoModificado] = useState(false)
+  const laudoModificadoRef = useRef(false)
   const [laudoUuid, setLaudoUuid] = useState(() => crypto.randomUUID())
 
   // Sincroniza as divisões internas com a lista de acabamentos
@@ -435,6 +439,7 @@ export default function NovoLaudoPage() {
 
 
   async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>, campo: 'documentacaoPdf') {
+    setLaudoModificado(true)
     const file = e.target.files?.[0]
     if (!file) return
     try {
@@ -470,6 +475,7 @@ export default function NovoLaudoPage() {
   }
 
   async function handleFotos(e: React.ChangeEvent<HTMLInputElement>) {
+    setLaudoModificado(true)
     const files = Array.from(e.target.files || [])
     const novasFotos = await Promise.all(
       files.map(async (file) => ({
@@ -935,6 +941,7 @@ export default function NovoLaudoPage() {
 
       await definirLaudoAtual(idSalvo)
       setAutoSaveStatus('saved')
+      setLaudoModificado(false)  // resetar após save — próximo save só se houver nova edição
       setTimeout(() => setAutoSaveStatus('idle'), 3000)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
@@ -959,6 +966,8 @@ export default function NovoLaudoPage() {
   // ── Auto-save com debounce de 2s (campos gerais) ─────────────────────────
   useEffect(() => {
     if (!formPronto || !laudoUuid) return
+    // Não autosalvar se o usuário não fez nenhuma alteração
+    if (!laudoModificado) return
     const timer = setTimeout(() => { saveRef.current(true) }, 2000)
     return () => clearTimeout(timer)
   }, [form, fotos, divisoes, acabamentos, fundamentacao, fundamentacaoInferencia,
@@ -989,11 +998,13 @@ export default function NovoLaudoPage() {
   // Ref para o estado formPronto — usada no cleanup para evitar save com form vazio
   const formProntoRef = useRef(false)
   useEffect(() => { formProntoRef.current = formPronto }, [formPronto])
+  useEffect(() => { laudoModificadoRef.current = laudoModificado }, [laudoModificado])
 
   useEffect(() => {
     return () => {
-      // Só salva ao desmontar se o form foi efetivamente carregado
-      if (formProntoRef.current) saveRef.current(true)
+      // Só salva ao desmontar se: form foi carregado E usuário realmente modificou algo
+      // Previne sobrescrever dados de outro usuário que está editando simultaneamente
+      if (formProntoRef.current && laudoModificadoRef.current) saveRef.current(true)
     }
   }, [])
 
