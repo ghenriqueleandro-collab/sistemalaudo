@@ -1515,7 +1515,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
 
 
             {/* ── MAPA DE LOCALIZAÇÃO DOS COMPARATIVOS ──────────── */}
-            {dados.localizacaoComparativos && temCddm && (
+            {dados.localizacaoComparativos && (temCddm || isEvoLaudo) && (
               <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
                 <CabecalhoLaudo />
                 <div className="mb-8 mt-8">
@@ -1529,7 +1529,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
             )}
 
             {/* ── HOMOGENEIZAÇÃO CDDM ───────────────────────────────── */}
-            {temCddm && cddm && (
+            {(temCddm || isEvoLaudo) && cddm && (
               <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
                 <CabecalhoLaudo />
                 <div className="mb-8 mt-8">

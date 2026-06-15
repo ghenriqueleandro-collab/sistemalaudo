@@ -594,6 +594,8 @@ export function LaudoPdf({
   const elemsEv     = evSnapData?.elementos || []
   const elemsExibir = isEvo ? elemsEv : elemsCddm
   const temCddm     = elemsCddm.length > 0
+  // Para o mapa e seções de cálculo: usar elementos do método ativo
+  const temElementosCalculo = elemsExibir.length > 0
   const temElementos = elemsExibir.length > 0
 
   // ─── Helper: card de elemento (evolutivo e comparativo) ─────────────────────
@@ -1335,7 +1337,7 @@ export function LaudoPdf({
         {temElementos && elemsExibir.map((el: any, i: number) => renderElemento(el, i))}
 
         {/* ── 10.1 LOCALIZAÇÃO DOS ELEMENTOS COMPARATIVOS ────── */}
-        {dados.localizacaoComparativos && temCddm && (
+        {dados.localizacaoComparativos && (temCddm || isEvo) && (
           <View wrap={false} style={{ marginTop: 8 }} break>
             <H2 id="s-10-1">10.1. LOCALIZAÇÃO DOS ELEMENTOS COMPARATIVOS</H2>
             <Image src={dados.localizacaoComparativos} style={{ width: '100%', objectFit: 'contain', borderWidth: 0.5, borderColor: CINZA }} />
@@ -1343,7 +1345,7 @@ export function LaudoPdf({
         )}
 
         {/* ── 9.1. HOMOGENEIZAÇÃO (só comparativo) ────────────────────────── */}
-        {temCddm && (
+        {(temCddm || isEvo) && (
           <>
             <H3 id="s-10-hom">{dados.localizacaoComparativos ? '10.2.' : '10.1.'} Homogeneização</H3>
             <View style={s.homogTable}>
