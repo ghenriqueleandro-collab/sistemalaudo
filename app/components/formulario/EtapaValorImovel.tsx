@@ -41,14 +41,17 @@ export default function EtapaValorImovel({
   const ev   = (form as any).dadosCalculoEvolutivo
   const isEvo = form.metodoAvaliacao === 'evolutivo'
 
-  const temCddm = !isEvo && cddm && (cddm.mediaSaneada ?? 0) > 0
-  const temEv   = isEvo  && ev   && (ev.valorFinal ?? 0) > 0
+  // Garantir que cddm e ev são objetos (não refs __ref__:... não resolvidas)
+  const cddmObj = cddm && typeof cddm === 'object' ? cddm : null
+  const evObj   = ev   && typeof ev   === 'object' ? ev   : null
+  const temCddm = !isEvo && cddmObj && (cddmObj.mediaSaneada ?? 0) > 0
+  const temEv   = isEvo  && evObj   && (evObj.valorFinal ?? 0) > 0
 
   // Valores automáticos do motor
-  const vuAuto        = temCddm ? cddm.mediaSaneada : 0
-  const areaAuto      = temCddm ? (cddm.avaliando?.area ?? 0) : 0
-  const valorCddmAuto = temCddm ? cddm.valorImovel : 0
-  const valorEvAuto   = temEv   ? ev.valorFinal : 0
+  const vuAuto        = temCddm ? cddmObj!.mediaSaneada : 0
+  const areaAuto      = temCddm ? (cddmObj!.avaliando?.area ?? 0) : 0
+  const valorCddmAuto = temCddm ? cddmObj!.valorImovel : 0
+  const valorEvAuto   = temEv   ? evObj!.valorFinal : 0
 
   // Fator de comercialização
   const fc = parseFloat((form.fatorComercializacao || '1').replace(',', '.')) || 1
@@ -92,11 +95,11 @@ export default function EtapaValorImovel({
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <span className={LBL + ' text-blue-600'}>Valor do terreno</span>
-                <div className={INP_RO}>{formatarMoeda(ev.valorTerreno ?? 0)}</div>
+                <div className={INP_RO}>{formatarMoeda(evObj?.valorTerreno ?? 0)}</div>
               </div>
               <div>
                 <span className={LBL + ' text-blue-600'}>Valor das benfeitorias</span>
-                <div className={INP_RO}>{formatarMoeda(ev.valorBenfeitorias ?? 0)}</div>
+                <div className={INP_RO}>{formatarMoeda(evObj?.valorBenfeitorias ?? 0)}</div>
               </div>
               <div>
                 <span className={LBL + ' text-blue-600'}>Valor base</span>

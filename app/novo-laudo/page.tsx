@@ -341,6 +341,7 @@ export default function NovoLaudoPage() {
         setEditandoLaudoExistente(false)
         setLaudoId('')
       } finally {
+        formLoadTimeRef.current = Date.now() // janela de 1s para carregamento inicial
         setFormPronto(true)
       }
     }
@@ -999,6 +1000,18 @@ export default function NovoLaudoPage() {
   const formProntoRef = useRef(false)
   useEffect(() => { formProntoRef.current = formPronto }, [formPronto])
   useEffect(() => { laudoModificadoRef.current = laudoModificado }, [laudoModificado])
+
+  // Rastrear modificações via mudanças no form state
+  // formLoadTimeRef: timestamp de quando o carregamento completou
+  const formLoadTimeRef = useRef(0)
+  // Monitora QUALQUER mudança no form após carregamento (inclui setForm de componentes)
+  useEffect(() => {
+    if (!formProntoRef.current) return // ainda carregando
+    if (Date.now() - formLoadTimeRef.current < 1000) return // dentro da janela de carregamento
+    laudoModificadoRef.current = true
+    setLaudoModificado(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, fotos])
 
   useEffect(() => {
     return () => {
