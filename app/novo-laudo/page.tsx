@@ -271,7 +271,6 @@ export default function NovoLaudoPage() {
 
         const [docPdf, locComp, imgBenf] = await Promise.all([
           resolverRef(laudoSalvo.documentacaoPdf || ''),
-          resolverRef(laudoSalvo.calculoPdf || ''),
           resolverRef(laudoSalvo.localizacaoComparativos || ''),
           resolverRef(laudoSalvo.imagemBenfeitorias || ''),
         ])
@@ -281,19 +280,22 @@ export default function NovoLaudoPage() {
         if (typeof dadosCddmRaw === 'string' && dadosCddmRaw.startsWith('__ref__:')) {
           const ch = dadosCddmRaw.replace('__ref__:', '')
           const r = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(ch)}`)
-          if (r.ok) { const { dado } = await r.json(); dadosCddmRaw = dado ? JSON.parse(dado) : undefined }
+          if (r.ok) { const { dado } = await r.json()
+            dadosCddmRaw = dado ? (typeof dado === 'string' ? JSON.parse(dado) : dado) : undefined }
         }
         let dadosEvRaw: any = laudoSalvo.dadosCalculoEvolutivo
         if (typeof dadosEvRaw === 'string' && dadosEvRaw.startsWith('__ref__:')) {
           const ch = dadosEvRaw.replace('__ref__:', '')
           const r = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(ch)}`)
-          if (r.ok) { const { dado } = await r.json(); dadosEvRaw = dado ? JSON.parse(dado) : undefined }
+          if (r.ok) { const { dado } = await r.json()
+            dadosEvRaw = dado ? (typeof dado === 'string' ? JSON.parse(dado) : dado) : undefined }
         }
         let elemsCompRaw: any = laudoSalvo.elementosComparativos
         if (typeof elemsCompRaw === 'string' && elemsCompRaw.startsWith('__ref__:')) {
           const ch = elemsCompRaw.replace('__ref__:', '')
           const r = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(ch)}`)
-          if (r.ok) { const { dado } = await r.json(); elemsCompRaw = dado ? JSON.parse(dado) : [] }
+          if (r.ok) { const { dado } = await r.json()
+            elemsCompRaw = dado ? (typeof dado === 'string' ? JSON.parse(dado) : dado) : [] }
         }
 
         let dadosCddmResolvido: any = dadosCddmRaw
@@ -336,13 +338,15 @@ export default function NovoLaudoPage() {
           melhoramentosPublicos: laudoSalvo.melhoramentosPublicos || prev.melhoramentosPublicos,
         }))
         setUsarCidadeReferencia(Boolean(laudoSalvo.cidadePrincipal || laudoSalvo.distanciaCidadePrincipal))
-      } catch (error) {
-        console.error(error)
-        setEditandoLaudoExistente(false)
-        setLaudoId('')
-      } finally {
-        formLoadTimeRef.current = Date.now() // janela de 1s para carregamento inicial
+        // Carregamento completo com sucesso
         setFormPronto(true)
+      } catch (error) {
+        console.error('[carregarLaudo] Erro durante carregamento:', error)
+        // NÃO chamar setFormPronto(true) — mantém formPronto=false
+        // Isso bloqueia o autosave e preserva os dados no Redis
+        setErroCarregamento('Erro ao carregar o laudo. Recarregue a página.')
+      } finally {
+        formLoadTimeRef.current = Date.now()
       }
     }
 
