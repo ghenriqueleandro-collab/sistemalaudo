@@ -344,7 +344,7 @@ export default function NovoLaudoPage() {
         console.error('[carregarLaudo] Erro durante carregamento:', error)
         // NÃO chamar setFormPronto(true) — mantém formPronto=false
         // Isso bloqueia o autosave e preserva os dados no Redis
-        setErroCarregamento('Erro ao carregar o laudo. Recarregue a página.')
+        console.error('[carregarLaudo] Carregamento falhou — autosave bloqueado para preservar dados no Redis')
       } finally {
         formLoadTimeRef.current = Date.now()
       }
