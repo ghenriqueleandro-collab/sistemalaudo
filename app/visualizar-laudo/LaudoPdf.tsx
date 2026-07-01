@@ -1389,7 +1389,7 @@ export function LaudoPdf({
         )}
 
         {/* ── 10.x HOMOGENEIZAÇÃO — EVOLUTIVO (terreno) ─────────────────────── */}
-        {isEvo && evSnapData?.resultado?.elementos?.length > 0 && (() => {
+        {isEvo && evSnapData?.resultado && (evSnapData?.elementos || []).length > 0 && (() => {
           const secNum     = dados.localizacaoComparativos ? '10.2.' : '10.1.'
           const resEv      = evSnapData.resultado
           const avArea     = parseFloat(String(evSnapData.avaliando?.area || '0').replace(',', '.')) || 0
@@ -1401,9 +1401,35 @@ export function LaudoPdf({
           const fmt2br     = (v: number) => (Math.round(v * 100) / 100).toFixed(2).replace('.', ',')
           const pnEv       = (v: any) => { if (!v) return 0; const s = String(v).replace(/\./g,'').replace(',','.'); return parseFloat(s)||0 }
 
-          // Lê diretamente os elementos já calculados pelo motor (snapshot)
-          // Igual ao que o PDF já faz para media, desvio, minimo, maximo, etc.
-          const elemsCalcFinal: any[] = resEv.elementos || []
+          // Usa resultado.elementos do snapshot quando disponível (laudos novos).
+          // Para laudos antigos sem esse campo, recalcula com fórmulas idênticas ao motor.
+          const pnMotor = (v: any): number => {
+            if (v == null || v === '') return 0
+            if (typeof v === 'number') return isFinite(v) ? v : 0
+            return parseFloat(String(v).replace(/[R$\s.]/g, '').replace(',', '.')) || 0
+          }
+          const round3Ev = (v: number) => Math.round(v / 0.001) * 0.001
+
+          const elemsCalcFinal: any[] = (resEv.elementos && resEv.elementos.length > 0)
+            ? resEv.elementos
+            : elemsInput.map((e: any) => {
+                const aE = pnMotor(e.areaTerreno)
+                const vO = pnMotor(e.valorOferta)
+                const fO = pnMotor(e.fatorOferta) || 1
+                const bE = e.tipo === 'Terreno c/ benfeitoria' ? pnMotor(e.benfElem) : 0
+                if (aE <= 0 || vO <= 0) return null
+                const vu = (vO * fO - bE) / aE
+                if (vu <= 0) return null
+                const ratio = avArea > 0 ? aE / avArea : 1
+                const fA = round3Ev(Math.pow(ratio, (ratio < 0.7 || ratio > 1.3) ? 0.125 : 0.25))
+                const fL = (pnMotor(e.fatorLocal) || 100) > 0 ? avLocal / (pnMotor(e.fatorLocal) || 100) : 1
+                const fT = (pnMotor(e.fatorTopografia) || 100) > 0 ? avTopo / (pnMotor(e.fatorTopografia) || 100) : 1
+                const fV = (pnMotor(e.fatorVisibilidade) || 100) > 0 ? avVis / (pnMotor(e.fatorVisibilidade) || 100) : 1
+                const soma  = vu * (1 + (fA - 1) + (fL - 1) + (fT - 1) + (fV - 1))
+                const coef  = soma / vu
+                const valido = coef >= 0.5 && coef <= 2.0
+                return { vu, fA, fL, fT, fV, soma, coef, valido }
+              })
 
           // ── Tabela helper: uma sub-tabela por fator ──────────────────────────
           const TabelaFator = ({
