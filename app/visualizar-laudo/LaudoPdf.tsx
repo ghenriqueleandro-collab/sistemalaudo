@@ -1537,8 +1537,7 @@ export function LaudoPdf({
                     <Text style={[s.homogTh,{flex:1.2}]}>V.U. s/ fatores</Text>
                     <Text style={[s.homogTh,{flex:1.2}]}>Somatória fatores</Text>
                     <Text style={[s.homogTh,{flex:1.0}]}>Coef. geral</Text>
-                    <Text style={[s.homogTh,{flex:1.2}]}>V.U. Homog.</Text>
-                    <Text style={[s.homogThLast,{flex:1.0}]}>IBAPE 0,5–2,0</Text>
+                    <Text style={[s.homogThLast,{flex:1.2}]}>V.U. Homog.</Text>
                   </View>
                   {elemsCalcFinal.map((r: any, i: number) => {
                     if (!r) return null
@@ -1559,10 +1558,7 @@ export function LaudoPdf({
                         <Text style={[td,{flex:1.2}]}>{fm(vu_r)}/m²</Text>
                         <Text style={[td,{flex:1.2}]}>{fm(soma_r)}</Text>
                         <Text style={[td,{flex:1.0,color: coef_r !== 1 ? AZUL : TEXTO, fontFamily:'Helvetica-Bold'}]}>{fmt4(coef_r)}</Text>
-                        <Text style={[td,{flex:1.2,fontFamily:'Helvetica-Bold'}]}>{fm(soma_r)}/m²</Text>
-                        <Text style={[valido ? s.homogTdLast : {...s.homogTdOut,borderRightWidth:0},{flex:1.0,color:valido?'#166534':'#991b1b',fontFamily:'Helvetica-Bold'}]}>
-                          {valido ? '✓' : `${fmt4(coef_r)} — desc.`}
-                        </Text>
+                        <Text style={[valido ? s.homogTdLast : {...s.homogTdOut,borderRightWidth:0},{flex:1.2,fontFamily:'Helvetica-Bold',color: valido ? TEXTO : '#991b1b'}]}>{fm(soma_r)}/m²</Text>
                       </View>
                     )
                   })}
