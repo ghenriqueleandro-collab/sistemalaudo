@@ -28,6 +28,7 @@ type Props = {
   onReordenarFotos: (origem: number, destino: number) => void
   onRemoverAnexo?: (campo: 'documentacaoPdf' | 'localizacaoComparativos') => void
   setForm?: React.Dispatch<React.SetStateAction<any>>
+  onSalvarAgora?: () => void  // chamado após gerar mapa para forçar save imediato
 }
 
 
@@ -110,6 +111,7 @@ export default function EtapaAnexosAssinatura({
   onReordenarFotos,
   onRemoverAnexo,
   setForm,
+  onSalvarAgora,
 }: Props) {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [gerandoMapa, setGerandoMapa] = useState(false)
@@ -212,7 +214,28 @@ export default function EtapaAnexosAssinatura({
         r.readAsDataURL(blob)
       })
 
+      // 1. Atualiza o estado local imediatamente (UI)
       setForm((prev: any) => ({ ...prev, localizacaoComparativos: base64 }))
+
+      // 2. Dispara save imediato via callback do orquestrador (que tem o contexto correto
+      //    de chunking, stripBase64, etc.) ou via API direta como fallback.
+      if (onSalvarAgora) {
+        // Aguarda o próximo tick para garantir que setForm já atualizou o estado
+        setTimeout(() => onSalvarAgora(), 50)
+      } else {
+        const laudoId = form?.id
+        if (laudoId) {
+          try {
+            await fetch(`/api/laudos/${laudoId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...form, localizacaoComparativos: base64 }),
+            })
+          } catch {
+            // Silencioso — o autosave tentará na próxima interação
+          }
+        }
+      }
     } catch (err: any) {
       setErroMapa(`Não foi possível gerar o mapa: ${err?.message || err}`)
     } finally {
