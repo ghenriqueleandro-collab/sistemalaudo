@@ -691,6 +691,8 @@ export default function EtapaCalculoEvolutivo({ form, setForm }: Props) {
         T: resultado.T, resultIC: resultado.resultIC, minimo: resultado.minimo, maximo: resultado.maximo,
         lim30inf: resultado.lim30inf, lim30sup: resultado.lim30sup,
         grauPrecisao: resultado.grauPrecisao, intervaloConfianca: resultado.intervaloConfianca,
+        // elementos calculados — necessários para as tabelas detalhadas do PDF
+        elementos: resultado.elementos,
       } : null,
       valorTerreno: resultado.valorTerreno,
       valorBenfeitorias: totalBenfeitorias,

@@ -591,7 +591,8 @@ export function LaudoPdf({
   const evSnapData  = (dados as any).dadosCalculoEvolutivo as any | undefined
   const isEvo       = dados.metodoAvaliacao === 'evolutivo'
   const elemsCddm   = cddmData?.elementos || []
-  const elemsEv     = evSnapData?.elementos || []
+  const elemsEv     = evSnapData?.elementos || []           // inputs brutos (para cards de elemento)
+  const elemsEvCalc = evSnapData?.resultado?.elementos || [] // elementos calculados (vu, fL, fT, fV, fA, soma, coef)
   const elemsExibir = isEvo ? elemsEv : elemsCddm
   const temCddm     = elemsCddm.length > 0
   // Para o mapa e seções de cálculo: usar elementos do método ativo
@@ -1388,7 +1389,7 @@ export function LaudoPdf({
         )}
 
         {/* ── 10.x HOMOGENEIZAÇÃO — EVOLUTIVO (terreno) ─────────────────────── */}
-        {isEvo && elemsEv.length > 0 && evSnapData?.resultado && (() => {
+        {isEvo && elemsEvCalc.length > 0 && evSnapData?.resultado && (() => {
           const secNum     = dados.localizacaoComparativos ? '10.2.' : '10.1.'
           const resEv      = evSnapData.resultado
           const avArea     = parseFloat(String(evSnapData.avaliando?.area || '0').replace(',', '.')) || 0
@@ -1426,13 +1427,13 @@ export function LaudoPdf({
                   <Text style={[s.homogTh,{flex:1.3}]}>Diferença (R$/m²)</Text>
                   <Text style={[s.homogThLast,{flex:1.3}]}>V.U. Calculado</Text>
                 </View>
-                {elemsEv.map((r: any, i: number) => {
+                {elemsEvCalc.map((r: any, i: number) => {
                   if (!r) return null
                   const inp = elemsInput[i] || {}
                   const f   = getFator(r)
                   const dif = (f - 1) * (r.vu ?? 0)
                   const vuC = (r.vu ?? 0) * f
-                  const isLast = i === elemsEv.length - 1
+                  const isLast = i === elemsEvCalc.length - 1
                   return (
                     <View key={`${titulo}-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
                       <Text style={[s.homogTd,{flex:0.5,textAlign:'left',paddingLeft:4}]}>{i+1}</Text>
@@ -1510,10 +1511,10 @@ export function LaudoPdf({
                     <Text style={[s.homogTh,{flex:1.2}]}>V.U. Homog.</Text>
                     <Text style={[s.homogThLast,{flex:1.0}]}>IBAPE 0,5–2,0</Text>
                   </View>
-                  {elemsEv.map((r: any, i: number) => {
+                  {elemsEvCalc.map((r: any, i: number) => {
                     if (!r) return null
                     const valido  = r.valido !== false
-                    const isLast  = i === elemsEv.length - 1
+                    const isLast  = i === elemsEvCalc.length - 1
                     const td      = valido ? s.homogTd : s.homogTdOut
                     return (
                       <View key={`coef-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
