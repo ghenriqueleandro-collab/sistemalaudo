@@ -1389,7 +1389,7 @@ export function LaudoPdf({
         )}
 
         {/* ── 10.x HOMOGENEIZAÇÃO — EVOLUTIVO (terreno) ─────────────────────── */}
-        {isEvo && evSnapData?.resultado && (() => {
+        {isEvo && evSnapData?.resultado?.elementos?.length > 0 && (() => {
           const secNum     = dados.localizacaoComparativos ? '10.2.' : '10.1.'
           const resEv      = evSnapData.resultado
           const avArea     = parseFloat(String(evSnapData.avaliando?.area || '0').replace(',', '.')) || 0
@@ -1401,33 +1401,9 @@ export function LaudoPdf({
           const fmt2br     = (v: number) => (Math.round(v * 100) / 100).toFixed(2).replace('.', ',')
           const pnEv       = (v: any) => { if (!v) return 0; const s = String(v).replace(/\./g,'').replace(',','.'); return parseFloat(s)||0 }
 
-          // Usa elementos calculados do snapshot (deploy novo) ou recalcula na hora (snapshot antigo)
-          const elemsCalcFinal: any[] = elemsEvCalc.length > 0
-            ? elemsEvCalc
-            : (() => {
-                const avA = avArea
-                const nL  = avLocal
-                const nT  = avTopo
-                const nV  = avVis
-                return elemsInput.map((e: any) => {
-                  const aE = pnEv(e.areaTerreno)
-                  const vO = pnEv(e.valorOferta)
-                  const fO = pnEv(e.fatorOferta) || 0.9
-                  const bE = e.tipo === 'Terreno c/ benfeitoria' ? pnEv(e.benfElem) : 0
-                  if (aE <= 0 || vO <= 0) return null
-                  const vu = (vO * fO - bE) / aE
-                  if (vu <= 0) return null
-                  const ratio = avA > 0 ? aE / avA : 1
-                  const fA = Math.round(Math.pow(ratio, (ratio < 0.7 || ratio > 1.3) ? 0.125 : 0.25) * 1000) / 1000
-                  const fL = (pnEv(e.fatorLocal) || 100) > 0 ? nL / (pnEv(e.fatorLocal) || 100) : 1
-                  const fT = (pnEv(e.fatorTopografia) || 100) > 0 ? nT / (pnEv(e.fatorTopografia) || 100) : 1
-                  const fV = (pnEv(e.fatorVisibilidade) || 100) > 0 ? nV / (pnEv(e.fatorVisibilidade) || 100) : 1
-                  const soma  = vu * (1 + (fA - 1) + (fL - 1) + (fT - 1) + (fV - 1))
-                  const coef  = soma / vu
-                  const valido = coef >= 0.5 && coef <= 2.0
-                  return { vu, fA, fL, fT, fV, soma, coef, valido }
-                })
-              })()
+          // Lê diretamente os elementos já calculados pelo motor (snapshot)
+          // Igual ao que o PDF já faz para media, desvio, minimo, maximo, etc.
+          const elemsCalcFinal: any[] = resEv.elementos || []
 
           // ── Tabela helper: uma sub-tabela por fator ──────────────────────────
           const TabelaFator = ({
