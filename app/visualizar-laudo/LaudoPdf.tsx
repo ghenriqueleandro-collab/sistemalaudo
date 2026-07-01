@@ -1389,113 +1389,190 @@ export function LaudoPdf({
 
         {/* ── 10.x HOMOGENEIZAÇÃO — EVOLUTIVO (terreno) ─────────────────────── */}
         {isEvo && elemsEv.length > 0 && evSnapData?.resultado && (() => {
-          const secNum = dados.localizacaoComparativos ? '10.2.' : '10.1.'
-          const resEv  = evSnapData.resultado
-          const avArea = parseFloat(String(evSnapData.avaliando?.area || '0').replace(',', '.')) || 0
-          const fmt4   = (v: number) => v.toFixed(4).replace('.', ',')
+          const secNum     = dados.localizacaoComparativos ? '10.2.' : '10.1.'
+          const resEv      = evSnapData.resultado
+          const avArea     = parseFloat(String(evSnapData.avaliando?.area || '0').replace(',', '.')) || 0
+          const avLocal    = parseFloat(String(evSnapData.avaliando?.notaLocal || '100').replace(',', '.')) || 100
+          const avTopo     = parseFloat(String(evSnapData.avaliando?.notaTopo  || '100').replace(',', '.')) || 100
+          const avVis      = parseFloat(String(evSnapData.avaliando?.notaVis   || '100').replace(',', '.')) || 100
           const elemsInput = evSnapData.elementos || []
-          return (
-            <>
-              <H3 id="s-10-hom">{secNum} Homogeneização — Terreno</H3>
+          const fmt4       = (v: number) => v.toFixed(4).replace('.', ',')
+          const fmt2br     = (v: number) => v.toLocaleString !== undefined
+            ? (Math.round(v * 100) / 100).toFixed(2).replace('.', ',')
+            : '0,00'
+          const pnEv       = (v: any) => { if (!v) return 0; const s = String(v).replace(/\./g,'').replace(',','.'); return parseFloat(s)||0 }
+
+          // ── Tabela helper: uma sub-tabela por fator ──────────────────────────
+          const TabelaFator = ({
+            titulo, nomeCampo, avVal, avLabel,
+            getValElem, getFator,
+          }: {
+            titulo: string
+            nomeCampo: string
+            avVal: number
+            avLabel: string
+            getValElem: (inp: any) => number
+            getFator: (r: any) => number
+          }) => (
+            <View style={{ marginBottom: 6 }}>
+              <View style={{ backgroundColor: '#EFF6FF', paddingVertical: 3, paddingHorizontal: 5, borderWidth: 0.5, borderColor: CINZA, borderBottomWidth: 0 }}>
+                <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: AZUL, textTransform: 'uppercase' }}>{titulo}</Text>
+              </View>
               <View style={s.homogTable}>
                 <View style={s.homogRowH}>
-                  <Text style={[s.homogTh,{flex:0.55}]}>Elem.</Text>
-                  <Text style={[s.homogTh,{flex:1.2}]}>VU Terreno (R$/m²)</Text>
-                  <Text style={[s.homogTh,{flex:0.8}]}>F.Local</Text>
-                  <Text style={[s.homogTh,{flex:0.8}]}>F.Topografia</Text>
-                  <Text style={[s.homogTh,{flex:0.8}]}>F.Visibilidade</Text>
-                  <Text style={[s.homogTh,{flex:0.8}]}>F.Área</Text>
-                  <Text style={[s.homogThLast,{flex:1.1}]}>VU/m² Hom.</Text>
+                  <Text style={[s.homogTh,{flex:0.5,textAlign:'left',paddingLeft:4}]}>Elem.</Text>
+                  <Text style={[s.homogTh,{flex:1.2}]}>{nomeCampo}</Text>
+                  <Text style={[s.homogTh,{flex:1.0}]}>Coeficiente</Text>
+                  <Text style={[s.homogTh,{flex:1.3}]}>Diferença (R$/m²)</Text>
+                  <Text style={[s.homogThLast,{flex:1.3}]}>V.U. Calculado</Text>
                 </View>
                 {elemsEv.map((r: any, i: number) => {
                   if (!r) return null
-                  const isLast = i === elemsEv.length - 1
-                  const valido = r.valido !== false
-                  const td = valido ? s.homogTd : s.homogTdOut
                   const inp = elemsInput[i] || {}
-                  // VU bruto do terreno
-                  const vuBruto = r.vu ?? 0
+                  const f   = getFator(r)
+                  const dif = (f - 1) * (r.vu ?? 0)
+                  const vuC = (r.vu ?? 0) * f
+                  const isLast = i === elemsEv.length - 1
                   return (
-                    <View key={`ev-h-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
-                      <Text style={[td,{flex:0.55}]}>{i+1}</Text>
-                      <Text style={[td,{flex:1.2}]}>{fm(vuBruto)}</Text>
-                      <Text style={[td,{flex:0.8}]}>{fmt4(r.fL ?? 1)}</Text>
-                      <Text style={[td,{flex:0.8}]}>{fmt4(r.fT ?? 1)}</Text>
-                      <Text style={[td,{flex:0.8}]}>{fmt4(r.fV ?? 1)}</Text>
-                      <Text style={[td,{flex:0.8}]}>{fmt4(r.fA ?? 1)}</Text>
-                      <Text style={[valido ? s.homogTdLast : {...s.homogTdOut,borderRightWidth:0},{flex:1.1}]}>{fm(r.soma ?? 0)}</Text>
+                    <View key={`${titulo}-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
+                      <Text style={[s.homogTd,{flex:0.5,textAlign:'left',paddingLeft:4}]}>{i+1}</Text>
+                      <Text style={[s.homogTd,{flex:1.2}]}>{fmt2br(getValElem(inp))}</Text>
+                      <Text style={[s.homogTd,{flex:1.0,color: f !== 1 ? AZUL : TEXTO, fontFamily: f !== 1 ? 'Helvetica-Bold' : 'Helvetica'}]}>{fmt4(f)}</Text>
+                      <Text style={[s.homogTd,{flex:1.3,color: dif > 0 ? '#166534' : dif < 0 ? '#991b1b' : TEXTO}]}>{dif >= 0 ? '+' : ''}{fm(dif)}</Text>
+                      <Text style={[s.homogTdLast,{flex:1.3}]}>{fm(vuC)}/m²</Text>
                     </View>
                   )
                 })}
-              </View>
-              <View style={s.legendaWrap}>
-                <Text style={[s.legendaTxt,{fontFamily:'Helvetica-Bold',marginBottom:2}]}>Legenda dos fatores aplicados:</Text>
-                <Text style={s.legendaTxt}>F.Local = Fator de Localização    F.Topografia = Fator de Topografia    F.Visibilidade = Fator de Visibilidade    F.Área = Fator de Adequação por Área</Text>
-                <Text style={s.legendaTxt}>* Elementos com coeficiente fora do intervalo [0,5; 2,0] foram excluídos do cálculo (IBAPE).</Text>
-              </View>
-
-              {/* Memorial de cálculo — terreno evolutivo */}
-              <View style={{ flexDirection: 'row', marginTop: 6 }}>
-                <View style={{ flex: 1.3, borderWidth: 0.5, borderColor: CINZA, marginRight: 4 }}>
-                  <View style={{ backgroundColor: AZUL, paddingVertical: 3, paddingHorizontal: 5 }}>
-                    <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center' }}>ENQUADRAMENTO DA AVALIAÇÃO</Text>
-                  </View>
-                  <View style={s.memorialRow}>
-                    <Text style={[s.memorialLbl,{flex:1.6,fontSize:6.5}]}>Amplitude do intervalo de confiança de 80% em torno da estimativa central</Text>
-                    <View style={{flex:1.5,flexDirection:'column'}}>
-                      <View style={{flexDirection:'row',backgroundColor:AZULLT}}>
-                        <Text style={{flex:1,fontSize:6.5,fontFamily:'Helvetica-Bold',color:AZUL,textAlign:'center',paddingVertical:2,borderRightWidth:0.5,borderColor:CINZA}}>III</Text>
-                        <Text style={{flex:1,fontSize:6.5,fontFamily:'Helvetica-Bold',color:AZUL,textAlign:'center',paddingVertical:2,borderRightWidth:0.5,borderColor:CINZA}}>II</Text>
-                        <Text style={{flex:1,fontSize:6.5,fontFamily:'Helvetica-Bold',color:AZUL,textAlign:'center',paddingVertical:2}}>I</Text>
-                      </View>
-                      <View style={{flexDirection:'row'}}>
-                        <Text style={{flex:1,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:2,borderTopWidth:0.5,borderRightWidth:0.5,borderColor:CINZA}}>{'<= 30%'}</Text>
-                        <Text style={{flex:1,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:2,borderTopWidth:0.5,borderRightWidth:0.5,borderColor:CINZA}}>{'<= 40%'}</Text>
-                        <Text style={{flex:1,fontSize:6.5,color:TEXTO,textAlign:'center',paddingVertical:2,borderTopWidth:0.5,borderColor:CINZA}}>{'<= 50%'}</Text>
-                      </View>
-                    </View>
-                  </View>
-                  <View style={s.memorialRow}>
-                    <Text style={[s.memorialLbl,{flex:2,fontFamily:'Helvetica-Bold'}]}>Intervalo de confiança</Text>
-                    <Text style={[s.memorialVal,{flex:1.1,textAlign:'center'}]}>{(resEv.intervaloConfianca||0).toFixed(2).replace('.',',')}%</Text>
-                  </View>
-                </View>
-                <View style={{ flex: 1, borderWidth: 0.5, borderColor: CINZA }}>
-                  <View style={{ backgroundColor: AZUL, paddingVertical: 3, paddingHorizontal: 5 }}>
-                    <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center' }}>MEMORIAL DE CÁLCULOS — TERRENO</Text>
-                  </View>
-                  <View style={s.memorialRow}><Text style={s.memorialLbl}>Média Saneada (VU Hom.)</Text><Text style={s.memorialVal}>{fm(resEv.media||0)}</Text></View>
-                  <View style={s.memorialRow}><Text style={s.memorialLbl}>Limite superior (+30%)</Text><Text style={s.memorialVal}>{fm(resEv.lim30sup||0)}</Text></View>
-                  <View style={s.memorialRow}><Text style={s.memorialLbl}>Limite inferior (-30%)</Text><Text style={s.memorialVal}>{fm(resEv.lim30inf||0)}</Text></View>
-                  <View style={s.memorialRow}><Text style={s.memorialLbl}>Desvio Padrão</Text><Text style={s.memorialVal}>{(resEv.desvio||0).toFixed(2).replace('.',',')}</Text></View>
-                  <View style={s.memorialRow}><Text style={s.memorialLbl}>Coeficiente de Variação</Text><Text style={s.memorialVal}>{resEv.desvio > 0 && resEv.media > 0 ? ((resEv.desvio/resEv.media)*100).toFixed(2).replace('.',',') : '0,00'}%</Text></View>
-                  <View style={s.memorialRow}><Text style={s.memorialLbl}>Elementos válidos</Text><Text style={s.memorialVal}>{resEv.N} de {elemsEv.filter(Boolean).length}</Text></View>
-                  <View style={s.memorialRow}><Text style={s.memorialLbl}>Limite Sup. IC</Text><Text style={s.memorialVal}>{fm(resEv.maximo||0)}</Text></View>
-                  <View style={s.memorialRowL}><Text style={s.memorialLbl}>Limite Inf. IC</Text><Text style={s.memorialVal}>{fm(resEv.minimo||0)}</Text></View>
+                {/* Linha avaliando */}
+                <View style={[s.homogRow, {backgroundColor: AZULLT}]}>
+                  <Text style={[s.homogTd,{flex:1.7,textAlign:'left',paddingLeft:4,fontFamily:'Helvetica-Bold',color:AZUL}]}>Avaliando</Text>
+                  <Text style={[s.homogTdLast,{flex:3.6,fontFamily:'Helvetica-Bold',color:AZUL,textAlign:'center'}]}>{avLabel}</Text>
                 </View>
               </View>
+            </View>
+          )
 
-              {/* Tabela de valores — terreno evolutivo */}
-              <View style={[s.homogTable, {marginTop:5, marginBottom:4}]}>
+          return (
+            <>
+              <H3 id="s-10-hom">{secNum} Homogeneização — Terreno</H3>
+
+              {/* FATOR ÁREA */}
+              <TabelaFator
+                titulo="Fator Área"
+                nomeCampo="Área (m²)"
+                avVal={avArea}
+                avLabel={`${fmt2br(avArea)} m²`}
+                getValElem={(inp) => pnEv(inp.areaTerreno) || 0}
+                getFator={(r) => r.fA ?? 1}
+              />
+
+              {/* FATOR LOCAL */}
+              <TabelaFator
+                titulo="Fator Local"
+                nomeCampo="Local"
+                avVal={avLocal}
+                avLabel={`Nota ${fmt2br(avLocal)}`}
+                getValElem={(inp) => pnEv(inp.fatorLocal) || 100}
+                getFator={(r) => r.fL ?? 1}
+              />
+
+              {/* FATOR TOPOGRAFIA */}
+              <TabelaFator
+                titulo="Fator Topografia"
+                nomeCampo="Topografia"
+                avVal={avTopo}
+                avLabel={`Nota ${fmt2br(avTopo)}`}
+                getValElem={(inp) => pnEv(inp.fatorTopografia) || 100}
+                getFator={(r) => r.fT ?? 1}
+              />
+
+              {/* FATOR VISIBILIDADE */}
+              <TabelaFator
+                titulo="Fator Visibilidade"
+                nomeCampo="Visibilidade"
+                avVal={avVis}
+                avLabel={`Nota ${fmt2br(avVis)}`}
+                getValElem={(inp) => pnEv(inp.fatorVisibilidade) || 100}
+                getFator={(r) => r.fV ?? 1}
+              />
+
+              {/* COEFICIENTE GERAL E ESTATÍSTICAS */}
+              <View style={{ marginBottom: 6 }}>
+                <View style={{ backgroundColor: '#EFF6FF', paddingVertical: 3, paddingHorizontal: 5, borderWidth: 0.5, borderColor: CINZA, borderBottomWidth: 0 }}>
+                  <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: AZUL, textTransform: 'uppercase' }}>Coeficiente Geral (Soma Aditiva) e Estatísticas</Text>
+                </View>
+                <View style={s.homogTable}>
+                  <View style={s.homogRowH}>
+                    <Text style={[s.homogTh,{flex:0.5,textAlign:'left',paddingLeft:4}]}>Elem.</Text>
+                    <Text style={[s.homogTh,{flex:1.2}]}>V.U. s/ fatores</Text>
+                    <Text style={[s.homogTh,{flex:1.2}]}>Somatória fatores</Text>
+                    <Text style={[s.homogTh,{flex:1.0}]}>Coef. geral</Text>
+                    <Text style={[s.homogTh,{flex:1.2}]}>V.U. Homog.</Text>
+                    <Text style={[s.homogThLast,{flex:1.0}]}>IBAPE 0,5–2,0</Text>
+                  </View>
+                  {elemsEv.map((r: any, i: number) => {
+                    if (!r) return null
+                    const valido  = r.valido !== false
+                    const isLast  = i === elemsEv.length - 1
+                    const td      = valido ? s.homogTd : s.homogTdOut
+                    return (
+                      <View key={`coef-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
+                        <Text style={[td,{flex:0.5,textAlign:'left',paddingLeft:4}]}>{i+1}</Text>
+                        <Text style={[td,{flex:1.2}]}>{fm(r.vu??0)}/m²</Text>
+                        <Text style={[td,{flex:1.2}]}>{fm(r.soma??0)}</Text>
+                        <Text style={[td,{flex:1.0,color: (r.coef??1) !== 1 ? AZUL : TEXTO, fontFamily:'Helvetica-Bold'}]}>{fmt4(r.coef??1)}</Text>
+                        <Text style={[td,{flex:1.2,fontFamily:'Helvetica-Bold'}]}>{fm(r.soma??0)}/m²</Text>
+                        <Text style={[valido ? s.homogTdLast : {...s.homogTdOut,borderRightWidth:0},{flex:1.0,color:valido?'#166534':'#991b1b',fontFamily:'Helvetica-Bold'}]}>
+                          {valido ? '✓' : `${fmt4(r.coef??0)} — desc.`}
+                        </Text>
+                      </View>
+                    )
+                  })}
+                </View>
+              </View>
+
+              {/* Estatísticas */}
+              <View style={{ flexDirection: 'row', marginTop: 5, marginBottom: 4 }}>
+                {[
+                  ['Elem. válidos',       String(resEv.N ?? 0)],
+                  ['T(N-1)',             String(resEv.N > 1 ? resEv.N - 1 : '—')],
+                  ['T Student',          (resEv.T??0).toFixed(3).replace('.',',')],
+                  ['Desvio padrão somas', fm(resEv.desvio??0)],
+                  ['Resultado IC',        fm(resEv.resultIC??0)],
+                  ['Grau de precisão',    resEv.grauPrecisao ?? '—'],
+                ].map(([lbl,val]) => (
+                  <View key={lbl} style={{ flex:1, backgroundColor:AZULLT, borderWidth:0.5, borderColor:CINZA, marginRight:3, padding:4, alignItems:'center' }}>
+                    <Text style={{ fontSize:6, color:'#5a7090', marginBottom:1, textAlign:'center' }}>{lbl}</Text>
+                    <Text style={{ fontSize:8, fontFamily:'Helvetica-Bold', color:AZUL, textAlign:'center' }}>{val}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Tabela intervalos terreno */}
+              <View style={[s.homogTable, {marginBottom:4}]}>
                 <View style={s.homogRowH}>
                   <Text style={[s.homogTh,{flex:1.5}]}>Intervalo</Text>
                   <Text style={[s.homogTh,{flex:1.5}]}>V.U. Terreno (R$/m²)</Text>
                   <Text style={[s.homogThLast,{flex:1.5}]}>Valor do Terreno (R$)</Text>
                 </View>
                 {([
-                  ['Mínimo',         resEv.minimo,   resEv.minimo   * avArea, false],
-                  ['Médio (adotado)',resEv.media,    resEv.media    * avArea, true],
-                  ['Máximo',         resEv.maximo,   resEv.maximo   * avArea, false],
-                  ['Limite −30%',    resEv.lim30inf, resEv.lim30inf * avArea, false],
-                  ['Limite +30%',    resEv.lim30sup, resEv.lim30sup * avArea, false],
+                  ['Mínimo',          resEv.minimo,   (resEv.minimo??0)   * avArea, false],
+                  ['Médio (adotado)', resEv.media,    (resEv.media??0)    * avArea, true ],
+                  ['Máximo',          resEv.maximo,   (resEv.maximo??0)   * avArea, false],
+                  ['Limite −30%',     resEv.lim30inf, (resEv.lim30inf??0) * avArea, false],
+                  ['Limite +30%',     resEv.lim30sup, (resEv.lim30sup??0) * avArea, false],
                 ] as [string,number,number,boolean][]).map(([lbl,vu,tot,hl],idx,arr) => (
                   <View key={lbl} style={[idx<arr.length-1?s.homogRowB:s.homogRow, hl?{backgroundColor:AZULLT}:{}]}>
                     <Text style={[s.homogTd,{flex:1.5,textAlign:'left',paddingLeft:5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{lbl}</Text>
-                    <Text style={[s.homogTd,{flex:1.5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{fm(vu||0)}</Text>
-                    <Text style={[s.homogTdLast,{flex:1.5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{fm(tot||0)}</Text>
+                    <Text style={[s.homogTd,{flex:1.5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{fm(vu??0)}</Text>
+                    <Text style={[s.homogTdLast,{flex:1.5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{fm(tot??0)}</Text>
                   </View>
                 ))}
               </View>
+
+              <Text style={[s.legendaTxt,{marginTop:2,marginBottom:4,fontStyle:'italic',color:'#475569'}]}>
+                * Elementos com coeficiente fora do intervalo [0,5; 2,0] foram excluídos do cálculo (IBAPE).
+              </Text>
 
               {/* Valor das Edificações — CUB R8N depreciado (VEIU) */}
               {(evSnapData.benfeitorias || []).filter((b: any) => b?.valor > 0).length > 0 && (() => {
@@ -1510,7 +1587,7 @@ export function LaudoPdf({
                         <Text style={[s.homogTh,{flex:0.8}]}>Área (m²)</Text>
                         <Text style={[s.homogTh,{flex:0.9}]}>CUB R8N (R$/m²)</Text>
                         <Text style={[s.homogTh,{flex:0.6}]}>Pc</Text>
-                        <Text style={[s.homogTh,{flex:0.6}]}>Idade</Text>
+                        <Text style={[s.homogTh,{flex:0.7}]}>Idade (anos)</Text>
                         <Text style={[s.homogTh,{flex:0.6}]}>Foc</Text>
                         <Text style={[s.homogThLast,{flex:1.2}]}>Valor (R$)</Text>
                       </View>
@@ -1522,16 +1599,15 @@ export function LaudoPdf({
                             <Text style={[s.homogTd,{flex:0.8}]}>{b.area || '—'}</Text>
                             <Text style={[s.homogTd,{flex:0.9}]}>{b.cub || '—'}</Text>
                             <Text style={[s.homogTd,{flex:0.6}]}>{typeof b.Pc === 'number' ? b.Pc.toFixed(4).replace('.',',') : (b.pc || '—')}</Text>
-                            <Text style={[s.homogTd,{flex:0.6}]}>{b.idadeReal || '—'} anos</Text>
+                            <Text style={[s.homogTd,{flex:0.7}]}>{b.idadeReal || '—'}</Text>
                             <Text style={[s.homogTd,{flex:0.6}]}>{typeof b.Foc === 'number' ? b.Foc.toFixed(4).replace('.',',') : '—'}</Text>
                             <Text style={[s.homogTdLast,{flex:1.2,fontFamily:'Helvetica-Bold',color:AZUL}]}>{fm(b.valor || 0)}</Text>
                           </View>
                         )
                       })}
-                      {/* Linha de total */}
                       <View style={[s.homogRow, {backgroundColor: AZULLT}]}>
-                        <Text style={[s.homogTd,{flex:4.7,textAlign:'right',paddingRight:6,fontFamily:'Helvetica-Bold',color:AZUL}]}>Total VEIU</Text>
-                        <Text style={[s.homogTdLast,{flex:1.2,fontFamily:'Helvetica-Bold',color:AZUL}]}>{fm(benfs.reduce((s: number, b: any) => s + (b.valor||0), 0))}</Text>
+                        <Text style={[s.homogTd,{flex:5.4,textAlign:'right',paddingRight:6,fontFamily:'Helvetica-Bold',color:AZUL}]}>Total VEIU</Text>
+                        <Text style={[s.homogTdLast,{flex:1.2,fontFamily:'Helvetica-Bold',color:AZUL}]}>{fm(benfs.reduce((acc: number, b: any) => acc + (b.valor||0), 0))}</Text>
                       </View>
                     </View>
                     <Text style={[s.legendaTxt,{marginTop:3}]}>
