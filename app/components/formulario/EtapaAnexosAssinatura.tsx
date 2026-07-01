@@ -214,28 +214,16 @@ export default function EtapaAnexosAssinatura({
         r.readAsDataURL(blob)
       })
 
-      // 1. Atualiza o estado local imediatamente (UI)
-      setForm((prev: any) => ({ ...prev, localizacaoComparativos: base64 }))
-
-      // 2. Dispara save imediato via callback do orquestrador (que tem o contexto correto
-      //    de chunking, stripBase64, etc.) ou via API direta como fallback.
-      if (onSalvarAgora) {
-        // Aguarda o próximo tick para garantir que setForm já atualizou o estado
-        setTimeout(() => onSalvarAgora(), 50)
-      } else {
-        const laudoId = form?.id
-        if (laudoId) {
-          try {
-            await fetch(`/api/laudos/${laudoId}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ...form, localizacaoComparativos: base64 }),
-            })
-          } catch {
-            // Silencioso — o autosave tentará na próxima interação
-          }
-        }
-      }
+      // Usa handleLocalizacaoComparativos (prop do orquestrador) para salvar o mapa
+      // pelo pipeline correto de binário (__ref__ + chunks no Redis).
+      // Converte o base64 de volta para File e simula o evento de onChange do input.
+      const byteStr  = atob(base64.split(',')[1])
+      const mime     = base64.match(/data:([^;]+);/)?.[1] ?? 'image/jpeg'
+      const bytes    = new Uint8Array(byteStr.length)
+      for (let i = 0; i < byteStr.length; i++) bytes[i] = byteStr.charCodeAt(i)
+      const file     = new File([bytes], 'mapa-comparativos.jpg', { type: mime })
+      const fakeEvt  = { target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>
+      handleLocalizacaoComparativos(fakeEvt)
     } catch (err: any) {
       setErroMapa(`Não foi possível gerar o mapa: ${err?.message || err}`)
     } finally {
