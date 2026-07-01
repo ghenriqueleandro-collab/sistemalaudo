@@ -1457,10 +1457,11 @@ export function LaudoPdf({
                 </View>
                 {elemsCalcFinal.map((r: any, i: number) => {
                   if (!r) return null
-                  const inp = elemsInput[i] || {}
-                  const f   = getFator(r)
-                  const dif = (f - 1) * (r.vu ?? 0)
-                  const vuC = (r.vu ?? 0) * f
+                  const inp  = elemsInput[i] || {}
+                  const vu_i = r.vu ?? 0
+                  const f    = getFator(r)
+                  const dif  = (f - 1) * vu_i
+                  const vuC  = vu_i * f
                   const isLast = i === elemsCalcFinal.length - 1
                   return (
                     <View key={`${titulo}-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
@@ -1541,18 +1542,26 @@ export function LaudoPdf({
                   </View>
                   {elemsCalcFinal.map((r: any, i: number) => {
                     if (!r) return null
-                    const valido  = r.valido !== false
+                    // Recalcula soma e coef a partir dos fatores individuais — mais confiável que r.soma/r.coef do snapshot
+                    const vu_r   = r.vu  ?? 0
+                    const fA_r   = r.fA  ?? 1
+                    const fL_r   = r.fL  ?? 1
+                    const fT_r   = r.fT  ?? 1
+                    const fV_r   = r.fV  ?? 1
+                    const soma_r = vu_r * (1 + (fA_r - 1) + (fL_r - 1) + (fT_r - 1) + (fV_r - 1))
+                    const coef_r = vu_r > 0 ? soma_r / vu_r : (r.coef ?? 1)
+                    const valido  = coef_r >= 0.5 && coef_r <= 2.0
                     const isLast  = i === elemsCalcFinal.length - 1
                     const td      = valido ? s.homogTd : s.homogTdOut
                     return (
                       <View key={`coef-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
                         <Text style={[td,{flex:0.5,textAlign:'left',paddingLeft:4}]}>{i+1}</Text>
-                        <Text style={[td,{flex:1.2}]}>{fm(r.vu??0)}/m²</Text>
-                        <Text style={[td,{flex:1.2}]}>{fm(r.soma??0)}</Text>
-                        <Text style={[td,{flex:1.0,color: (r.coef??1) !== 1 ? AZUL : TEXTO, fontFamily:'Helvetica-Bold'}]}>{fmt4(r.coef??1)}</Text>
-                        <Text style={[td,{flex:1.2,fontFamily:'Helvetica-Bold'}]}>{fm(r.soma??0)}/m²</Text>
+                        <Text style={[td,{flex:1.2}]}>{fm(vu_r)}/m²</Text>
+                        <Text style={[td,{flex:1.2}]}>{fm(soma_r)}</Text>
+                        <Text style={[td,{flex:1.0,color: coef_r !== 1 ? AZUL : TEXTO, fontFamily:'Helvetica-Bold'}]}>{fmt4(coef_r)}</Text>
+                        <Text style={[td,{flex:1.2,fontFamily:'Helvetica-Bold'}]}>{fm(soma_r)}/m²</Text>
                         <Text style={[valido ? s.homogTdLast : {...s.homogTdOut,borderRightWidth:0},{flex:1.0,color:valido?'#166534':'#991b1b',fontFamily:'Helvetica-Bold'}]}>
-                          {valido ? '✓' : `${fmt4(r.coef??0)} — desc.`}
+                          {valido ? '✓' : `${fmt4(coef_r)} — desc.`}
                         </Text>
                       </View>
                     )
