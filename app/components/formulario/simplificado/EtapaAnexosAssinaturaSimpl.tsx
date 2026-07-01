@@ -154,15 +154,22 @@ export default function EtapaAnexosAssinatura({
         r.readAsDataURL(blob)
       })
 
-      // Usa handleLocalizacaoComparativos (prop do orquestrador) para salvar pelo
-      // pipeline correto de binário (__ref__ + chunks no Redis).
-      const byteStr  = atob(base64.split(',')[1])
-      const mime     = base64.match(/data:([^;]+);/)?.[1] ?? 'image/jpeg'
-      const bytes    = new Uint8Array(byteStr.length)
-      for (let i = 0; i < byteStr.length; i++) bytes[i] = byteStr.charCodeAt(i)
-      const file     = new File([bytes], 'mapa-comparativos.jpg', { type: mime })
-      const fakeEvt  = { target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>
-      handleLocalizacaoComparativos(fakeEvt)
+      // Atualiza localizacaoComparativos E zera _refLocComp para forçar re-save no Redis.
+      if (setForm) {
+        setForm((prev: any) => ({
+          ...prev,
+          localizacaoComparativos: base64,
+          _refLocComp: undefined,
+        }))
+      } else {
+        const byteStr = atob(base64.split(',')[1])
+        const mime    = base64.match(/data:([^;]+);/)?.[1] ?? 'image/jpeg'
+        const bytes   = new Uint8Array(byteStr.length)
+        for (let i = 0; i < byteStr.length; i++) bytes[i] = byteStr.charCodeAt(i)
+        const file    = new File([bytes], 'mapa-comparativos.jpg', { type: mime })
+        const fakeEvt = { target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>
+        handleLocalizacaoComparativos(fakeEvt)
+      }
     } catch (err: any) {
       setErroMapa(`Não foi possível gerar o mapa: ${err?.message || err}`)
     } finally {
