@@ -1527,11 +1527,17 @@ export function LaudoPdf({
           </View>
         </View>
 
-        {/* Observações da seção 11 */}
+        {/* Observações da seção 11 — preserva quebras de linha do textarea */}
         {(dados as any).observacaoValorImovel?.trim() && (
           <View style={{ marginTop: 6, marginBottom: 8 }}>
             <Text style={[s.bold, { fontSize: 9, marginBottom: 3 }]}>Observações:</Text>
-            <Text style={{ fontSize: 9, color: TEXTO, lineHeight: 1.5 }}>{(dados as any).observacaoValorImovel}</Text>
+            <View>
+              {String((dados as any).observacaoValorImovel).split('\n').map((linha: string, i: number) => (
+                <Text key={i} style={{ fontSize: 9, color: TEXTO, lineHeight: 1.5, minHeight: linha.trim() === '' ? 6 : undefined }}>
+                  {linha || ' '}
+                </Text>
+              ))}
+            </View>
           </View>
         )}
 
