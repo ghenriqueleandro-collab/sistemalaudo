@@ -27,11 +27,14 @@ export default function EtapaGarantia({ form, setForm }: Props) {
           <option value="negativa">Imóvel não recomendado</option>
         </select>
 
-        {(form.garantiaClassificacao === 'observacoes' ||
-          form.garantiaClassificacao === 'negativa') && (
+        {form.garantiaClassificacao && (
           <textarea
             className="w-full border rounded p-2 min-h-[140px]"
-            placeholder="Digite as observações ou justificativa"
+            placeholder={
+              form.garantiaClassificacao === 'boa'
+                ? 'Observações adicionais (opcional)'
+                : 'Digite as observações ou justificativa'
+            }
             value={form.garantiaObservacoes}
             onChange={(e) =>
               setForm({

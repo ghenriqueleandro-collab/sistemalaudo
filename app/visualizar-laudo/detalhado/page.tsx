@@ -350,7 +350,7 @@ function obterTextoGarantia(classificacao?: string, observacoes?: string) {
   if (classificacao === 'boa') {
     return {
       titulo: 'O imóvel avaliado apresenta-se como boa garantia.',
-      texto: 'Após análise das características apresentadas no presente laudo, entendemos que o imóvel em questão reúne condições satisfatórias para ser aceito como garantia.',
+      texto: `Após análise das características apresentadas no presente laudo, entendemos que o imóvel em questão reúne condições satisfatórias para ser aceito como garantia.${observacoes ? ` ${observacoes}` : ''}`,
     }
   }
   if (classificacao === 'observacoes') {
@@ -1714,13 +1714,6 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     )}
                   </div>
                 </div>
-                {/* Observações do valor do imóvel */}
-                {(dados as any).observacaoValorImovel?.trim() && (
-                  <div className="mt-4 p-3 rounded-lg border border-slate-200 bg-slate-50">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Observações</p>
-                    <p className="text-sm text-slate-700 leading-relaxed" style={{ whiteSpace: 'pre-wrap' }}>{(dados as any).observacaoValorImovel}</p>
-                  </div>
-                )}
               </div>
             </PaginaFlexivel>
 
