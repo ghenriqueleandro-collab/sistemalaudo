@@ -266,6 +266,19 @@ export default function EtapaValorImovel({
           </div>
         )}
       </div>
+
+      {/* Campo de observação — seção 11 */}
+      <div className="space-y-1.5">
+        <label className={LBL}>Observações</label>
+        <textarea
+          name="observacaoValorImovel"
+          value={form.observacaoValorImovel || ''}
+          onChange={handleChange}
+          rows={4}
+          placeholder="Observações adicionais sobre o valor do imóvel (opcional)..."
+          className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white outline-none focus:border-blue-400 transition resize-none"
+        />
+      </div>
     </div>
   )
 }
