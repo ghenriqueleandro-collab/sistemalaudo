@@ -350,22 +350,25 @@ function obterTextoGarantia(classificacao?: string, observacoes?: string) {
   if (classificacao === 'boa') {
     return {
       titulo: 'O imóvel avaliado apresenta-se como boa garantia.',
-      texto: `Após análise das características apresentadas no presente laudo, entendemos que o imóvel em questão reúne condições satisfatórias para ser aceito como garantia.${observacoes ? ` ${observacoes}` : ''}`,
+      texto: 'Após análise das características apresentadas no presente laudo, entendemos que o imóvel em questão reúne condições satisfatórias para ser aceito como garantia.',
+      observacoes: observacoes || '',
     }
   }
   if (classificacao === 'observacoes') {
     return {
       titulo: 'O imóvel avaliado apresenta observações relevantes quanto à garantia.',
-      texto: `Após análise das características apresentada no presente laudo, verificamos que o imóvel poderá ser aceito como garantia, porém existem ressalvas que deverão ser avaliadas pelo interessado, ficando a aceitação final a seu critério.${observacoes ? ` Observações: ${observacoes}` : ''}`,
+      texto: 'Após análise das características apresentada no presente laudo, verificamos que o imóvel poderá ser aceito como garantia, porém existem ressalvas que deverão ser avaliadas pelo interessado, ficando a aceitação final a seu critério.',
+      observacoes: observacoes || '',
     }
   }
   if (classificacao === 'negativa') {
     return {
       titulo: 'O imóvel avaliado não é recomendado como garantia.',
-      texto: `Após análise das características apresentada no presente laudo, entendemos que o imóvel em questão não apresenta condições adequadas para aceitação como garantia.${observacoes ? ` Justificativa: ${observacoes}` : ''}`,
+      texto: 'Após análise das características apresentada no presente laudo, entendemos que o imóvel em questão não apresenta condições adequadas para aceitação como garantia.',
+      observacoes: observacoes || '',
     }
   }
-  return { titulo: '', texto: '' }
+  return { titulo: '', texto: '', observacoes: '' }
 }
 
 function arredondarValorLaudo(valor: number) {
@@ -2139,7 +2142,13 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               {garantiaTexto.titulo && (
                 <div className="mb-8 mt-8">
                   <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.garantia}. GARANTIA</h2>
-                  <div className="space-y-4 text-justify"><p><strong>{garantiaTexto.titulo}</strong></p><p>{garantiaTexto.texto}</p></div>
+                  <div className="space-y-4 text-justify">
+                    <p><strong>{garantiaTexto.titulo}</strong></p>
+                    <p>{garantiaTexto.texto}</p>
+                    {garantiaTexto.observacoes?.trim() && (
+                      <p style={{ whiteSpace: 'pre-wrap' }}>{garantiaTexto.observacoes}</p>
+                    )}
+                  </div>
                 </div>
               )}
               <div className="mb-8 mt-8">
