@@ -351,24 +351,21 @@ function obterTextoGarantia(classificacao?: string, observacoes?: string) {
     return {
       titulo: 'O imóvel avaliado apresenta-se como boa garantia.',
       texto: 'Após análise das características apresentadas no presente laudo, entendemos que o imóvel em questão reúne condições satisfatórias para ser aceito como garantia.',
-      observacoes: observacoes || '',
     }
   }
   if (classificacao === 'observacoes') {
     return {
       titulo: 'O imóvel avaliado apresenta observações relevantes quanto à garantia.',
-      texto: 'Após análise das características apresentada no presente laudo, verificamos que o imóvel poderá ser aceito como garantia, porém existem ressalvas que deverão ser avaliadas pelo interessado, ficando a aceitação final a seu critério.',
-      observacoes: observacoes || '',
+      texto: `Após análise das características apresentada no presente laudo, verificamos que o imóvel poderá ser aceito como garantia, porém existem ressalvas que deverão ser avaliadas pelo interessado, ficando a aceitação final a seu critério.${observacoes ? ` Observações: ${observacoes}` : ''}`,
     }
   }
   if (classificacao === 'negativa') {
     return {
       titulo: 'O imóvel avaliado não é recomendado como garantia.',
-      texto: 'Após análise das características apresentada no presente laudo, entendemos que o imóvel em questão não apresenta condições adequadas para aceitação como garantia.',
-      observacoes: observacoes || '',
+      texto: `Após análise das características apresentada no presente laudo, entendemos que o imóvel em questão não apresenta condições adequadas para aceitação como garantia.${observacoes ? ` Justificativa: ${observacoes}` : ''}`,
     }
   }
-  return { titulo: '', texto: '', observacoes: '' }
+  return { titulo: '', texto: '' }
 }
 
 function arredondarValorLaudo(valor: number) {
@@ -790,6 +787,21 @@ function VisualizarLaudoContent() {
     }))
   })()
   const temCddm    = elemsCddm.some((e: any) => (e.vu || e.valorUnitarioOferta) > 0)
+
+  // Variáveis para bloco evolutivo
+  const evSnap        = (dados as any).dadosCalculoEvolutivo as any | undefined
+  const isEvoVis      = dados.metodoAvaliacao === 'evolutivo'
+  const evInputs      = evSnap?.elementos || []
+  const evCalcElems   = evSnap?.resultado?.elementos || []
+  const evRes         = evSnap?.resultado
+  const pnVis = (v: any): number => {
+    if (v == null || v === '') return 0
+    if (typeof v === 'number') return isFinite(v) ? v : 0
+    return parseFloat(String(v).replace(/[R$\s.]/g, '').replace(',', '.')) || 0
+  }
+  const round3Vis = (v: number) => Math.round(v / 0.001) * 0.001
+  const fmt4Vis   = (v: number) => v.toFixed(4).replace('.', ',')
+  const fmt2Vis   = (v: number) => (Math.round(v * 100) / 100).toFixed(2).replace('.', ',')
   const gruposFotos = chunkArray(dados.fotos || [], 4)
   const paragrafosConsideracoesMercado = dividirTextoEmParagrafos(dados.consideracoesMercado || '')
   const paginasSecao8 = dividirParagrafosEmPaginas(paragrafosConsideracoesMercado, 3200, 8)
@@ -1532,7 +1544,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
             )}
 
             {/* ── HOMOGENEIZAÇÃO CDDM ───────────────────────────────── */}
-            {(temCddm || isEvoLaudo) && cddm && (
+            {temCddm && cddm && (
               <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
                 <CabecalhoLaudo />
                 <div className="mb-8 mt-8">
@@ -1672,6 +1684,237 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 </div>
               </PaginaFlexivel>
             )}
+
+            {/* ── HOMOGENEIZAÇÃO EVOLUTIVO ──────────────────────────────── */}
+            {isEvoVis && evSnap && evInputs.length > 0 && evRes && (() => {
+              const avArea  = pnVis(evSnap.avaliando?.area)
+              const avLocal = pnVis(evSnap.avaliando?.notaLocal) || 100
+              const avTopo  = pnVis(evSnap.avaliando?.notaTopo)  || 100
+              const avVis2  = pnVis(evSnap.avaliando?.notaVis)   || 100
+
+              // Usa resultado.elementos do snapshot ou recalcula
+              const elemsCalc: any[] = evCalcElems.length > 0
+                ? evCalcElems
+                : evInputs.map((e: any) => {
+                    const aE = pnVis(e.areaTerreno)
+                    const vO = pnVis(e.valorOferta)
+                    const fOStr = String(e.fatorOferta ?? '').trim()
+                    const fO = fOStr.includes(',') ? parseFloat(fOStr.replace(/\./g,'').replace(',','.')) || 1 : parseFloat(fOStr) || 1
+                    const bE = e.tipo === 'Terreno c/ benfeitoria' ? pnVis(e.benfElem) : 0
+                    if (aE <= 0 || vO <= 0) return null
+                    const vu = (vO * fO - bE) / aE
+                    if (vu <= 0) return null
+                    const ratio = avArea > 0 ? aE / avArea : 1
+                    const fA = round3Vis(Math.pow(ratio, (ratio < 0.7 || ratio > 1.3) ? 0.125 : 0.25))
+                    const fL = (pnVis(e.fatorLocal)||100) > 0 ? avLocal / (pnVis(e.fatorLocal)||100) : 1
+                    const fT = (pnVis(e.fatorTopografia)||100) > 0 ? avTopo / (pnVis(e.fatorTopografia)||100) : 1
+                    const fV = (pnVis(e.fatorVisibilidade)||100) > 0 ? avVis2 / (pnVis(e.fatorVisibilidade)||100) : 1
+                    const soma = vu * (1 + (fA-1) + (fL-1) + (fT-1) + (fV-1))
+                    const coef = soma / vu
+                    return { vu, fA, fL, fT, fV, soma, coef, valido: coef >= 0.5 && coef <= 2.0 }
+                  })
+
+              const thStyle: React.CSSProperties = { padding: '4px', fontWeight: 700, color: '#fff', textAlign: 'center', borderRight: '0.5px solid #475e9b', fontSize: '10px' }
+              const thLast: React.CSSProperties  = { ...thStyle, borderRight: 'none' }
+
+              const SubTabela = ({ titulo, nomeCampo, avLabel, getVal, getF }: {
+                titulo: string; nomeCampo: string; avLabel: string
+                getVal: (inp: any) => number; getF: (r: any) => number
+              }) => (
+                <div className="mb-3 evitar-quebra">
+                  <div style={{ background: '#EFF6FF', padding: '3px 6px', border: '0.5px solid #C9D3E6', borderBottom: 'none', fontSize: '10px', fontWeight: 700, color: '#1a3564', textTransform: 'uppercase' }}>{titulo}</div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '10px' }}>
+                    <thead>
+                      <tr style={{ background: '#1a3564' }}>
+                        <th style={{ ...thStyle, textAlign: 'left', paddingLeft: '6px' }}>Elem.</th>
+                        <th style={thStyle}>{nomeCampo}</th>
+                        <th style={thStyle}>Coeficiente</th>
+                        <th style={thStyle}>Diferença (R$/m²)</th>
+                        <th style={thLast}>V.U. Calculado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {elemsCalc.map((r: any, i: number) => {
+                        if (!r) return null
+                        const inp = evInputs[i] || {}
+                        const vu_i = r.vu ?? 0
+                        const f   = getF(r)
+                        const dif = (f - 1) * vu_i
+                        const vuC = vu_i * f
+                        const td: React.CSSProperties = { padding: '3px 4px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', borderTop: '0.5px solid #C9D3E6' }
+                        return (
+                          <tr key={i}>
+                            <td style={{ ...td, textAlign: 'left', paddingLeft: '6px' }}>{i+1}</td>
+                            <td style={td}>{fmt2Vis(getVal(inp))}</td>
+                            <td style={{ ...td, fontWeight: f !== 1 ? 700 : 400, color: f !== 1 ? '#2347C6' : '#1e293b' }}>{fmt4Vis(f)}</td>
+                            <td style={{ ...td, color: dif > 0 ? '#166534' : dif < 0 ? '#991b1b' : '#1e293b' }}>{dif >= 0 ? '+' : ''}{formatarMoeda(dif)}</td>
+                            <td style={{ ...td, borderRight: 'none' }}>{formatarMoeda(vuC)}/m²</td>
+                          </tr>
+                        )
+                      })}
+                      <tr style={{ background: '#EFF6FF' }}>
+                        <td colSpan={2} style={{ padding: '3px 6px', fontWeight: 700, color: '#1a3564', fontSize: '10px', borderTop: '0.5px solid #C9D3E6' }}>Avaliando</td>
+                        <td colSpan={3} style={{ padding: '3px 6px', fontWeight: 700, color: '#1a3564', fontSize: '10px', textAlign: 'center', borderTop: '0.5px solid #C9D3E6' }}>{avLabel}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )
+
+              const secNum = dados.localizacaoComparativos ? 2 : 1
+              const benfs  = (evSnap.benfeitorias || []).filter((b: any) => b?.valor > 0)
+
+              return (
+                <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
+                  <CabecalhoLaudo />
+                  <div className="mb-8 mt-8">
+                    <h2 className="text-2xl font-bold mb-4 titulo-laudo">
+                      {sn.metodologia}.{secNum} HOMOGENEIZAÇÃO — TERRENO
+                    </h2>
+
+                    <SubTabela titulo="Fator Área" nomeCampo="Área (m²)"
+                      avLabel={`${fmt2Vis(avArea)} m²`}
+                      getVal={(inp) => pnVis(inp.areaTerreno)}
+                      getF={(r) => r.fA ?? 1} />
+
+                    <SubTabela titulo="Fator Local" nomeCampo="Local"
+                      avLabel={`Nota ${fmt2Vis(avLocal)}`}
+                      getVal={(inp) => pnVis(inp.fatorLocal) || 100}
+                      getF={(r) => r.fL ?? 1} />
+
+                    <SubTabela titulo="Fator Topografia" nomeCampo="Topografia"
+                      avLabel={`Nota ${fmt2Vis(avTopo)}`}
+                      getVal={(inp) => pnVis(inp.fatorTopografia) || 100}
+                      getF={(r) => r.fT ?? 1} />
+
+                    <SubTabela titulo="Fator Visibilidade" nomeCampo="Visibilidade"
+                      avLabel={`Nota ${fmt2Vis(avVis2)}`}
+                      getVal={(inp) => pnVis(inp.fatorVisibilidade) || 100}
+                      getF={(r) => r.fV ?? 1} />
+
+                    {/* Coeficiente Geral */}
+                    <div className="mb-3 evitar-quebra">
+                      <div style={{ background: '#EFF6FF', padding: '3px 6px', border: '0.5px solid #C9D3E6', borderBottom: 'none', fontSize: '10px', fontWeight: 700, color: '#1a3564', textTransform: 'uppercase' }}>Coeficiente Geral (Soma Aditiva) e Estatísticas</div>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '10px' }}>
+                        <thead>
+                          <tr style={{ background: '#1a3564' }}>
+                            {['Elem.','V.U. s/ fatores','Somatória fatores','Coef. geral','V.U. Homog.'].map((h, i, arr) => (
+                              <th key={h} style={{ ...thStyle, ...(i===arr.length-1 ? thLast : {}), ...(i===0?{textAlign:'left',paddingLeft:'6px'}:{}) }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {elemsCalc.map((r: any, i: number) => {
+                            if (!r) return null
+                            const vu_r  = r.vu ?? 0
+                            const soma_r = vu_r * (1 + (r.fA??1)-1 + (r.fL??1)-1 + (r.fT??1)-1 + (r.fV??1)-1)
+                            const coef_r = vu_r > 0 ? soma_r / vu_r : 1
+                            const valido = coef_r >= 0.5 && coef_r <= 2.0
+                            const clr    = valido ? '#1e293b' : '#9ca3af'
+                            const td: React.CSSProperties = { padding: '3px 4px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', borderTop: '0.5px solid #C9D3E6', color: clr, fontStyle: valido ? 'normal' : 'italic' }
+                            return (
+                              <tr key={i}>
+                                <td style={{ ...td, textAlign: 'left', paddingLeft: '6px' }}>{i+1}</td>
+                                <td style={td}>{formatarMoeda(vu_r)}/m²</td>
+                                <td style={td}>{formatarMoeda(soma_r)}</td>
+                                <td style={{ ...td, fontWeight: 700, color: coef_r !== 1 ? '#2347C6' : clr }}>{fmt4Vis(coef_r)}</td>
+                                <td style={{ ...td, borderRight: 'none', fontWeight: 700, color: valido ? '#17325C' : '#991b1b' }}>{formatarMoeda(soma_r)}/m²</td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Estatísticas */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: '4px', marginBottom: '8px' }}>
+                      {[
+                        ['Elem. válidos',       String(evRes.N ?? 0)],
+                        ['T(N-1)',              String(evRes.N > 1 ? evRes.N - 1 : '—')],
+                        ['T Student',           (evRes.T??0).toFixed(3).replace('.',',')],
+                        ['Desvio padrão somas', formatarMoeda(evRes.desvio??0)],
+                        ['Resultado IC',        formatarMoeda(evRes.resultIC??0)],
+                        ['Grau de precisão',    evRes.grauPrecisao ?? '—'],
+                      ].map(([l,v]) => (
+                        <div key={String(l)} style={{ background: '#EAF0FB', border: '0.5px solid #C9D3E6', borderRadius: '3px', padding: '6px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '9px', color: '#5a7090', marginBottom: '2px' }}>{l}</div>
+                          <div style={{ fontSize: '11px', fontWeight: 700, color: '#17325C' }}>{v}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Tabela intervalos */}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', marginBottom: '8px' }}>
+                      <thead>
+                        <tr style={{ background: '#1a3564' }}>
+                          <th style={{ ...thStyle, textAlign: 'left', paddingLeft: '8px' }}>Intervalo</th>
+                          <th style={thStyle}>V.U. Terreno (R$/m²)</th>
+                          <th style={thLast}>Valor do Terreno (R$)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {([
+                          ['Mínimo',          evRes.minimo,   (evRes.minimo??0)   * avArea, false],
+                          ['Médio (adotado)', evRes.media,    (evRes.media??0)    * avArea, true ],
+                          ['Máximo',          evRes.maximo,   (evRes.maximo??0)   * avArea, false],
+                          ['Limite −30%',     evRes.lim30inf, (evRes.lim30inf??0) * avArea, false],
+                          ['Limite +30%',     evRes.lim30sup, (evRes.lim30sup??0) * avArea, false],
+                        ] as [string,number,number,boolean][]).map(([lbl,vu,tot,hl]) => (
+                          <tr key={lbl} style={{ background: hl ? '#EFF6FF' : 'transparent' }}>
+                            <td style={{ padding: '3px 8px', borderTop: '0.5px solid #C9D3E6', fontWeight: hl ? 700 : 400, color: hl ? '#1a3564' : '#1e293b' }}>{lbl}</td>
+                            <td style={{ padding: '3px 4px', textAlign: 'center', borderTop: '0.5px solid #C9D3E6', borderLeft: '0.5px solid #C9D3E6', fontWeight: hl ? 700 : 400, color: hl ? '#1a3564' : '#1e293b' }}>{formatarMoeda(vu??0)}</td>
+                            <td style={{ padding: '3px 4px', textAlign: 'center', borderTop: '0.5px solid #C9D3E6', borderLeft: '0.5px solid #C9D3E6', fontWeight: hl ? 700 : 400, color: hl ? '#1a3564' : '#1e293b' }}>{formatarMoeda(tot??0)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    <p style={{ fontSize: '9px', fontStyle: 'italic', color: '#475569', marginBottom: '8px' }}>
+                      * Elementos com coeficiente fora do intervalo [0,5; 2,0] foram excluídos do cálculo (IBAPE).
+                    </p>
+
+                    {/* VEIU */}
+                    {benfs.length > 0 && (
+                      <>
+                        <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#17325C', marginBottom: '6px', marginTop: '12px' }}>
+                          {sn.metodologia}.{secNum + 1} Valor das Edificações — CUB R8N depreciado (VEIU)
+                        </h3>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #C9D3E6', fontSize: '10px', marginBottom: '6px' }}>
+                          <thead>
+                            <tr style={{ background: '#1a3564' }}>
+                              {['Edificação','Área (m²)','CUB R8N (R$/m²)','Pc','Idade (anos)','Foc','Valor (R$)'].map((h,i,arr) => (
+                                <th key={h} style={{ ...thStyle, ...(i===arr.length-1?thLast:{}) }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {benfs.map((b: any, i: number) => {
+                              const td2: React.CSSProperties = { padding: '3px 4px', textAlign: 'center', borderRight: '0.5px solid #C9D3E6', borderTop: '0.5px solid #C9D3E6' }
+                              return (
+                                <tr key={i}>
+                                  <td style={{ ...td2, textAlign: 'left', paddingLeft: '6px' }}>{b.descricao || `Edificação ${i+1}`}</td>
+                                  <td style={td2}>{b.area || '—'}</td>
+                                  <td style={td2}>{b.cub || '—'}</td>
+                                  <td style={td2}>{typeof b.Pc === 'number' ? b.Pc.toFixed(4).replace('.',',') : (b.pc || '—')}</td>
+                                  <td style={td2}>{b.idadeReal || '—'}</td>
+                                  <td style={td2}>{typeof b.Foc === 'number' ? b.Foc.toFixed(4).replace('.',',') : '—'}</td>
+                                  <td style={{ ...td2, borderRight: 'none', fontWeight: 700, color: '#17325C' }}>{formatarMoeda(b.valor||0)}</td>
+                                </tr>
+                              )
+                            })}
+                            <tr style={{ background: '#EFF6FF' }}>
+                              <td colSpan={6} style={{ padding: '3px 6px', textAlign: 'right', fontWeight: 700, color: '#1a3564', borderTop: '0.5px solid #C9D3E6' }}>Total VEIU</td>
+                              <td style={{ padding: '3px 6px', textAlign: 'center', fontWeight: 700, color: '#1a3564', borderTop: '0.5px solid #C9D3E6', borderLeft: '0.5px solid #C9D3E6' }}>{formatarMoeda(benfs.reduce((a: number, b: any) => a + (b.valor||0), 0))}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        <p style={{ fontSize: '9px', fontStyle: 'italic', color: '#475569' }}>Fórmula: Valor da Edificação = CUB R8N × Pc × Área × Foc (Ross-Heidecke)</p>
+                      </>
+                    )}
+                  </div>
+                </PaginaFlexivel>
+              )
+            })()}
 
             <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
               <CabecalhoLaudo />
@@ -2142,13 +2385,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               {garantiaTexto.titulo && (
                 <div className="mb-8 mt-8">
                   <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.garantia}. GARANTIA</h2>
-                  <div className="space-y-4 text-justify">
-                    <p><strong>{garantiaTexto.titulo}</strong></p>
-                    <p>{garantiaTexto.texto}</p>
-                    {garantiaTexto.observacoes?.trim() && (
-                      <p style={{ whiteSpace: 'pre-wrap' }}>{garantiaTexto.observacoes}</p>
-                    )}
-                  </div>
+                  <div className="space-y-4 text-justify"><p><strong>{garantiaTexto.titulo}</strong></p><p>{garantiaTexto.texto}</p></div>
                 </div>
               )}
               <div className="mb-8 mt-8">
