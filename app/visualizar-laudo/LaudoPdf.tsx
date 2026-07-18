@@ -594,7 +594,8 @@ export function LaudoPdf({
   const evSnapData  = (dados as any).dadosCalculoEvolutivo as any | undefined
   const isEvo       = dados.metodoAvaliacao === 'evolutivo'
   const elemsCddm   = cddmData?.elementos || []
-  const elemsEv     = evSnapData?.elementos || []
+  const elemsEv     = evSnapData?.elementos || []           // inputs brutos (para cards)
+  const elemsEvCalc = evSnapData?.resultado?.elementos || [] // elementos calculados (para tabelas)
   const elemsExibir = isEvo ? elemsEv : elemsCddm
   const temCddm     = elemsCddm.length > 0
   // Para o mapa e seções de cálculo: usar elementos do método ativo
@@ -1347,8 +1348,8 @@ export function LaudoPdf({
           </View>
         )}
 
-        {/* ── 9.1. HOMOGENEIZAÇÃO (só comparativo) ────────────────────────── */}
-        {(temCddm || isEvo) && (
+        {/* ── HOMOGENEIZAÇÃO — CDDM ────────────────────────────────────── */}
+        {temCddm && (
           <>
             <H3 id="s-10-hom">{dados.localizacaoComparativos ? '10.2.' : '10.1.'} Homogeneização</H3>
             <View style={s.homogTable}>
@@ -1388,6 +1389,239 @@ export function LaudoPdf({
             </View>
           </>
         )}
+
+        {/* ── HOMOGENEIZAÇÃO — EVOLUTIVO ─────────────────────────────────── */}
+        {isEvo && evSnapData?.resultado && (evSnapData?.elementos || []).length > 0 && (() => {
+          const secNum     = dados.localizacaoComparativos ? '10.2.' : '10.1.'
+          const resEv      = evSnapData.resultado
+          const avArea     = parseFloat(String(evSnapData.avaliando?.area || '0').replace(',', '.')) || 0
+          const avLocal    = parseFloat(String(evSnapData.avaliando?.notaLocal || '100').replace(',', '.')) || 100
+          const avTopo     = parseFloat(String(evSnapData.avaliando?.notaTopo  || '100').replace(',', '.')) || 100
+          const avVis      = parseFloat(String(evSnapData.avaliando?.notaVis   || '100').replace(',', '.')) || 100
+          const elemsInput = evSnapData.elementos || []
+          const fmt4       = (v: number) => v.toFixed(4).replace('.', ',')
+          const fmt2br     = (v: number) => (Math.round(v * 100) / 100).toFixed(2).replace('.', ',')
+          const pnMotor    = (v: any): number => {
+            if (v == null || v === '') return 0
+            if (typeof v === 'number') return isFinite(v) ? v : 0
+            return parseFloat(String(v).replace(/[R$\s.]/g, '').replace(',', '.')) || 0
+          }
+          const round3Ev = (v: number) => Math.round(v / 0.001) * 0.001
+
+          // Usa resultado.elementos do snapshot quando disponível; recalcula para snapshots antigos
+          const elemsCalcFinal: any[] = (elemsEvCalc.length > 0)
+            ? elemsEvCalc
+            : elemsInput.map((e: any) => {
+                const aE = pnMotor(e.areaTerreno)
+                const vO = pnMotor(e.valorOferta)
+                const fOStr = String(e.fatorOferta ?? '').trim()
+                const fO = fOStr.includes(',') ? parseFloat(fOStr.replace(/\./g, '').replace(',', '.')) || 1 : parseFloat(fOStr) || 1
+                const bE = e.tipo === 'Terreno c/ benfeitoria' ? pnMotor(e.benfElem) : 0
+                if (aE <= 0 || vO <= 0) return null
+                const vu = (vO * fO - bE) / aE
+                if (vu <= 0) return null
+                const ratio = avArea > 0 ? aE / avArea : 1
+                const fA = round3Ev(Math.pow(ratio, (ratio < 0.7 || ratio > 1.3) ? 0.125 : 0.25))
+                const fL = (pnMotor(e.fatorLocal) || 100) > 0 ? avLocal / (pnMotor(e.fatorLocal) || 100) : 1
+                const fT = (pnMotor(e.fatorTopografia) || 100) > 0 ? avTopo / (pnMotor(e.fatorTopografia) || 100) : 1
+                const fV = (pnMotor(e.fatorVisibilidade) || 100) > 0 ? avVis / (pnMotor(e.fatorVisibilidade) || 100) : 1
+                const soma = vu * (1 + (fA - 1) + (fL - 1) + (fT - 1) + (fV - 1))
+                const coef = soma / vu
+                const valido = coef >= 0.5 && coef <= 2.0
+                return { vu, fA, fL, fT, fV, soma, coef, valido }
+              })
+
+          // Helper: sub-tabela por fator
+          const TabelaFator = ({ titulo, nomeCampo, avLabel, getValElem, getFator }: {
+            titulo: string; nomeCampo: string; avLabel: string
+            getValElem: (inp: any) => number; getFator: (r: any) => number
+          }) => (
+            <View style={{ marginBottom: 6 }}>
+              <View style={{ backgroundColor: '#EFF6FF', paddingVertical: 3, paddingHorizontal: 5, borderWidth: 0.5, borderColor: CINZA, borderBottomWidth: 0 }}>
+                <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: AZUL, textTransform: 'uppercase' }}>{titulo}</Text>
+              </View>
+              <View style={s.homogTable}>
+                <View style={s.homogRowH}>
+                  <Text style={[s.homogTh,{flex:0.5,textAlign:'left',paddingLeft:4}]}>Elem.</Text>
+                  <Text style={[s.homogTh,{flex:1.2}]}>{nomeCampo}</Text>
+                  <Text style={[s.homogTh,{flex:1.0}]}>Coeficiente</Text>
+                  <Text style={[s.homogTh,{flex:1.3}]}>Diferença (R$/m²)</Text>
+                  <Text style={[s.homogThLast,{flex:1.3}]}>V.U. Calculado</Text>
+                </View>
+                {elemsCalcFinal.map((r: any, i: number) => {
+                  if (!r) return null
+                  const inp  = elemsInput[i] || {}
+                  const vu_i = r.vu ?? 0
+                  const f    = getFator(r)
+                  const dif  = (f - 1) * vu_i
+                  const vuC  = vu_i * f
+                  const isLast = i === elemsCalcFinal.length - 1
+                  return (
+                    <View key={`${titulo}-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
+                      <Text style={[s.homogTd,{flex:0.5,textAlign:'left',paddingLeft:4}]}>{i+1}</Text>
+                      <Text style={[s.homogTd,{flex:1.2}]}>{fmt2br(getValElem(inp))}</Text>
+                      <Text style={[s.homogTd,{flex:1.0,color: f !== 1 ? AZUL : TEXTO, fontFamily: f !== 1 ? 'Helvetica-Bold' : 'Helvetica'}]}>{fmt4(f)}</Text>
+                      <Text style={[s.homogTd,{flex:1.3,color: dif > 0 ? '#166534' : dif < 0 ? '#991b1b' : TEXTO}]}>{dif >= 0 ? '+' : ''}{fm(dif)}</Text>
+                      <Text style={[s.homogTdLast,{flex:1.3}]}>{fm(vuC)}/m²</Text>
+                    </View>
+                  )
+                })}
+                <View style={[s.homogRow, {backgroundColor: AZULLT}]}>
+                  <Text style={[s.homogTd,{flex:1.7,textAlign:'left',paddingLeft:4,fontFamily:'Helvetica-Bold',color:AZUL}]}>Avaliando</Text>
+                  <Text style={[s.homogTdLast,{flex:3.6,fontFamily:'Helvetica-Bold',color:AZUL,textAlign:'center'}]}>{avLabel}</Text>
+                </View>
+              </View>
+            </View>
+          )
+
+          return (
+            <>
+              <H3 id="s-10-hom">{secNum} Homogeneização — Terreno</H3>
+
+              <TabelaFator titulo="Fator Área" nomeCampo="Área (m²)"
+                avLabel={`${fmt2br(avArea)} m²`}
+                getValElem={(inp) => pnMotor(inp.areaTerreno)}
+                getFator={(r) => r.fA ?? 1} />
+
+              <TabelaFator titulo="Fator Local" nomeCampo="Local"
+                avLabel={`Nota ${fmt2br(avLocal)}`}
+                getValElem={(inp) => pnMotor(inp.fatorLocal) || 100}
+                getFator={(r) => r.fL ?? 1} />
+
+              <TabelaFator titulo="Fator Topografia" nomeCampo="Topografia"
+                avLabel={`Nota ${fmt2br(avTopo)}`}
+                getValElem={(inp) => pnMotor(inp.fatorTopografia) || 100}
+                getFator={(r) => r.fT ?? 1} />
+
+              <TabelaFator titulo="Fator Visibilidade" nomeCampo="Visibilidade"
+                avLabel={`Nota ${fmt2br(avVis)}`}
+                getValElem={(inp) => pnMotor(inp.fatorVisibilidade) || 100}
+                getFator={(r) => r.fV ?? 1} />
+
+              {/* Coeficiente Geral */}
+              <View style={{ marginBottom: 6 }}>
+                <View style={{ backgroundColor: '#EFF6FF', paddingVertical: 3, paddingHorizontal: 5, borderWidth: 0.5, borderColor: CINZA, borderBottomWidth: 0 }}>
+                  <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: AZUL, textTransform: 'uppercase' }}>Coeficiente Geral (Soma Aditiva) e Estatísticas</Text>
+                </View>
+                <View style={s.homogTable}>
+                  <View style={s.homogRowH}>
+                    <Text style={[s.homogTh,{flex:0.5,textAlign:'left',paddingLeft:4}]}>Elem.</Text>
+                    <Text style={[s.homogTh,{flex:1.2}]}>V.U. s/ fatores</Text>
+                    <Text style={[s.homogTh,{flex:1.2}]}>Somatória fatores</Text>
+                    <Text style={[s.homogTh,{flex:1.0}]}>Coef. geral</Text>
+                    <Text style={[s.homogThLast,{flex:1.2}]}>V.U. Homog.</Text>
+                  </View>
+                  {elemsCalcFinal.map((r: any, i: number) => {
+                    if (!r) return null
+                    const vu_r   = r.vu  ?? 0
+                    const fA_r   = r.fA  ?? 1
+                    const fL_r   = r.fL  ?? 1
+                    const fT_r   = r.fT  ?? 1
+                    const fV_r   = r.fV  ?? 1
+                    const soma_r = vu_r * (1 + (fA_r - 1) + (fL_r - 1) + (fT_r - 1) + (fV_r - 1))
+                    const coef_r = vu_r > 0 ? soma_r / vu_r : (r.coef ?? 1)
+                    const valido  = coef_r >= 0.5 && coef_r <= 2.0
+                    const isLast  = i === elemsCalcFinal.length - 1
+                    const td      = valido ? s.homogTd : s.homogTdOut
+                    return (
+                      <View key={`coef-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
+                        <Text style={[td,{flex:0.5,textAlign:'left',paddingLeft:4}]}>{i+1}</Text>
+                        <Text style={[td,{flex:1.2}]}>{fm(vu_r)}/m²</Text>
+                        <Text style={[td,{flex:1.2}]}>{fm(soma_r)}</Text>
+                        <Text style={[td,{flex:1.0,color: coef_r !== 1 ? AZUL : TEXTO, fontFamily:'Helvetica-Bold'}]}>{fmt4(coef_r)}</Text>
+                        <Text style={[valido ? s.homogTdLast : {...s.homogTdOut,borderRightWidth:0},{flex:1.2,fontFamily:'Helvetica-Bold',color: valido ? TEXTO : '#991b1b'}]}>{fm(soma_r)}/m²</Text>
+                      </View>
+                    )
+                  })}
+                </View>
+              </View>
+
+              {/* Estatísticas */}
+              <View style={{ flexDirection: 'row', marginTop: 5, marginBottom: 4 }}>
+                {([
+                  ['Elem. válidos', String(resEv.N ?? 0)],
+                  ['T(N-1)', String(resEv.N > 1 ? resEv.N - 1 : '—')],
+                  ['T Student', (resEv.T??0).toFixed(3).replace('.',',')],
+                  ['Desvio padrão somas', fm(resEv.desvio??0)],
+                  ['Resultado IC', fm(resEv.resultIC??0)],
+                  ['Grau de precisão', resEv.grauPrecisao ?? '—'],
+                ] as [string,string][]).map(([lbl,val]) => (
+                  <View key={lbl} style={{ flex:1, backgroundColor:AZULLT, borderWidth:0.5, borderColor:CINZA, marginRight:3, padding:4, alignItems:'center' }}>
+                    <Text style={{ fontSize:6, color:'#5a7090', marginBottom:1, textAlign:'center' }}>{lbl}</Text>
+                    <Text style={{ fontSize:8, fontFamily:'Helvetica-Bold', color:AZUL, textAlign:'center' }}>{val}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Tabela intervalos terreno */}
+              <View style={[s.homogTable, {marginBottom:4}]}>
+                <View style={s.homogRowH}>
+                  <Text style={[s.homogTh,{flex:1.5}]}>Intervalo</Text>
+                  <Text style={[s.homogTh,{flex:1.5}]}>V.U. Terreno (R$/m²)</Text>
+                  <Text style={[s.homogThLast,{flex:1.5}]}>Valor do Terreno (R$)</Text>
+                </View>
+                {([
+                  ['Mínimo',          resEv.minimo,   (resEv.minimo??0)   * avArea, false],
+                  ['Médio (adotado)', resEv.media,    (resEv.media??0)    * avArea, true ],
+                  ['Máximo',          resEv.maximo,   (resEv.maximo??0)   * avArea, false],
+                  ['Limite −30%',     resEv.lim30inf, (resEv.lim30inf??0) * avArea, false],
+                  ['Limite +30%',     resEv.lim30sup, (resEv.lim30sup??0) * avArea, false],
+                ] as [string,number,number,boolean][]).map(([lbl,vu,tot,hl],idx,arr) => (
+                  <View key={lbl} style={[idx<arr.length-1?s.homogRowB:s.homogRow, hl?{backgroundColor:AZULLT}:{}]}>
+                    <Text style={[s.homogTd,{flex:1.5,textAlign:'left',paddingLeft:5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{lbl}</Text>
+                    <Text style={[s.homogTd,{flex:1.5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{fm(vu??0)}</Text>
+                    <Text style={[s.homogTdLast,{flex:1.5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{fm(tot??0)}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <Text style={[s.legendaTxt,{marginTop:2,marginBottom:4,fontStyle:'italic',color:'#475569'}]}>
+                * Elementos com coeficiente fora do intervalo [0,5; 2,0] foram excluídos do cálculo (IBAPE).
+              </Text>
+
+              {/* VEIU */}
+              {(evSnapData.benfeitorias || []).filter((b: any) => b?.valor > 0).length > 0 && (() => {
+                const benfs: any[] = (evSnapData.benfeitorias || []).filter((b: any) => b?.valor > 0)
+                const secVEIU = dados.localizacaoComparativos ? '10.3.' : '10.2.'
+                return (
+                  <>
+                    <H3>{secVEIU} Valor das Edificações — CUB R8N depreciado (VEIU)</H3>
+                    <View style={s.homogTable}>
+                      <View style={s.homogRowH}>
+                        <Text style={[s.homogTh,{flex:1.8}]}>Edificação</Text>
+                        <Text style={[s.homogTh,{flex:0.8}]}>Área (m²)</Text>
+                        <Text style={[s.homogTh,{flex:0.9}]}>CUB R8N (R$/m²)</Text>
+                        <Text style={[s.homogTh,{flex:0.6}]}>Pc</Text>
+                        <Text style={[s.homogTh,{flex:0.7}]}>Idade (anos)</Text>
+                        <Text style={[s.homogTh,{flex:0.6}]}>Foc</Text>
+                        <Text style={[s.homogThLast,{flex:1.2}]}>Valor (R$)</Text>
+                      </View>
+                      {benfs.map((b: any, i: number) => {
+                        const isLast = i === benfs.length - 1
+                        return (
+                          <View key={`veiu-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
+                            <Text style={[s.homogTd,{flex:1.8,textAlign:'left',paddingLeft:4}]}>{b.descricao || `Edificação ${i+1}`}</Text>
+                            <Text style={[s.homogTd,{flex:0.8}]}>{b.area || '—'}</Text>
+                            <Text style={[s.homogTd,{flex:0.9}]}>{b.cub || '—'}</Text>
+                            <Text style={[s.homogTd,{flex:0.6}]}>{typeof b.Pc === 'number' ? b.Pc.toFixed(4).replace('.',',') : (b.pc || '—')}</Text>
+                            <Text style={[s.homogTd,{flex:0.7}]}>{b.idadeReal || '—'}</Text>
+                            <Text style={[s.homogTd,{flex:0.6}]}>{typeof b.Foc === 'number' ? b.Foc.toFixed(4).replace('.',',') : '—'}</Text>
+                            <Text style={[s.homogTdLast,{flex:1.2,fontFamily:'Helvetica-Bold',color:AZUL}]}>{fm(b.valor || 0)}</Text>
+                          </View>
+                        )
+                      })}
+                      <View style={[s.homogRow, {backgroundColor: AZULLT}]}>
+                        <Text style={[s.homogTd,{flex:5.4,textAlign:'right',paddingRight:6,fontFamily:'Helvetica-Bold',color:AZUL}]}>Total VEIU</Text>
+                        <Text style={[s.homogTdLast,{flex:1.2,fontFamily:'Helvetica-Bold',color:AZUL}]}>{fm(benfs.reduce((acc: number, b: any) => acc + (b.valor||0), 0))}</Text>
+                      </View>
+                    </View>
+                    <Text style={[s.legendaTxt,{marginTop:3}]}>Fórmula: Valor da Edificação = CUB R8N × Pc × Área × Foc (Ross-Heidecke)</Text>
+                  </>
+                )
+              })()}
+            </>
+          )
+        })()}
 
         {/* ── Memorial de cálculos (comparativo) ──────────────────────────── */}
         {temCddm && cddmData && (
