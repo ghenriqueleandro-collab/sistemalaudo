@@ -1439,8 +1439,40 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
             </PaginaFlexivel>
 
 
-            {/* ── CARDS DE ELEMENTOS COMPARATIVOS ──────────────────────── */}
-            {elemsCddm.length > 0 && elemsCddm.map((el: any, i: number) => {
+            {/* ── CARDS DE ELEMENTOS COMPARATIVOS (CDDM) ou EVOLUTIVO ─── */}
+            {(() => {
+              // Para evolutivo: usa os inputs brutos de evSnap.elementos
+              // Para comparativo: usa elemsCddm (mesclado com elementosComparativos)
+              const listaElems: any[] = isEvoVis
+                ? (evSnap?.elementos || []).map((e: any, idx: number) => ({
+                    // Adapta campos do evolutivo para o mesmo formato do CDDM
+                    ...e,
+                    tipo:               e.tipo          || '',
+                    logradouro:         e.logradouro    || e.endereco || '',
+                    bairro:             e.bairro        || '',
+                    cidade:             e.cidade        || '',
+                    uf:                 e.uf            || '',
+                    coordenadas:        e.coordenadas   || '',
+                    fonte:              e.fonte         || '',
+                    data:               e.data          || '',
+                    areaTerreno:        e.areaTerreno   || 0,
+                    valorOferta:        e.valorOferta   || '',
+                    fatorOferta:        e.fatorOferta   || '',
+                    observacoes:        e.observacoes   || '',
+                    // campos calculados — para exibir VU
+                    vu: (() => {
+                      const calc = evSnap?.resultado?.elementos?.[idx]
+                      if (calc?.vu > 0) return calc.vu
+                      // Fallback: calcular VU do terreno
+                      const pn = (v: any) => { if (!v) return 0; const s = String(v).replace(/[R$\s.]/g,'').replace(',','.'); return parseFloat(s)||0 }
+                      const aE = pn(e.areaTerreno); const vO = pn(e.valorOferta)
+                      const fO = pn(e.fatorOferta) || 1; const bE = e.tipo === 'Terreno c/ benfeitoria' ? pn(e.benfElem) : 0
+                      return aE > 0 && vO > 0 ? (vO * fO - bE) / aE : 0
+                    })(),
+                  }))
+                : elemsCddm
+
+              return listaElems.length > 0 && listaElems.map((el: any, i: number) => {
               const fm = (v: number) => v > 0 ? formatarMoeda(v) : ''
               const ok = (v: any) => { const s = String(v ?? '').trim(); return s && s !== '0' && s !== '-' ? s : '' }
               const focLabel = (v: any) => ({ A: 'A – Novo', B: 'B – Entre novo e regular', C: 'C – Regular', D: 'D – Entre regular e reparos simples', E: 'E – Reparos simples', F: 'F – Entre reparos simples e importantes', G: 'G – Reparos importantes', H: 'H – Entre reparos importantes e sem valor', I: 'I – Sem valor' }[(String(v||'')).toUpperCase()] || ok(v))
@@ -1517,6 +1549,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 </div>
               )
             })}
+            })()}
 
             {dados.imagemBenfeitorias && (
               <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
