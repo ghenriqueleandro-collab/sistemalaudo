@@ -65,19 +65,6 @@ function formatarData(iso?: string) {
   return new Date(iso).toLocaleDateString('pt-BR')
 }
 
-const statusLabel: Record<string, string> = {
-  em_preenchimento: 'Em preenchimento',
-  finalizado: 'Finalizado',
-}
-
-const statusVistoriaLabel: Record<string, string> = {
-  aguardando_agendamento: 'Aguardando agendamento',
-  agendada: 'Vistoria agendada',
-  realizada: 'Vistoria realizada',
-  fotos_disponiveis: 'Fotos disponíveis',
-  finalizado: 'Finalizado',
-}
-
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 export default function MeusLaudosPage() {
