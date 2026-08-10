@@ -9,28 +9,41 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import AppShell from '../components/AppShell'
+import {
+  filtrarLaudos,
+  formatarStatusAcompanhamento,
+  listarLaudos,
+  type LaudoResumo,
+  type StatusAcompanhamento,
+} from '../../lib/laudos-storage'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-type Laudo = {
-  id: string
-  endereco?: string
-  proprietario?: string
-  tipo?: string
-  finalidade?: string
-  solicitante?: string
-  status?: string
-  statusVistoria?: string
-  statusAcompanhamento?: string
-  tipoLaudo?: string
-  criadoEm?: string
-  atualizadoEm?: string
-  editorResponsavelNome?: string
-  editorResponsavelEmail?: string
-  matricula?: string
-  metodoAvaliacao?: string
+
+// ─── Status de acompanhamento ────────────────────────────────────────────────
+
+const acompanhamentoConfig: Record<StatusAcompanhamento, { classe: string; dot: string }> = {
+  levantamento_documentos: { classe: 'bg-amber-50 text-amber-700',   dot: 'bg-amber-400' },
+  atuando_vistoria:        { classe: 'bg-purple-50 text-purple-700', dot: 'bg-purple-400' },
+  atuando_pesquisa:        { classe: 'bg-blue-50 text-blue-700',     dot: 'bg-blue-400' },
+  concluido:               { classe: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-400' },
+}
+
+const ORDEM_STATUS: StatusAcompanhamento[] = [
+  'levantamento_documentos',
+  'atuando_vistoria',
+  'atuando_pesquisa',
+  'concluido',
+]
+
+const statusVistoriaLabel: Record<string, string> = {
+  aguardando_agendamento: 'Aguardando agendamento',
+  agendada:               'Vistoria agendada',
+  realizada:              'Vistoria realizada',
+  fotos_disponiveis:      'Fotos disponíveis',
+  finalizado:             'Finalizado',
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -72,10 +85,11 @@ export default function MeusLaudosPage() {
   const router = useRouter()
 
   // Estado de lista
-  const [laudos, setLaudos] = useState<Laudo[]>([])
+  const [laudos, setLaudos] = useState<LaudoResumo[]>([])
   const [empresas, setEmpresas] = useState<{ id: string; nome: string }[]>([])
   const [carregando, setCarregando] = useState(true)
   const [busca, setBusca] = useState('')
+  const [filtroAcomp, setFiltroAcomp] = useState<StatusAcompanhamento | ''>('')
 
   // Estado do modal de criação
   const [mostrarModal, setMostrarModal] = useState(false)
@@ -123,26 +137,28 @@ export default function MeusLaudosPage() {
   }, [status])
 
   useEffect(() => {
-    if (status === 'authenticated') carregarDados()
-  }, [status])
+    if (status === 'authenticated') {
+      carregarDados()
+      const intervalo = setInterval(carregarDados, 15_000)
+      return () => clearInterval(intervalo)
+    }
+  }, [status, carregarDados])
 
   // ─── Funções de dados ────────────────────────────────────────────────────
 
-  async function carregarDados() {
-    setCarregando(true)
+  const carregarDados = useCallback(async () => {
     try {
-      const [resLaudos, resEmpresas] = await Promise.all([
-        fetch('/api/laudos', { cache: 'no-store' }),
+      const [dadosLaudos, resEmpresas] = await Promise.all([
+        listarLaudos(),
         fetch('/api/empresas', { cache: 'no-store' }),
       ])
-      const dadosLaudos = await resLaudos.json()
       const dadosEmpresas = await resEmpresas.json()
-      setLaudos((dadosLaudos || []).filter(Boolean))
+      setLaudos(dadosLaudos)
       setEmpresas((dadosEmpresas || []).filter(Boolean))
     } finally {
       setCarregando(false)
     }
-  }
+  }, [])
 
   // ─── Geocodificação ──────────────────────────────────────────────────────
 
@@ -258,11 +274,28 @@ export default function MeusLaudosPage() {
     }
   }
 
-  // ─── Filtro de busca ─────────────────────────────────────────────────────
+  // ─── Contadores e filtros ────────────────────────────────────────────────────
 
-  const laudosFiltrados = laudos.filter((l) => {
-    if (!busca.trim()) return true
-    const q = busca.toLowerCase()
+  const contadores = useMemo(
+    () => Object.fromEntries(
+      ORDEM_STATUS.map((st) => [
+        st,
+        laudos.filter((l) => (l.statusAcompanhamento || 'levantamento_documentos') === st).length,
+      ])
+    ) as Record<StatusAcompanhamento, number>,
+    [laudos]
+  )
+
+  const laudosFiltrados = useMemo(() => {
+    let resultado = filtrarLaudos(laudos, { busca })
+    if (filtroAcomp) {
+      resultado = resultado.filter(
+        (l) => (l.statusAcompanhamento || 'levantamento_documentos') === filtroAcomp
+      )
+    }
+    return resultado
+  }, [laudos, busca, filtroAcomp])
+
     return (
       l.endereco?.toLowerCase().includes(q) ||
       l.proprietario?.toLowerCase().includes(q) ||
@@ -293,6 +326,30 @@ export default function MeusLaudosPage() {
           </button>
         </div>
 
+        {/* Cards de dashboard — filtro por statusAcompanhamento */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          {ORDEM_STATUS.map((st) => {
+            const cfg = acompanhamentoConfig[st]
+            const ativo = filtroAcomp === st
+            return (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setFiltroAcomp(ativo ? '' : st)}
+                className={`rounded-[20px] border p-4 text-left transition ${
+                  ativo ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                }`}
+              >
+                <span className={`inline-block h-2 w-2 rounded-full ${cfg.dot} mb-2`} />
+                <div className="text-2xl font-semibold text-slate-950">{contadores[st]}</div>
+                <div className="mt-1 text-xs text-slate-500 leading-tight">
+                  {formatarStatusAcompanhamento(st)}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
         {/* Busca */}
         <div className="mb-5">
           <input
@@ -317,7 +374,6 @@ export default function MeusLaudosPage() {
                 ? `/laudo/simplificado?id=${laudo.id}`
                 : `/novo-laudo?id=${laudo.id}`
               const rotaVis = `/visualizar-laudo?id=${laudo.id}`
-              const svLabel = statusVistoriaLabel[laudo.statusVistoria || ''] || laudo.statusVistoria || '—'
               return (
                 <div key={laudo.id} className="px-6 py-4 flex items-start justify-between gap-4 hover:bg-slate-50 transition">
                   <div className="min-w-0 flex-1">
@@ -328,18 +384,23 @@ export default function MeusLaudosPage() {
                       {laudo.matricula && ` · Matrícula: ${laudo.matricula}`}
                     </p>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {laudo.status && (
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          laudo.status === 'finalizado' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'
-                        }`}>
-                          {statusLabel[laudo.status] || laudo.status}
-                        </span>
-                      )}
-                      {laudo.statusVistoria && (
+                      {/* Status de acompanhamento — principal */}
+                      {(() => {
+                        const st = (laudo.statusAcompanhamento || 'levantamento_documentos') as StatusAcompanhamento
+                        const cfg = acompanhamentoConfig[st]
+                        return (
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cfg.classe}`}>
+                            {formatarStatusAcompanhamento(st)}
+                          </span>
+                        )
+                      })()}
+                      {/* Status de vistoria — só se existir e for relevante */}
+                      {laudo.statusVistoria && laudo.statusVistoria !== 'aguardando_agendamento' && (
                         <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700">
-                          {svLabel}
+                          {statusVistoriaLabel[laudo.statusVistoria] || laudo.statusVistoria}
                         </span>
                       )}
+                      {/* Tipo de laudo */}
                       {laudo.tipoLaudo && (
                         <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-600">
                           {laudo.tipoLaudo === 'simplificado' ? 'Simplificado' : 'Detalhado'}
