@@ -353,8 +353,7 @@ export default function MeusLaudosPage() {
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-slate-900 truncate">{laudo.endereco || 'Endereço não informado'}</p>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        {laudo.solicitante || laudo.proprietario || '—'}
-                        {laudo.matricula && ` · Matrícula: ${laudo.matricula}`}
+                        {laudo.solicitante || '—'}
                       </p>
                       <div className="flex flex-wrap gap-2 mt-2">
                         {/* Status de acompanhamento — único status principal */}
