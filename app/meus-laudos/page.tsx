@@ -296,15 +296,6 @@ export default function MeusLaudosPage() {
     return resultado
   }, [laudos, busca, filtroAcomp])
 
-    return (
-      l.endereco?.toLowerCase().includes(q) ||
-      l.proprietario?.toLowerCase().includes(q) ||
-      l.solicitante?.toLowerCase().includes(q) ||
-      l.matricula?.toLowerCase().includes(q) ||
-      l.tipo?.toLowerCase().includes(q)
-    )
-  })
-
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
