@@ -114,11 +114,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       label: 'Meus laudos',
       visivel: true,
     },
-    {
-      href: '/agendamentos',
-      label: 'Agendamentos',
-      visivel: isAdmin || !!permissoes?.realizarAgendamentos,
-    },
+
     {
       href: '/aprovacoes',
       label: 'Aprovações',

@@ -1,5 +1,7 @@
 /**
  * SALVAR EM: src/app/usuarios/page.tsx
+ *
+ * Atualizado: removido perfil 'agendador' e permissão 'realizarAgendamentos'.
  */
 
 'use client'
@@ -19,7 +21,6 @@ type Permissoes = {
   excluirLaudos: boolean
   visualizarTodos: boolean
   gerarPdf: boolean
-  realizarAgendamentos: boolean
 }
 
 type Usuario = {
@@ -31,22 +32,20 @@ type Usuario = {
   permissoes: Permissoes
 }
 
-const permissaoLabel: Record<string, string> = {
-  criarLaudos: 'Criar laudos',
-  editarLaudos: 'Editar laudos',
-  excluirLaudos: 'Excluir (requer aprovação)',
-  visualizarTodos: 'Visualizar todos os laudos',
-  gerarPdf: 'Gerar PDF',
-  realizarAgendamentos: 'Realizar agendamentos',
+const permissaoLabel: Record<keyof Permissoes, string> = {
+  criarLaudos:      'Criar laudos',
+  editarLaudos:     'Editar laudos',
+  excluirLaudos:    'Excluir (requer aprovação)',
+  visualizarTodos:  'Visualizar todos os laudos',
+  gerarPdf:         'Gerar PDF',
 }
 
 const PERMISSOES_PADRAO: Permissoes = {
-  criarLaudos: false,
-  editarLaudos: false,
-  excluirLaudos: false,
+  criarLaudos:     false,
+  editarLaudos:    false,
+  excluirLaudos:   false,
   visualizarTodos: false,
-  gerarPdf: false,
-  realizarAgendamentos: false,
+  gerarPdf:        false,
 }
 
 function badgePerfil(perfil: string) {
@@ -93,7 +92,6 @@ export default function UsuariosPage() {
     try {
       const res = await fetch('/api/usuarios', { cache: 'no-store' })
       const dados = await res.json()
-      // Garante que todos os usuários têm o campo permissoes
       setUsuarios(dados.map((u: Usuario) => ({
         ...u,
         permissoes: { ...PERMISSOES_PADRAO, ...(u.permissoes || {}) },
@@ -140,7 +138,8 @@ export default function UsuariosPage() {
     })
     if (res.ok) {
       setUsuarios((prev) => prev.map((u) => u.email === usuario.email ? { ...u, ativo: !u.ativo } : u))
-      if (usuarioSelecionado?.email === usuario.email) setUsuarioSelecionado((p) => p ? { ...p, ativo: !p.ativo } : p)
+      if (usuarioSelecionado?.email === usuario.email)
+        setUsuarioSelecionado((p) => p ? { ...p, ativo: !p.ativo } : p)
     }
   }
 
@@ -184,104 +183,82 @@ export default function UsuariosPage() {
 
   async function removerUsuario(email: string) {
     if (!confirm('Tem certeza que deseja remover este usuário?')) return
-    await fetch(`/api/usuarios/${encodeURIComponent(email)}`, { method: 'DELETE' })
-    setUsuarios((prev) => prev.filter((u) => u.email !== email))
-    if (usuarioSelecionado?.email === email) setUsuarioSelecionado(null)
+    const res = await fetch(`/api/usuarios/${encodeURIComponent(email)}`, { method: 'DELETE' })
+    if (res.ok) {
+      setUsuarios((prev) => prev.filter((u) => u.email !== email))
+      if (usuarioSelecionado?.email === email) setUsuarioSelecionado(null)
+    } else {
+      alert('Erro ao remover usuário.')
+    }
   }
 
-  if (status === 'loading' || carregando) {
+  if (carregando) {
     return (
       <AppShell>
-        <div className="flex items-center justify-center py-24 text-slate-400 text-sm">
-          Carregando...
-        </div>
+        <div className="flex h-96 items-center justify-center text-slate-400 text-sm">Carregando usuários...</div>
       </AppShell>
     )
   }
 
   return (
     <AppShell>
-      <section className="mx-auto max-w-7xl px-6 pb-16 pt-10 lg:px-10 lg:pt-14">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between mb-8">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
+
+        {/* Cabeçalho */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
-            <div className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-400">
-              administração
-            </div>
-            <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-950">
-              Gerenciamento de usuários
-            </h1>
-            <p className="mt-3 text-slate-600">
-              Cadastre usuários e defina o que cada um pode fazer no sistema.
-            </p>
+            <div className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">administração</div>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Usuários</h1>
           </div>
           <button
             onClick={() => setMostrarForm(true)}
-            className="inline-flex items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#15803d,#22c55e)] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20"
+            className="inline-flex items-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#0f3d68,#2563eb)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition"
           >
-            + Adicionar usuário
+            <span className="text-lg leading-none">+</span>
+            Novo usuário
           </button>
         </div>
 
-        {/* Modal novo usuário */}
+        {/* Modal criar usuário */}
         {mostrarForm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 overflow-y-auto py-8 px-4">
             <div className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-8 shadow-xl">
-              <h2 className="text-xl font-semibold text-slate-950 mb-6">Novo usuário</h2>
-              {erro && (
-                <div className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 border border-rose-200">
-                  {erro}
-                </div>
-              )}
-              <div className="space-y-4">
-                <input
-                  value={novoNome}
-                  onChange={(e) => setNovoNome(e.target.value)}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-slate-950">Novo usuário</h2>
+                <button onClick={() => { setMostrarForm(false); setErro('') }} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+              </div>
+              <div className="space-y-3">
+                <input value={novoNome} onChange={(e) => setNovoNome(e.target.value)}
                   placeholder="Nome completo"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white"
-                />
-                <input
-                  type="email"
-                  value={novoEmail}
-                  onChange={(e) => setNovoEmail(e.target.value)}
-                  placeholder="E-mail"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white"
-                />
-                <input
-                  type="password"
-                  value={novaSenha}
-                  onChange={(e) => setNovaSenha(e.target.value)}
-                  placeholder="Senha inicial"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white"
-                />
-                {/* Administrador toggle */}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+                <input value={novoEmail} onChange={(e) => setNovoEmail(e.target.value)}
+                  placeholder="E-mail" type="email"
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+                <input value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)}
+                  placeholder="Senha (mín. 6 caracteres)" type="password"
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
                 <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <span className="text-sm text-slate-700">Administrador</span>
+                  <span className="text-sm font-medium text-slate-700">Administrador</span>
                   <button
                     type="button"
-                    onClick={() => setNovoEhAdmin((v) => !v)}
+                    onClick={() => setNovoEhAdmin(!novoEhAdmin)}
                     className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${novoEhAdmin ? 'bg-blue-600' : 'bg-slate-200'}`}
                   >
                     <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${novoEhAdmin ? 'translate-x-4' : 'translate-x-0'}`} />
                   </button>
                 </div>
                 {novoEhAdmin && (
-                  <p className="text-xs text-blue-600 px-1">
-                    Administradores têm acesso total ao sistema independente das permissões.
-                  </p>
+                  <p className="text-xs text-blue-600 px-1">Administradores têm acesso total ao sistema independente das permissões.</p>
                 )}
+                {erro && <p className="text-sm text-rose-600">{erro}</p>}
               </div>
               <div className="mt-6 flex gap-3">
-                <button
-                  onClick={() => { setMostrarForm(false); setErro('') }}
-                  className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700"
-                >
+                <button onClick={() => { setMostrarForm(false); setErro('') }}
+                  className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700">
                   Cancelar
                 </button>
-                <button
-                  onClick={criarUsuario}
-                  disabled={salvando}
-                  className="flex-1 rounded-2xl bg-blue-600 py-3 text-sm font-semibold text-white disabled:opacity-60"
-                >
+                <button onClick={criarUsuario} disabled={salvando}
+                  className="flex-1 rounded-2xl bg-blue-600 py-3 text-sm font-semibold text-white disabled:opacity-60">
                   {salvando ? 'Criando...' : 'Criar usuário'}
                 </button>
               </div>
@@ -305,41 +282,38 @@ export default function UsuariosPage() {
               <tbody className="divide-y divide-slate-100">
                 {usuarios.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
-                      Nenhum usuário cadastrado ainda.
-                    </td>
+                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400">Nenhum usuário cadastrado ainda.</td>
                   </tr>
                 )}
                 {usuarios.map((u) => (
                   <tr
                     key={u.email}
-                    className={`hover:bg-slate-50/70 cursor-pointer ${usuarioSelecionado?.email === u.email ? 'bg-blue-50/50' : ''}`}
-                    onClick={() => setUsuarioSelecionado(u)}
+                    className={`hover:bg-slate-50/70 cursor-pointer ${usuarioSelecionado?.email === u.email ? 'bg-blue-50/40' : ''}`}
+                    onClick={() => { setUsuarioSelecionado(u); setNovaSenhaEdicao('') }}
                   >
-                    <td className="px-6 py-4 font-medium text-slate-950">{u.nome}</td>
-                    <td className="px-6 py-4 text-slate-600">{u.email}</td>
+                    <td className="px-6 py-4 font-medium text-slate-900">{u.nome}</td>
+                    <td className="px-6 py-4 text-slate-500">{u.email}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${badgePerfil(u.perfil)}`}>
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${badgePerfil(u.perfil)}`}>
                         {labelPerfil(u.perfil)}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${u.ativo ? 'text-emerald-700' : 'text-slate-400'}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${u.ativo ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${u.ativo ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'}`}>
                         {u.ativo ? 'Ativo' : 'Inativo'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex gap-2">
                         <button
-                          onClick={() => toggleAtivo(u)}
-                          className={`rounded-xl border px-3 py-1.5 text-xs font-semibold ${u.ativo ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}
+                          onClick={(e) => { e.stopPropagation(); toggleAtivo(u) }}
+                          className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
                         >
                           {u.ativo ? 'Desativar' : 'Ativar'}
                         </button>
                         <button
-                          onClick={() => removerUsuario(u.email)}
-                          className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700"
+                          onClick={(e) => { e.stopPropagation(); removerUsuario(u.email) }}
+                          className="rounded-lg border border-rose-200 px-3 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
                         >
                           Remover
                         </button>
@@ -352,7 +326,7 @@ export default function UsuariosPage() {
           </div>
 
           {/* Painel de permissões */}
-          {usuarioSelecionado ? (
+          {usuarioSelecionado && (
             <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm h-fit">
               <h2 className="text-base font-semibold text-slate-950 mb-1">Permissões</h2>
               <p className="text-sm text-slate-500 mb-5">{usuarioSelecionado.nome}</p>
@@ -372,11 +346,9 @@ export default function UsuariosPage() {
                 </button>
               </div>
 
-              {/* Permissões individuais — desabilitadas para admin */}
+              {/* Permissões individuais */}
               {usuarioSelecionado.perfil === 'admin' ? (
-                <p className="text-xs text-blue-600 mb-4 px-1">
-                  Administradores têm acesso total ao sistema.
-                </p>
+                <p className="text-xs text-blue-600 mb-4 px-1">Administradores têm acesso total ao sistema.</p>
               ) : (
                 <div className="space-y-1 mb-5">
                   {(Object.keys(permissaoLabel) as (keyof Permissoes)[]).map((chave) => {
@@ -400,40 +372,38 @@ export default function UsuariosPage() {
                 </div>
               )}
 
+              {/* Redefinir senha */}
+              <div className="border-t border-slate-100 pt-4 mb-5">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Redefinir senha</p>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={novaSenhaEdicao}
+                    onChange={(e) => setNovaSenhaEdicao(e.target.value)}
+                    placeholder="Nova senha (mín. 6 caracteres)"
+                    className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-400"
+                  />
+                  <button
+                    onClick={redefinirSenha}
+                    disabled={redefinindo}
+                    className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
+                  >
+                    {redefinindo ? '...' : 'Salvar'}
+                  </button>
+                </div>
+              </div>
+
               <button
                 onClick={() => salvarPermissoes(usuarioSelecionado)}
                 disabled={salvando}
-                className="w-full rounded-2xl bg-blue-600 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                className="w-full rounded-2xl bg-[linear-gradient(135deg,#0f3d68,#2563eb)] py-3 text-sm font-semibold text-white disabled:opacity-60"
               >
                 {salvando ? 'Salvando...' : 'Salvar permissões'}
               </button>
-
-              {/* Redefinir senha */}
-              <div className="mt-6 pt-5 border-t border-slate-100">
-                <p className="text-xs font-semibold text-slate-500 mb-3">Redefinir senha</p>
-                <input
-                  type="password"
-                  value={novaSenhaEdicao}
-                  onChange={(e) => setNovaSenhaEdicao(e.target.value)}
-                  placeholder="Nova senha (mín. 6 caracteres)"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:bg-white mb-3"
-                />
-                <button
-                  onClick={redefinirSenha}
-                  disabled={redefinindo || !novaSenhaEdicao}
-                  className="w-full rounded-2xl border border-amber-200 bg-amber-50 py-2.5 text-sm font-semibold text-amber-700 disabled:opacity-50"
-                >
-                  {redefinindo ? 'Redefinindo...' : 'Redefinir senha'}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-6 flex items-center justify-center text-sm text-slate-400">
-              Clique em um usuário para editar as permissões
             </div>
           )}
         </div>
-      </section>
+      </div>
     </AppShell>
   )
 }
