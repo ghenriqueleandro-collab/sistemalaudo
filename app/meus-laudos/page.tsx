@@ -370,7 +370,7 @@ export default function MeusLaudosPage() {
                         <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-600">
                           {laudo.tipoLaudo === 'simplificado' ? 'Simplificado' : 'Detalhado'}
                         </span>
-                        <span className="text-xs text-slate-400">Criado em {formatarData(laudo.criadoEm)}</span>
+                        <span className="text-xs text-slate-400">Criado em {formatarData(laudo.data)}</span>
                       </div>
                     </div>
                     <div className="flex flex-col gap-2 shrink-0">
