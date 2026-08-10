@@ -357,6 +357,7 @@ export default function NovoLaudoPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) {
     const { name, value, type } = e.target
+    setLaudoModificado(true)
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked
       setForm({ ...form, [name]: checked })
@@ -962,6 +963,21 @@ export default function NovoLaudoPage() {
     }
   }
 
+  // ── Marca laudo como modificado quando qualquer estado editável muda ────────
+  // Cobre todos os setForm, setFotos, setDivisoes etc. sem precisar adicionar
+  // setLaudoModificado(true) em cada função individualmente.
+  const formProntoParaMarcacao = useRef(false)
+  useEffect(() => {
+    if (!formPronto) return
+    // Ignora a primeira execução logo após o carregamento (form acabou de ser populado)
+    if (!formProntoParaMarcacao.current) {
+      formProntoParaMarcacao.current = true
+      return
+    }
+    setLaudoModificado(true)
+  }, [form, fotos, divisoes, acabamentos, fundamentacao, fundamentacaoInferencia,
+      fundamentacaoEvolutivo, precisao, resumoMercado, outrosFatoresImovel, valoresAdicionais])
+
   // ── Ref que sempre aponta para o executarSave mais recente ─────────────────
   // Permite chamar o save com o form atualizado ao desmontar o componente,
   // cobrindo navegações internas do Next.js (que não disparam beforeunload).
@@ -1010,7 +1026,9 @@ export default function NovoLaudoPage() {
     return () => {
       // Só salva ao desmontar se: form foi carregado E usuário realmente modificou algo
       // Previne sobrescrever dados de outro usuário que está editando simultaneamente
-      if (formProntoRef.current) saveRef.current(true)
+      // CRÍTICO: sem verificar laudoModificadoRef, abrir e fechar o laudo sem editar
+      // dispara save com form possivelmente incompleto e sobrescreve dados no Redis
+      if (formProntoRef.current && laudoModificadoRef.current) saveRef.current(true)
     }
   }, [])
 
