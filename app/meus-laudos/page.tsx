@@ -1,15 +1,15 @@
 /**
  * SALVAR EM: src/app/meus-laudos/page.tsx
  *
- * Atualizado: botão "Novo laudo" e modal de criação migrados de agendamentos/page.tsx.
- * Perfil agendador removido — todos os usuários autenticados podem criar laudos.
+ * Integra o modal de criação de laudo (migrado de agendamentos)
+ * com o dashboard e lista de laudos originais.
  */
 
 'use client'
 
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useState } from 'react'
 import AppShell from '../components/AppShell'
 import {
   filtrarLaudos,
@@ -19,15 +19,12 @@ import {
   type StatusAcompanhamento,
 } from '../../lib/laudos-storage'
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-
-
-// ─── Status de acompanhamento ────────────────────────────────────────────────
+// ─── Constantes de status ─────────────────────────────────────────────────────
 
 const acompanhamentoConfig: Record<StatusAcompanhamento, { classe: string; dot: string }> = {
-  levantamento_documentos: { classe: 'bg-amber-50 text-amber-700',   dot: 'bg-amber-400' },
-  atuando_vistoria:        { classe: 'bg-purple-50 text-purple-700', dot: 'bg-purple-400' },
-  atuando_pesquisa:        { classe: 'bg-blue-50 text-blue-700',     dot: 'bg-blue-400' },
+  levantamento_documentos: { classe: 'bg-amber-50 text-amber-700',    dot: 'bg-amber-400' },
+  atuando_vistoria:        { classe: 'bg-purple-50 text-purple-700',  dot: 'bg-purple-400' },
+  atuando_pesquisa:        { classe: 'bg-blue-50 text-blue-700',      dot: 'bg-blue-400' },
   concluido:               { classe: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-400' },
 }
 
@@ -46,18 +43,18 @@ const statusVistoriaLabel: Record<string, string> = {
   finalizado:             'Finalizado',
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers geocodificação ───────────────────────────────────────────────────
 
 function haversineMetros(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371000
   const toRad = (v: number) => (v * Math.PI) / 180
   const dLat = toRad(lat2 - lat1); const dLon = toRad(lon2 - lon1)
-  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
   return R * 2 * Math.asin(Math.sqrt(a))
 }
 
 function formatarDistancia(m: number) {
-  return m < 1000 ? `${Math.round(m)} m` : `${(m/1000).toFixed(1).replace('.', ',')} km`
+  return m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1).replace('.', ',')} km`
 }
 
 function formatarData(iso?: string) {
@@ -65,59 +62,48 @@ function formatarData(iso?: string) {
   return new Date(iso).toLocaleDateString('pt-BR')
 }
 
+// ─── Estado inicial do modal ──────────────────────────────────────────────────
+
+const NOVO_LAUDO_INICIAL = {
+  tipoLaudo: 'detalhado' as 'detalhado' | 'simplificado',
+  tipoImovelCDDM: '' as '' | 'isolado' | 'fracao',
+  areaComum: '', areaTotal: '', fracaoIdeal: '',
+  fatoresCDDMAtivos: { local: true, padrao: true, foc: true, andar: true, vaga: true },
+  coordenadasImovel: '', endereco: '', proprietario: '', solicitante: '',
+  empresaClienteId: '', tipo: '', finalidade: '',
+  areaConstruidaTotal: '', areaConstruidaAverbada: '',
+  areaTerrenoTotal: '', areaTerrenoAverbada: '',
+  matricula: '', iptu: '',
+  referencia1: '', distancia1: '', referencia2: '', distancia2: '',
+  referencia3: '', distancia3: '', referencia4: '', distancia4: '',
+  referencia5: '', distancia5: '',
+}
+
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 export default function MeusLaudosPage() {
-  const { data: session, status } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
   const router = useRouter()
 
-  // Estado de lista
+  // Lista
   const [laudos, setLaudos] = useState<LaudoResumo[]>([])
-  const [empresas, setEmpresas] = useState<{ id: string; nome: string }[]>([])
   const [carregando, setCarregando] = useState(true)
   const [busca, setBusca] = useState('')
   const [filtroAcomp, setFiltroAcomp] = useState<StatusAcompanhamento | ''>('')
 
-  // Estado do modal de criação
+  // Modal criação
+  const [empresas, setEmpresas] = useState<{ id: string; nome: string }[]>([])
   const [mostrarModal, setMostrarModal] = useState(false)
   const [criandoLaudo, setCriandoLaudo] = useState(false)
   const [buscandoCoords, setBuscandoCoords] = useState(false)
-  const [msgCoords, setMsgCoords] = useState<{tipo:'ok'|'erro';texto:string}|null>(null)
-
-  const estadoInicialNovoLaudo = {
-    tipoLaudo: 'detalhado' as 'detalhado' | 'simplificado',
-    tipoImovelCDDM: '' as '' | 'isolado' | 'fracao',
-    areaComum: '',
-    areaTotal: '',
-    fracaoIdeal: '',
-    fatoresCDDMAtivos: { local: true, padrao: true, foc: true, andar: true, vaga: true },
-    coordenadasImovel: '',
-    endereco: '',
-    proprietario: '',
-    solicitante: '',
-    empresaClienteId: '',
-    tipo: '',
-    finalidade: '',
-    areaConstruidaTotal: '',
-    areaConstruidaAverbada: '',
-    areaTerrenoTotal: '',
-    areaTerrenoAverbada: '',
-    matricula: '',
-    iptu: '',
-    referencia1: '', distancia1: '',
-    referencia2: '', distancia2: '',
-    referencia3: '', distancia3: '',
-    referencia4: '', distancia4: '',
-    referencia5: '', distancia5: '',
-  }
-
-  const [novoLaudo, setNovoLaudo] = useState(estadoInicialNovoLaudo)
+  const [msgCoords, setMsgCoords] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
+  const [novoLaudo, setNovoLaudo] = useState(NOVO_LAUDO_INICIAL)
 
   function setField(name: string, value: string) {
     setNovoLaudo((prev) => ({ ...prev, [name]: value }))
   }
 
-  // ─── Funções de dados ────────────────────────────────────────────────────
+  // ─── Carregamento ─────────────────────────────────────────────────────────
 
   const carregarDados = useCallback(async () => {
     try {
@@ -133,21 +119,44 @@ export default function MeusLaudosPage() {
     }
   }, [])
 
-  // ─── Efeitos ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (sessionStatus === 'unauthenticated') router.push('/')
+  }, [sessionStatus, router])
 
   useEffect(() => {
-    if (status === 'unauthenticated') router.push('/')
-  }, [status])
-
-  useEffect(() => {
-    if (status === 'authenticated') {
+    if (sessionStatus === 'authenticated') {
       carregarDados()
       const intervalo = setInterval(carregarDados, 15_000)
       return () => clearInterval(intervalo)
     }
-  }, [status, carregarDados])
+  }, [sessionStatus, carregarDados])
 
-  // ─── Geocodificação ──────────────────────────────────────────────────────
+  // ─── Contadores e filtros ─────────────────────────────────────────────────
+
+  const contadores = useMemo(
+    () => Object.fromEntries(
+      ORDEM_STATUS.map((st) => [
+        st,
+        laudos.filter((l) => (l.statusAcompanhamento || 'levantamento_documentos') === st).length,
+      ])
+    ) as Record<StatusAcompanhamento, number>,
+    [laudos]
+  )
+
+  const laudosFiltrados = useMemo(() => {
+    // filtrarLaudos exige todos os campos de FiltrosLaudo
+    let resultado = filtrarLaudos(laudos, {
+      busca,
+      status: filtroAcomp,
+      cidade: '',
+      tipoImovel: '',
+      finalidade: '',
+      tipoLaudo: '',
+    })
+    return resultado
+  }, [laudos, busca, filtroAcomp])
+
+  // ─── Geocodificação ───────────────────────────────────────────────────────
 
   async function buscarCoordenadas() {
     const raw = novoLaudo.coordenadasImovel.trim()
@@ -162,7 +171,6 @@ export default function MeusLaudosPage() {
     setMsgCoords(null)
     try {
       const campos: Record<string, string> = {}
-      // Reverse geocoding via Nominatim
       const resGeo = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
         { headers: { 'Accept-Language': 'pt-BR' } }
@@ -177,25 +185,20 @@ export default function MeusLaudosPage() {
         const cep = a.postcode || ''
         if (logradouro) campos['endereco'] = [logradouro, bairro, cidade, estado, cep].filter(Boolean).join(', ')
       }
-      // Pontos de referência via Overpass
       try {
         const delta = 0.015
         const bbox = `${lat - delta},${lng - delta},${lat + delta},${lng + delta}`
         const query = `[out:json][timeout:10];(node["amenity"](${bbox});node["shop"](${bbox});node["highway"="bus_stop"](${bbox}););out body;`
         const resOv = await fetch('https://overpass-api.de/api/interpreter', {
-          method: 'POST', body: query,
-          headers: { 'Content-Type': 'text/plain' }
+          method: 'POST', body: query, headers: { 'Content-Type': 'text/plain' },
         })
         if (resOv.ok) {
           const ov = await resOv.json()
           const pontos = (ov.elements || [])
             .filter((el: any) => el.tags?.name)
-            .map((el: any) => ({
-              nome: el.tags.name,
-              dist: haversineMetros(lat, lng, el.lat, el.lon),
-            }))
+            .map((el: any) => ({ nome: el.tags.name, dist: haversineMetros(lat, lng, el.lat, el.lon) }))
             .sort((a: any, b: any) => a.dist - b.dist)
-          const unicos: {nome: string; dist: number}[] = []
+          const unicos: { nome: string; dist: number }[] = []
           const vistos = new Set<string>()
           for (const p of pontos) {
             if (!vistos.has(p.nome)) { vistos.add(p.nome); unicos.push(p) }
@@ -207,7 +210,7 @@ export default function MeusLaudosPage() {
           if (unicos[3]) { campos['referencia4'] = unicos[3].nome; campos['distancia4'] = formatarDistancia(unicos[3].dist) }
           if (unicos[4]) { campos['referencia5'] = unicos[4].nome; campos['distancia5'] = formatarDistancia(unicos[4].dist) }
         }
-      } catch {}
+      } catch { /* overpass falhou — silencioso */ }
       if (Object.keys(campos).length > 0) setNovoLaudo((prev) => ({ ...prev, ...campos }))
       setMsgCoords({ tipo: 'ok', texto: 'Endereço e referências preenchidos automaticamente.' })
     } catch {
@@ -217,7 +220,7 @@ export default function MeusLaudosPage() {
     }
   }
 
-  // ─── Criar laudo ─────────────────────────────────────────────────────────
+  // ─── Criar laudo ──────────────────────────────────────────────────────────
 
   async function criarNovoLaudo() {
     if (!novoLaudo.endereco && !novoLaudo.coordenadasImovel) {
@@ -230,17 +233,13 @@ export default function MeusLaudosPage() {
       const agora = new Date().toISOString()
       const criadoPor = session?.user?.name || 'Usuário'
       const payload = {
-        id,
-        ...novoLaudo,
+        id, ...novoLaudo,
         status: 'em_preenchimento',
         statusVistoria: 'aguardando_agendamento',
         statusAcompanhamento: 'levantamento_documentos',
         criadoPorNome: criadoPor,
-        criadoEm: agora,
-        atualizadoEm: agora,
-        melhoramentosPublicos: {},
-        croquis: [],
-        fotos: [],
+        criadoEm: agora, atualizadoEm: agora,
+        melhoramentosPublicos: {}, croquis: [], fotos: [],
         historicoEventos: [{ data: agora, usuario: criadoPor, acao: 'Laudo criado' }],
       }
       const res = await fetch('/api/laudos', {
@@ -250,50 +249,31 @@ export default function MeusLaudosPage() {
       })
       if (!res.ok) { alert('Erro ao criar laudo. Tente novamente.'); return }
       setMostrarModal(false)
-      setNovoLaudo(estadoInicialNovoLaudo)
+      setNovoLaudo(NOVO_LAUDO_INICIAL)
       setMsgCoords(null)
-      const rotaEdicao = novoLaudo.tipoLaudo === 'simplificado'
+      const rota = novoLaudo.tipoLaudo === 'simplificado'
         ? `/laudo/simplificado?id=${id}`
         : `/novo-laudo?id=${id}`
-      router.push(rotaEdicao)
+      router.push(rota)
     } finally {
       setCriandoLaudo(false)
     }
   }
 
-  // ─── Contadores e filtros ────────────────────────────────────────────────────
-
-  const contadores = useMemo(
-    () => Object.fromEntries(
-      ORDEM_STATUS.map((st) => [
-        st,
-        laudos.filter((l) => (l.statusAcompanhamento || 'levantamento_documentos') === st).length,
-      ])
-    ) as Record<StatusAcompanhamento, number>,
-    [laudos]
-  )
-
-  const laudosFiltrados = useMemo(() => {
-    let resultado = filtrarLaudos(laudos, { busca })
-    if (filtroAcomp) {
-      resultado = resultado.filter(
-        (l) => (l.statusAcompanhamento || 'levantamento_documentos') === filtroAcomp
-      )
-    }
-    return resultado
-  }, [laudos, busca, filtroAcomp])
-
-  // ─── Render ──────────────────────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-16 pt-8 lg:px-10 lg:pt-12">
 
         {/* Cabeçalho */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">gestão de laudos</div>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Meus laudos</h1>
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">Meus laudos</h1>
+            <p className="mt-1 text-slate-500 text-sm">
+              {carregando ? 'Carregando...' : `${laudos.length} laudo${laudos.length !== 1 ? 's' : ''} no total`}
+            </p>
           </div>
           <button
             onClick={() => setMostrarModal(true)}
@@ -304,7 +284,7 @@ export default function MeusLaudosPage() {
           </button>
         </div>
 
-        {/* Cards de dashboard — filtro por statusAcompanhamento */}
+        {/* Cards de dashboard */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {ORDEM_STATUS.map((st) => {
             const cfg = acompanhamentoConfig[st]
@@ -339,87 +319,89 @@ export default function MeusLaudosPage() {
         </div>
 
         {/* Lista */}
-        {carregando ? (
-          <div className="text-center text-slate-400 py-16 text-sm">Carregando laudos...</div>
-        ) : laudosFiltrados.length === 0 ? (
-          <div className="text-center text-slate-400 py-16 text-sm">
-            {busca ? 'Nenhum laudo encontrado para essa busca.' : 'Nenhum laudo cadastrado ainda.'}
+        <div className="rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <span className="font-semibold text-slate-900">Laudos</span>
+            {filtroAcomp && (
+              <button
+                type="button"
+                onClick={() => setFiltroAcomp('')}
+                className="text-xs text-slate-400 hover:text-slate-600 transition"
+              >
+                Ver todos ×
+              </button>
+            )}
           </div>
-        ) : (
-          <div className="rounded-[28px] border border-slate-200 bg-white overflow-hidden shadow-sm divide-y divide-slate-100">
-            {laudosFiltrados.map((laudo) => {
-              const rotaEdicao = laudo.tipoLaudo === 'simplificado'
-                ? `/laudo/simplificado?id=${laudo.id}`
-                : `/novo-laudo?id=${laudo.id}`
-              const rotaVis = `/visualizar-laudo?id=${laudo.id}`
-              return (
-                <div key={laudo.id} className="px-6 py-4 flex items-start justify-between gap-4 hover:bg-slate-50 transition">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-slate-900 truncate">{laudo.endereco || 'Endereço não informado'}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {laudo.proprietario || '—'}
-                      {laudo.solicitante && ` · ${laudo.solicitante}`}
-                      {laudo.matricula && ` · Matrícula: ${laudo.matricula}`}
-                    </p>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {/* Status de acompanhamento — principal */}
-                      {(() => {
-                        const st = (laudo.statusAcompanhamento || 'levantamento_documentos') as StatusAcompanhamento
-                        const cfg = acompanhamentoConfig[st]
-                        return (
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cfg.classe}`}>
-                            {formatarStatusAcompanhamento(st)}
-                          </span>
-                        )
-                      })()}
-                      {/* Status de vistoria — só se existir e for relevante */}
-                      {laudo.statusVistoria && laudo.statusVistoria !== 'aguardando_agendamento' && (
-                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700">
-                          {statusVistoriaLabel[laudo.statusVistoria] || laudo.statusVistoria}
+
+          {carregando ? (
+            <div className="px-6 py-16 text-center text-slate-400 text-sm">Carregando laudos...</div>
+          ) : laudosFiltrados.length === 0 ? (
+            <div className="px-6 py-16 text-center text-slate-400 text-sm">
+              {busca || filtroAcomp ? 'Nenhum laudo encontrado para essa busca.' : 'Nenhum laudo cadastrado ainda.'}
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {laudosFiltrados.map((laudo) => {
+                const rotaEdicao = laudo.tipoLaudo === 'simplificado'
+                  ? `/laudo/simplificado?id=${laudo.id}`
+                  : `/novo-laudo?id=${laudo.id}`
+                const rotaVis = `/visualizar-laudo?id=${laudo.id}`
+                const stAcomp = (laudo.statusAcompanhamento || 'levantamento_documentos') as StatusAcompanhamento
+                const cfgAcomp = acompanhamentoConfig[stAcomp]
+                return (
+                  <div key={laudo.id} className="px-6 py-4 flex items-start justify-between gap-4 hover:bg-slate-50 transition">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-slate-900 truncate">{laudo.endereco || 'Endereço não informado'}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {laudo.solicitante || laudo.proprietario || '—'}
+                        {laudo.matricula && ` · Matrícula: ${laudo.matricula}`}
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {/* Status de acompanhamento — único status principal */}
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cfgAcomp.classe}`}>
+                          {formatarStatusAcompanhamento(stAcomp)}
                         </span>
-                      )}
-                      {/* Tipo de laudo */}
-                      {laudo.tipoLaudo && (
+                        {/* Status de vistoria — só quando relevante */}
+                        {laudo.statusVistoria && laudo.statusVistoria !== 'aguardando_agendamento' && (
+                          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700">
+                            {statusVistoriaLabel[laudo.statusVistoria] || laudo.statusVistoria}
+                          </span>
+                        )}
+                        {/* Tipo */}
                         <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-600">
                           {laudo.tipoLaudo === 'simplificado' ? 'Simplificado' : 'Detalhado'}
                         </span>
-                      )}
-                      <span className="text-xs text-slate-400">Criado em {formatarData(laudo.criadoEm)}</span>
+                        <span className="text-xs text-slate-400">Criado em {formatarData(laudo.criadoEm)}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <a href={rotaEdicao}
+                        className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition text-center">
+                        Editar
+                      </a>
+                      <a href={rotaVis}
+                        className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition text-center">
+                        Visualizar
+                      </a>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 shrink-0">
-                    <a
-                      href={rotaEdicao}
-                      className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition text-center"
-                    >
-                      Editar
-                    </a>
-                    <a
-                      href={rotaVis}
-                      className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition text-center"
-                    >
-                      Visualizar
-                    </a>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </section>
 
-      {/* ── Modal de criação de laudo ── */}
+      {/* ── Modal de criação ── */}
       {mostrarModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 overflow-y-auto py-8 px-4">
           <div className="w-full max-w-2xl rounded-[28px] border border-slate-200 bg-white p-8 shadow-xl">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-slate-950">Iniciar novo laudo</h2>
               <button
-                onClick={() => { setMostrarModal(false); setMsgCoords(null); setNovoLaudo(estadoInicialNovoLaudo) }}
+                onClick={() => { setMostrarModal(false); setMsgCoords(null); setNovoLaudo(NOVO_LAUDO_INICIAL) }}
                 className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
-              >
-                ×
-              </button>
+              >×</button>
             </div>
 
             <div className="space-y-4">
@@ -427,18 +409,13 @@ export default function MeusLaudosPage() {
               <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 space-y-3">
                 <label className="block text-sm font-semibold text-blue-900">📍 Coordenadas do imóvel</label>
                 <div className="flex gap-2">
-                  <input
-                    value={novoLaudo.coordenadasImovel}
+                  <input value={novoLaudo.coordenadasImovel}
                     onChange={(e) => setField('coordenadasImovel', e.target.value)}
                     placeholder="Ex: -23.550520, -46.633308"
-                    className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400"
-                  />
-                  <button
-                    type="button"
-                    onClick={buscarCoordenadas}
+                    className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
+                  <button type="button" onClick={buscarCoordenadas}
                     disabled={buscandoCoords || !novoLaudo.coordenadasImovel.trim()}
-                    className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                  >
+                    className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap">
                     {buscandoCoords ? 'Buscando…' : 'Preencher dados'}
                   </button>
                 </div>
@@ -455,18 +432,14 @@ export default function MeusLaudosPage() {
                   placeholder="Endereço" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
                 <input value={novoLaudo.proprietario} onChange={(e) => setField('proprietario', e.target.value)}
                   placeholder="Proprietário" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
-                <select
-                  value={novoLaudo.empresaClienteId}
+                <select value={novoLaudo.empresaClienteId}
                   onChange={(e) => {
                     const emp = empresas.find((em) => em.id === e.target.value)
                     setNovoLaudo((prev) => ({ ...prev, empresaClienteId: emp?.id || '', solicitante: emp?.nome || '' }))
                   }}
-                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400"
-                >
+                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400">
                   <option value="">Empresa / Solicitante</option>
-                  {empresas.map((emp) => (
-                    <option key={emp.id} value={emp.id}>{emp.nome}</option>
-                  ))}
+                  {empresas.map((emp) => <option key={emp.id} value={emp.id}>{emp.nome}</option>)}
                 </select>
                 <select value={novoLaudo.tipo} onChange={(e) => setField('tipo', e.target.value)}
                   className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400">
@@ -509,11 +482,11 @@ export default function MeusLaudosPage() {
                   placeholder="Área de terreno averbada (m²)" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
               </div>
 
-              {/* Pontos de referência (preenchidos automaticamente) */}
+              {/* Pontos de referência */}
               {(novoLaudo.referencia1 || novoLaudo.referencia2) && (
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-2">
                   <p className="text-sm font-semibold text-slate-700">Pontos de referência</p>
-                  {[1,2,3,4,5].map((n) => {
+                  {[1, 2, 3, 4, 5].map((n) => {
                     const ref = (novoLaudo as any)[`referencia${n}`]
                     const dist = (novoLaudo as any)[`distancia${n}`]
                     if (!ref) return null
@@ -532,23 +505,18 @@ export default function MeusLaudosPage() {
                 <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Modelo de laudo</p>
                 <div className="grid grid-cols-2 gap-3">
                   {(['detalhado', 'simplificado'] as const).map((tipo) => (
-                    <button
-                      key={tipo}
-                      type="button"
+                    <button key={tipo} type="button"
                       onClick={() => setNovoLaudo((prev) => ({ ...prev, tipoLaudo: tipo }))}
                       className={`rounded-2xl border-2 p-3 text-left transition ${
                         novoLaudo.tipoLaudo === tipo
                           ? tipo === 'simplificado' ? 'border-emerald-400 bg-emerald-50' : 'border-blue-400 bg-blue-50'
                           : 'border-slate-200 bg-white hover:border-slate-300'
-                      }`}
-                    >
+                      }`}>
                       <p className="text-xs font-semibold text-slate-800 mb-1">
                         {tipo === 'detalhado' ? 'Laudo completo NBR 14653' : 'Laudo simplificado'}
                       </p>
                       <p className="text-[11px] text-slate-500 leading-tight">
-                        {tipo === 'detalhado'
-                          ? 'Todas as seções da norma. ~20 páginas.'
-                          : 'Formato compacto para análise rápida. ~4 páginas.'}
+                        {tipo === 'detalhado' ? 'Todas as seções da norma. ~20 páginas.' : 'Formato compacto para análise rápida. ~4 páginas.'}
                       </p>
                     </button>
                   ))}
@@ -564,9 +532,7 @@ export default function MeusLaudosPage() {
                       { value: 'isolado', label: 'Imóvel isolado', desc: 'Casa, terreno, galpão. Sem fração ideal.' },
                       { value: 'fracao', label: 'Imóvel com fração', desc: 'Apartamento, sala, vaga. Possui área comum e fração ideal.' },
                     ] as const).map(({ value, label, desc }) => (
-                      <button
-                        key={value}
-                        type="button"
+                      <button key={value} type="button"
                         onClick={() => {
                           const novoFatores = value === 'isolado'
                             ? { ...novoLaudo.fatoresCDDMAtivos, local: true, andar: false, vaga: false }
@@ -575,14 +541,12 @@ export default function MeusLaudosPage() {
                         }}
                         className={`rounded-2xl border-2 p-3 text-left transition ${
                           novoLaudo.tipoImovelCDDM === value ? 'border-blue-400 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'
-                        }`}
-                      >
+                        }`}>
                         <p className="text-xs font-semibold text-slate-800 mb-1">{label}</p>
                         <p className="text-[11px] text-slate-500 leading-tight">{desc}</p>
                       </button>
                     ))}
                   </div>
-
                   {novoLaudo.tipoImovelCDDM === 'fracao' && (
                     <div className="grid grid-cols-3 gap-3 mt-3">
                       <div>
@@ -606,19 +570,14 @@ export default function MeusLaudosPage() {
               )}
             </div>
 
-            {/* Botões */}
             <div className="mt-6 flex gap-3">
               <button
-                onClick={() => { setMostrarModal(false); setMsgCoords(null); setNovoLaudo(estadoInicialNovoLaudo) }}
-                className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
+                onClick={() => { setMostrarModal(false); setMsgCoords(null); setNovoLaudo(NOVO_LAUDO_INICIAL) }}
+                className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                 Cancelar
               </button>
-              <button
-                onClick={criarNovoLaudo}
-                disabled={criandoLaudo}
-                className="flex-1 rounded-2xl bg-[linear-gradient(135deg,#0f3d68,#2563eb)] py-3 text-sm font-semibold text-white disabled:opacity-60"
-              >
+              <button onClick={criarNovoLaudo} disabled={criandoLaudo}
+                className="flex-1 rounded-2xl bg-[linear-gradient(135deg,#0f3d68,#2563eb)] py-3 text-sm font-semibold text-white disabled:opacity-60">
                 {criandoLaudo ? 'Criando laudo...' : 'Criar laudo'}
               </button>
             </div>
