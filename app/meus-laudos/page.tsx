@@ -117,20 +117,6 @@ export default function MeusLaudosPage() {
     setNovoLaudo((prev) => ({ ...prev, [name]: value }))
   }
 
-  // ─── Efeitos ─────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (status === 'unauthenticated') router.push('/')
-  }, [status])
-
-  useEffect(() => {
-    if (status === 'authenticated') {
-      carregarDados()
-      const intervalo = setInterval(carregarDados, 15_000)
-      return () => clearInterval(intervalo)
-    }
-  }, [status, carregarDados])
-
   // ─── Funções de dados ────────────────────────────────────────────────────
 
   const carregarDados = useCallback(async () => {
@@ -146,6 +132,20 @@ export default function MeusLaudosPage() {
       setCarregando(false)
     }
   }, [])
+
+  // ─── Efeitos ─────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (status === 'unauthenticated') router.push('/')
+  }, [status])
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      carregarDados()
+      const intervalo = setInterval(carregarDados, 15_000)
+      return () => clearInterval(intervalo)
+    }
+  }, [status, carregarDados])
 
   // ─── Geocodificação ──────────────────────────────────────────────────────
 
