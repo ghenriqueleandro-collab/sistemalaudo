@@ -1,6 +1,5 @@
 /**
  * SALVAR EM: src/app/api/auth/[...nextauth]/route.ts
- * (substitui o route.ts atual do NextAuth)
  */
 
 import NextAuth from 'next-auth'
@@ -30,7 +29,7 @@ const handler = NextAuth({
 
         if (!email || !password) return null
 
-        // Verifica admin via variáveis de ambiente (conta raiz)
+        // Admin via variáveis de ambiente
         const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase()
         const adminPassword = process.env.ADMIN_PASSWORD
         if (email === adminEmail && password === adminPassword) {
@@ -39,13 +38,15 @@ const handler = NextAuth({
             name: 'Administrador Lesath',
             email: adminEmail,
             perfil: 'admin',
+            permissoes: {},
+            empresaClienteId: undefined,
+            empresaNome: undefined,
           }
         }
 
-        // Verifica usuários cadastrados no Redis
+        // Usuários no Redis
         const usuario = await redis.get<any>(`usuario:${email}`)
-        if (!usuario) return null
-        if (!usuario.ativo) return null
+        if (!usuario || !usuario.ativo) return null
 
         const senhaCorreta = await bcrypt.compare(password, usuario.senhaHash)
         if (!senhaCorreta) return null
@@ -56,28 +57,54 @@ const handler = NextAuth({
           email: usuario.email,
           perfil: usuario.perfil,
           permissoes: usuario.permissoes ?? {},
+          empresaClienteId: usuario.empresaClienteId ?? null,
+          empresaNome: usuario.empresaNome ?? null,
         }
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
+      // No login: popula o token com todos os campos do usuário
       if (user) {
-        token.id = (user as any).id
-        token.name = user.name
-        token.email = user.email
-        token.perfil = (user as any).perfil
-        token.permissoes = (user as any).permissoes ?? {}
+        token.id             = (user as any).id
+        token.perfil         = (user as any).perfil
+        token.permissoes     = (user as any).permissoes ?? {}
+        token.empresaClienteId = (user as any).empresaClienteId ?? null
+        token.empresaNome    = (user as any).empresaNome ?? null
       }
+
+      // A cada renovação do token (update ou chamadas subsequentes):
+      // re-lê o usuário do Redis para pegar empresaClienteId atualizado.
+      // Isso garante que vinculações feitas após o login apareçam sem
+      // precisar fazer logout/login.
+      if (token.email && token.perfil === 'cliente') {
+        try {
+          const email = (token.email as string).trim().toLowerCase()
+          const usuarioAtual = await redis.get<any>(`usuario:${email}`)
+          if (usuarioAtual) {
+            token.empresaClienteId = usuarioAtual.empresaClienteId ?? null
+            token.empresaNome      = usuarioAtual.empresaNome ?? null
+            token.permissoes       = usuarioAtual.permissoes ?? {}
+            token.perfil           = usuarioAtual.perfil
+          }
+        } catch {
+          // Silencioso — mantém o token como está
+        }
+      }
+
       return token
     },
+
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id
-        session.user.name = token.name
-        session.user.email = token.email as string
-        ;(session.user as any).perfil = token.perfil
-        ;(session.user as any).permissoes = token.permissoes ?? {}
+        (session.user as any).id              = token.id
+        session.user.name                     = token.name
+        session.user.email                    = token.email as string
+        ;(session.user as any).perfil         = token.perfil
+        ;(session.user as any).permissoes     = token.permissoes ?? {}
+        ;(session.user as any).empresaClienteId = token.empresaClienteId ?? null
+        ;(session.user as any).empresaNome    = token.empresaNome ?? null
       }
       return session
     },
