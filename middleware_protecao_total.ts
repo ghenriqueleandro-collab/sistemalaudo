@@ -56,5 +56,5 @@ export default withAuth(
 )
 
 export const config = {
-  matcher: ['/', '/meus-laudos/:path*', '/novo-laudo/:path*', '/laudo/:path*', '/relatorios/:path*', '/visualizar-laudo/:path*', '/portal/:path*', '/aprovacoes/:path*', '/empresas/:path*', '/usuarios/:path*'],
+  matcher: ['/', '/meus-laudos', '/meus-laudos/:path*', '/novo-laudo', '/novo-laudo/:path*', '/laudo/:path*', '/relatorios/:path*', '/visualizar-laudo/:path*', '/portal', '/portal/:path*', '/aprovacoes', '/aprovacoes/:path*', '/empresas', '/empresas/:path*', '/usuarios', '/usuarios/:path*'],
 }

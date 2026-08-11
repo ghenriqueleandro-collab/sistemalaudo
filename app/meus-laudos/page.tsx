@@ -322,13 +322,15 @@ export default function MeusLaudosPage() {
               {carregando ? 'Carregando...' : `${laudos.length} laudo${laudos.length !== 1 ? 's' : ''} no total`}
             </p>
           </div>
-          <button
-            onClick={() => setMostrarModal(true)}
-            className="inline-flex items-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#0f3d68,#2563eb)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition"
-          >
-            <span className="text-lg leading-none">+</span>
-            Novo laudo
-          </button>
+          {perfil !== 'cliente' && (
+            <button
+              onClick={() => setMostrarModal(true)}
+              className="inline-flex items-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#0f3d68,#2563eb)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition"
+            >
+              <span className="text-lg leading-none">+</span>
+              Novo laudo
+            </button>
+          )}
         </div>
 
         {/* Cards de dashboard */}
