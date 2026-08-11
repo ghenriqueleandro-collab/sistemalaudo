@@ -689,8 +689,15 @@ function VisualizarLaudoContent() {
           <div className="bg-white p-8 rounded-2xl shadow text-center">
             <h1 className="text-2xl font-bold mb-4">Nenhum laudo encontrado</h1>
             <div className="flex gap-3 justify-center">
-              <Link href="/meus-laudos" className="border px-4 py-2 rounded-xl">Meus laudos</Link>
-              <Link href="/novo-laudo" className="bg-green-600 text-white px-4 py-2 rounded-xl">Novo laudo</Link>
+              {!isCliente && (
+                <>
+                  <Link href="/meus-laudos" className="border px-4 py-2 rounded-xl">Meus laudos</Link>
+                  <Link href="/novo-laudo" className="bg-green-600 text-white px-4 py-2 rounded-xl">Novo laudo</Link>
+                </>
+              )}
+              {isCliente && (
+                <Link href="/portal" className="border px-4 py-2 rounded-xl">← Voltar ao portal</Link>
+              )}
             </div>
           </div>
         </section>
