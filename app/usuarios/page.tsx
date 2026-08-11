@@ -92,10 +92,15 @@ export default function UsuariosPage() {
     try {
       const res = await fetch('/api/usuarios', { cache: 'no-store' })
       const dados = await res.json()
-      setUsuarios(dados.map((u: Usuario) => ({
-        ...u,
-        permissoes: { ...PERMISSOES_PADRAO, ...(u.permissoes || {}) },
-      })))
+      // Exclui usuários com perfil 'cliente' — esses são gerenciados na página Empresas
+      setUsuarios(
+        dados
+          .filter((u: Usuario) => u.perfil !== 'cliente')
+          .map((u: Usuario) => ({
+            ...u,
+            permissoes: { ...PERMISSOES_PADRAO, ...(u.permissoes || {}) },
+          }))
+      )
     } finally {
       setCarregando(false)
     }
