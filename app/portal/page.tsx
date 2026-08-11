@@ -80,6 +80,7 @@ export default function PortalPage() {
   const [laudos, setLaudos] = useState<LaudoPortal[]>([])
   const [carregando, setCarregando] = useState(true)
   const [filtroStatus, setFiltroStatus] = useState<StatusAcompanhamento | ''>('')
+  const [busca, setBusca] = useState('')
   const [erro, setErro] = useState('')
 
   // Redireciona se não for cliente
@@ -127,9 +128,15 @@ export default function PortalPage() {
     {} as Record<StatusAcompanhamento, number>
   )
 
-  const laudosFiltrados = filtroStatus
-    ? laudos.filter((l) => l.statusAcompanhamento === filtroStatus)
-    : laudos
+  const norm = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  const laudosFiltrados = laudos.filter((l) => {
+    const porStatus = !filtroStatus || l.statusAcompanhamento === filtroStatus
+    const termo = norm(busca.trim())
+    const porBusca = !termo || [
+      l.endereco, l.tipo, l.referenciaCliente, l.observacaoCliente,
+    ].some((campo) => norm(campo || '').includes(termo))
+    return porStatus && porBusca
+  })
 
   // Loading / erro de sessão
   if (sessionStatus === 'loading') {
@@ -205,6 +212,16 @@ export default function PortalPage() {
               </button>
             )
           })}
+        </div>
+
+        {/* Barra de pesquisa */}
+        <div className="mb-6">
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por endereço, tipo, referência..."
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-400 transition shadow-sm"
+          />
         </div>
 
         {/* Mensagem de erro */}
