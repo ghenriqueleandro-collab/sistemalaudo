@@ -431,6 +431,7 @@ function VisualizarLaudoContent() {
   const laudoId = searchParams.get('id')
 
   const [dados, setDados] = useState<DadosLaudo | null>(null)
+  const [carregando, setCarregando] = useState(true)
   const [sumario, setSumario] = useState<ItemSumario[]>([])
   const [documentacaoNumPages, setDocumentacaoNumPages] = useState(0)
   const [calculoNumPages, setCalculoNumPages] = useState(0)
@@ -649,6 +650,8 @@ function VisualizarLaudoContent() {
         }
       } catch (error) {
         console.error(error)
+      } finally {
+        setCarregando(false)
       }
     }
     carregarLaudo()
@@ -683,6 +686,25 @@ function VisualizarLaudoContent() {
   }, [dados, documentacaoNumPages, calculoNumPages])
 
   if (!dados) {
+    if (carregando) {
+      return (
+        <AppShell>
+          <section className="flex min-h-[60vh] items-center justify-center px-6">
+            <div className="text-center">
+              <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+                <svg className="h-6 w-6 animate-spin text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              </div>
+              <p className="text-base font-medium text-slate-700">Preparando seu laudo…</p>
+              <p className="mt-1 text-sm text-slate-400">Isso pode levar alguns segundos.</p>
+            </div>
+          </section>
+        </AppShell>
+      )
+    }
+
     return (
       <AppShell>
         <section className="mx-auto max-w-4xl px-6 pt-10">
