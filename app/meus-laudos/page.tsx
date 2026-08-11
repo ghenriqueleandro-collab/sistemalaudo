@@ -12,6 +12,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import AppShell from '../components/AppShell'
 import {
+  excluirLaudo,
   filtrarLaudos,
   formatarStatusAcompanhamento,
   listarLaudos,
@@ -90,6 +91,8 @@ export default function MeusLaudosPage() {
   const [carregando, setCarregando] = useState(true)
   const [busca, setBusca] = useState('')
   const [filtroAcomp, setFiltroAcomp] = useState<StatusAcompanhamento | ''>('')
+  const [excluindoId, setExcluindoId] = useState<string | null>(null)
+  const [solicitandoId, setSolicitandoId] = useState<string | null>(null)
 
   // Modal criação
   const [empresas, setEmpresas] = useState<{ id: string; nome: string }[]>([])
@@ -155,6 +158,50 @@ export default function MeusLaudosPage() {
     })
     return resultado
   }, [laudos, busca, filtroAcomp])
+
+  // ─── Permissões de exclusão ──────────────────────────────────────────────
+
+  const perfil = (session?.user as any)?.perfil
+  const usuarioEmail = session?.user?.email || ''
+  const usuarioNome = session?.user?.name || usuarioEmail
+  const isAdmin = perfil === 'admin'
+  const podeExcluirDireto = isAdmin
+
+  async function handleExcluir(id: string) {
+    if (!confirm('Tem certeza que deseja excluir este laudo? Esta ação não pode ser desfeita.')) return
+    try {
+      setExcluindoId(id)
+      await excluirLaudo(id)
+      setLaudos((atual) => atual.filter((item) => item.id !== id))
+    } catch {
+      alert('Erro ao excluir o laudo.')
+    } finally {
+      setExcluindoId(null)
+    }
+  }
+
+  async function handleSolicitarExclusao(laudo: LaudoResumo) {
+    if (!confirm(`Solicitar exclusão deste laudo? O administrador precisará aprovar.`)) return
+    setSolicitandoId(laudo.id)
+    try {
+      const res = await fetch('/api/solicitacoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          laudoId: laudo.id,
+          laudoCodigo: laudo.codigo,
+          laudoEndereco: laudo.endereco,
+          usuarioEmail,
+          usuarioNome,
+        }),
+      })
+      const dados = await res.json()
+      if (!res.ok) { alert(dados.erro || 'Erro ao enviar solicitação.'); return }
+      alert('Solicitação enviada. O administrador será notificado.')
+    } finally {
+      setSolicitandoId(null)
+    }
+  }
 
   // ─── Geocodificação ───────────────────────────────────────────────────────
 
@@ -382,6 +429,21 @@ export default function MeusLaudosPage() {
                         className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition text-center">
                         Visualizar
                       </a>
+                      {podeExcluirDireto ? (
+                        <button type="button"
+                          onClick={() => handleExcluir(laudo.id)}
+                          disabled={excluindoId === laudo.id}
+                          className="rounded-xl border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition disabled:opacity-50 text-center">
+                          {excluindoId === laudo.id ? '...' : 'Excluir'}
+                        </button>
+                      ) : (
+                        <button type="button"
+                          onClick={() => handleSolicitarExclusao(laudo)}
+                          disabled={solicitandoId === laudo.id}
+                          className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50 transition disabled:opacity-50 text-center">
+                          {solicitandoId === laudo.id ? '...' : 'Solicitar exclusão'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 )
