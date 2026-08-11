@@ -6,6 +6,7 @@ import React, { useEffect, useState, Suspense } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import AppShell from '../../components/AppShell'
 import nextDynamic from 'next/dynamic'
 import { obterLaudoAtual, buscarLaudo } from '@/lib/laudos-storage'
@@ -424,6 +425,8 @@ function VisualizarLaudoContent() {
     return String(contadorPagina)
   }
 
+  const { data: session } = useSession()
+  const isCliente = (session?.user as any)?.perfil === 'cliente'
   const searchParams = useSearchParams()
   const laudoId = searchParams.get('id')
 
@@ -864,16 +867,23 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               <h1 className="text-3xl font-bold">Visualizar laudo</h1>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href="/" className="border px-3 py-2 rounded-xl">Início</Link>
-              <Link href="/meus-laudos" className="border px-3 py-2 rounded-xl">Meus laudos</Link>
-              <Link
-                href={
-                  laudoId ? `/novo-laudo?id=${laudoId}` : '/novo-laudo'
-                }
-                className="bg-blue-50 px-3 py-2 rounded-xl text-blue-700"
-              >
-                Editar laudo
-              </Link>
+              {!isCliente && (
+                <>
+                  <Link href="/" className="border px-3 py-2 rounded-xl">Início</Link>
+                  <Link href="/meus-laudos" className="border px-3 py-2 rounded-xl">Meus laudos</Link>
+                  <Link
+                    href={laudoId ? `/novo-laudo?id=${laudoId}` : '/novo-laudo'}
+                    className="bg-blue-50 px-3 py-2 rounded-xl text-blue-700"
+                  >
+                    Editar laudo
+                  </Link>
+                </>
+              )}
+              {isCliente && (
+                <Link href="/portal" className="border px-3 py-2 rounded-xl">
+                  ← Voltar ao portal
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={baixarLaudoPdf}
