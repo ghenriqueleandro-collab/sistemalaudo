@@ -1,10 +1,13 @@
 /**
  * SALVAR EM: src/app/api/solicitacoes/[id]/route.ts
- * (pasta [id] com colchetes)
+ *
+ * Atualizado: ao aprovar exclusão, agora chama limparChavesLaudo
+ * para remover todas as mídias associadas ao laudo do Redis.
  */
 
 import { Redis } from '@upstash/redis'
 import { NextRequest, NextResponse } from 'next/server'
+import { limparChavesLaudo } from '../../../api/laudos/[id]/route'
 
 const redis = new Redis({
   url: process.env.KV_REST_API_URL!,
@@ -14,7 +17,6 @@ const redis = new Redis({
 type Params = { params: Promise<{ id: string }> }
 
 // PUT /api/solicitacoes/:id — admin aprova ou nega
-// body: { acao: 'aprovar' | 'negar' }
 export async function PUT(request: NextRequest, { params }: Params) {
   try {
     const { id } = await params
@@ -43,15 +45,16 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
     await redis.set(`solicitacao:${id}`, solicitacaoAtualizada)
 
-    // Se aprovado, exclui o laudo do Redis
+    // Se aprovado, remove o laudo e todas as mídias associadas
     if (acao === 'aprovar') {
-      await Promise.all([
-        redis.del(`laudo:${solicitacao.laudoId}`),
-        redis.srem('laudo_ids', solicitacao.laudoId),
-      ])
+      await redis.srem('laudo_ids', solicitacao.laudoId)
+      // Limpeza completa em background — não bloqueia resposta
+      limparChavesLaudo(solicitacao.laudoId).catch((err) =>
+        console.error(`[solicitacoes/${id}] Erro ao limpar mídias do laudo ${solicitacao.laudoId}:`, err)
+      )
     }
 
-    // Cria notificação para o usuário que solicitou
+    // Notificação para o solicitante
     const notifId = crypto.randomUUID()
     const notificacao = {
       id: notifId,
