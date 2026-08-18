@@ -954,10 +954,8 @@ export default function NovoLaudoPage() {
       console.error('Erro ao salvar laudo:', msg)
       setErroSaveMsg(msg)
       setAutoSaveStatus('error')
-      if (!silencioso) {
-        const msg = error instanceof Error ? error.message : String(error)
-        alert(`Erro ao salvar o laudo.\n\nDetalhe: ${msg}`)
-      }
+      // Não exibir alert no autosave silencioso — o banner vermelho já avisa
+      // Em save manual (silencioso=false), o usuário já vê o alert do idSalvo acima
     } finally {
       setSalvando(false)
     }
@@ -1075,12 +1073,29 @@ export default function NovoLaudoPage() {
         {/* ── FORMULÁRIO FULL-WIDTH ── */}
         {/* Indicador de auto-save */}
         {autoSaveStatus !== 'idle' && (
-          <div className={`mb-4 text-xs px-3 py-1.5 rounded-lg w-fit ${
-            autoSaveStatus === 'saving' ? 'bg-amber-50 text-amber-700' :
-            autoSaveStatus === 'saved'  ? 'bg-green-50 text-green-700' :
-            'bg-red-50 text-red-700'
+          <div className={`mb-4 flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium w-fit ${
+            autoSaveStatus === 'saving' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+            autoSaveStatus === 'saved'  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+            'bg-red-50 text-red-700 border border-red-300'
           }`}>
-            {autoSaveStatus === 'saving' ? '⏳ Salvando…' : autoSaveStatus === 'saved' ? '✓ Salvo automaticamente' : `✗ Erro ao salvar${erroSaveMsg ? ': ' + erroSaveMsg.slice(0,60) : ''}`}
+            {autoSaveStatus === 'saving' && (
+              <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Salvando…</>
+            )}
+            {autoSaveStatus === 'saved' && (
+              <>✓ Salvo automaticamente</>
+            )}
+            {autoSaveStatus === 'error' && (
+              <>
+                <span>⚠️ Falha ao salvar. Sua conexão pode estar instável.</span>
+                <button
+                  type="button"
+                  onClick={() => executarSave(false)}
+                  className="ml-2 underline text-red-800 hover:text-red-900 font-semibold whitespace-nowrap"
+                >
+                  Tentar novamente
+                </button>
+              </>
+            )}
           </div>
         )}
 
