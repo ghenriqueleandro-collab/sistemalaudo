@@ -527,8 +527,13 @@ export default function MeusLaudosPage() {
                     <option>Estacionamento</option><option>Terreno comercial</option><option>Terreno industrial</option>
                   </optgroup>
                 </select>
-                <input value={novoLaudo.finalidade} onChange={(e) => setField('finalidade', e.target.value)}
-                  placeholder="Finalidade" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
+                <select value={novoLaudo.finalidade} onChange={(e) => setField('finalidade', e.target.value)}
+                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400">
+                  <option value="">Finalidade</option>
+                  <option value="garantia">Garantia</option>
+                  <option value="execucao">Execução</option>
+                  <option value="locacao">Locação</option>
+                </select>
                 <input value={novoLaudo.matricula} onChange={(e) => setField('matricula', e.target.value)}
                   placeholder="Matrícula" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
               </div>
