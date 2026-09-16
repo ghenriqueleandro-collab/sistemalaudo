@@ -1116,7 +1116,7 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
           </Text>
           {isLocacao && (
             <Text style={[s.txt,{marginTop:4}]}>
-              Com base nas pesquisas de mercado realizadas e nas características do imóvel avaliado, conclui-se que o valor locativo determinado reflete as condições atuais do mercado imobiliário local, considerando imóveis de características semelhantes quanto à localização, padrão construtivo e estado de conservação. O valor de locação estabelecido é compatível com a realidade do mercado, podendo sofrer variações em função de condições específicas de negociação.
+              Com base nas pesquisas de mercado realizadas e nas características do imóvel avaliado, conclui-se que o valor locativo determinado reflete as condições atuais do mercado imobiliário local, considerando imóveis de características semelhantes quanto à localização, padrão construtivo e estado de conservação.
             </Text>
           )}
           {dados.observacoesFinais && <Text style={[s.txt,{marginTop:4}]}>{dados.observacoesFinais}</Text>}

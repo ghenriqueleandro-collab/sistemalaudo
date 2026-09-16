@@ -2451,7 +2451,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 <div className="mb-8 mt-8">
                   <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.garantia}. CONCLUSÕES GERAIS DE LOCAÇÃO</h2>
                   <div className="space-y-4 text-justify">
-                    <p>Com base nas pesquisas de mercado realizadas e nas características do imóvel avaliado, conclui-se que o valor locativo determinado reflete as condições atuais do mercado imobiliário local, considerando imóveis de características semelhantes quanto à localização, padrão construtivo e estado de conservação. O valor de locação estabelecido é compatível com a realidade do mercado, podendo sofrer variações em função de condições específicas de negociação.</p>
+                    <p>Com base nas pesquisas de mercado realizadas e nas características do imóvel avaliado, conclui-se que o valor locativo determinado reflete as condições atuais do mercado imobiliário local, considerando imóveis de características semelhantes quanto à localização, padrão construtivo e estado de conservação.</p>
                     {dados.garantiaObservacoes?.trim() && (
                       <p style={{ whiteSpace: 'pre-wrap' }}>{dados.garantiaObservacoes}</p>
                     )}

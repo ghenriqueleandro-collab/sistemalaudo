@@ -1870,7 +1870,7 @@ export function LaudoPdf({
         {isLocacao ? (
           <>
             <H2 id="s-14">14. CONCLUSÕES GERAIS DE LOCAÇÃO</H2>
-            <P>Com base nas pesquisas de mercado realizadas e nas características do imóvel avaliado, conclui-se que o valor locativo determinado reflete as condições atuais do mercado imobiliário local, considerando imóveis de características semelhantes quanto à localização, padrão construtivo e estado de conservação. O valor de locação estabelecido é compatível com a realidade do mercado, podendo sofrer variações em função de condições específicas de negociação.</P>
+            <P>Com base nas pesquisas de mercado realizadas e nas características do imóvel avaliado, conclui-se que o valor locativo determinado reflete as condições atuais do mercado imobiliário local, considerando imóveis de características semelhantes quanto à localização, padrão construtivo e estado de conservação.</P>
             {(dados as any).garantiaObservacoes?.trim() && (
               <View style={{ marginTop: 4 }}>
                 {String((dados as any).garantiaObservacoes).split('\n').map((linha: string, i: number) => (
