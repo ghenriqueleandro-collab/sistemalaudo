@@ -334,7 +334,8 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
   const temElementos = elementosExibir.length > 0
 
   const capaMetodologia = isEvolutivo ? 'Evolutivo' : dados.metodoAvaliacao==='comparativo' ? 'Comparativo Direto' : dados.metodoAvaliacao||'–'
-  const capaFinalidade  = dados.finalidade==='garantia' ? 'Avaliação para fins de garantia' : dados.finalidade==='execucao' ? 'Avaliação para fins de execução' : dados.finalidade||'–'
+  const capaFinalidade  = dados.finalidade==='garantia' ? 'Avaliação para fins de garantia' : dados.finalidade==='execucao' ? 'Avaliação para fins de execução' : dados.finalidade==='locacao' ? 'Avaliação para fins de locação' : dados.finalidade||'–'
+  const isLocacao = dados.finalidade === 'locacao'
 
   const gv = (i:any) => i.pontos || (i.grau==='III'?3:i.grau==='II'?2:i.grau==='I'?1:0)
   const capaGrauFund = (()=>{
@@ -534,11 +535,11 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
         <SecHeader num="2" titulo="Avaliação" />
         <View style={s.valorRow}>
           <View style={s.valorDark}>
-            <Text style={s.valorLbl}>VALOR DA AVALIAÇÃO</Text>
+            <Text style={s.valorLbl}>{isLocacao ? 'VALOR DE LOCAÇÃO' : 'VALOR DA AVALIAÇÃO'}</Text>
             <Text style={s.valorNum}>{fm(vlFinal)}</Text>
             <Text style={s.valorExt}>({cap(numeroPorExtenso(vlFinal))})</Text>
           </View>
-          {vlf > 0 && (
+          {!isLocacao && vlf > 0 && (
             <View style={s.valorLight}>
               <Text style={s.valorLblD}>VALOR DE LIQUIDAÇÃO</Text>
               <Text style={s.valorNumD}>{fm(vlf)}</Text>
@@ -934,11 +935,11 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
         )}
         <View style={s.valorRow}>
           <View style={s.valorDark}>
-            <Text style={s.valorLbl}>VALOR DA AVALIAÇÃO</Text>
+            <Text style={s.valorLbl}>{isLocacao ? 'VALOR DE LOCAÇÃO' : 'VALOR DA AVALIAÇÃO'}</Text>
             <Text style={s.valorNum}>{fm(vlFinal)}</Text>
             <Text style={s.valorExt}>({cap(numeroPorExtenso(vlFinal))})</Text>
           </View>
-          {vlf > 0 && (
+          {!isLocacao && vlf > 0 && (
             <View style={s.valorLight}>
               <Text style={s.valorLblD}>VALOR DE LIQUIDEZ FORÇADA</Text>
               <Text style={s.valorNumD}>{fm(vlf)}</Text>
@@ -1108,10 +1109,16 @@ export default function LaudoPdfSimplificado({ dados }: { dados: DadosLaudo }) {
         <View style={{ borderWidth: 0.5, borderColor: CINZA, padding: 8, marginTop: 3 }}>
           <Text style={s.txtBold}>INFORMAÇÕES FINAIS</Text>
           <Text style={[s.txt,{marginTop:4}]}>
-            Avaliação para determinação do valor de mercado do imóvel localizado em {dados.endereco},
-            feita pelo {metLabel(dados.metodoAvaliacao)}. O presente laudo se enquadra no Grau de Fundamentação {capaGrauFund} e
-            Grau de Precisão {capaGrauPrec}, atendendo à Norma ABNT NBR 14.653.
+            {isLocacao
+              ? `Avaliação para determinação do valor locativo do imóvel localizado em ${dados.endereco}, feita pelo ${metLabel(dados.metodoAvaliacao)}. O presente laudo se enquadra no Grau de Fundamentação ${capaGrauFund} e Grau de Precisão ${capaGrauPrec}, atendendo à Norma ABNT NBR 14.653.`
+              : `Avaliação para determinação do valor de mercado do imóvel localizado em ${dados.endereco}, feita pelo ${metLabel(dados.metodoAvaliacao)}. O presente laudo se enquadra no Grau de Fundamentação ${capaGrauFund} e Grau de Precisão ${capaGrauPrec}, atendendo à Norma ABNT NBR 14.653.`
+            }
           </Text>
+          {isLocacao && (
+            <Text style={[s.txt,{marginTop:4}]}>
+              Com base nas pesquisas de mercado realizadas e nas características do imóvel avaliado, conclui-se que o valor locativo determinado reflete as condições atuais do mercado imobiliário local, considerando imóveis de características semelhantes quanto à localização, padrão construtivo e estado de conservação. O valor de locação estabelecido é compatível com a realidade do mercado, podendo sofrer variações em função de condições específicas de negociação.
+            </Text>
+          )}
           {dados.observacoesFinais && <Text style={[s.txt,{marginTop:4}]}>{dados.observacoesFinais}</Text>}
         </View>
         <View style={s.signArea}>

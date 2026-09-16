@@ -65,7 +65,7 @@ export default function EtapaValorImovel({
 
   return (
     <div className="space-y-5">
-      <h2 className="text-2xl font-bold text-slate-900">11. Valor do imóvel</h2>
+      <h2 className="text-2xl font-bold text-slate-900">{form.finalidade === 'locacao' ? '11. Valor de locação' : '11. Valor do imóvel'}</h2>
 
       {/* ── Bloco Evolutivo — sempre visível quando isEvo, mesmo sem dados calculados ── */}
       {isEvo && (
@@ -265,19 +265,6 @@ export default function EtapaValorImovel({
             <span className="font-semibold">{formatarMoeda(Math.round(Math.round(valorFinalImovel / 100) * 100 * fatorLiq / 100) * 100)}</span>
           </div>
         )}
-      </div>
-
-      {/* Campo de observação — seção 11 */}
-      <div className="space-y-1.5">
-        <label className={LBL}>Observações</label>
-        <textarea
-          name="observacaoValorImovel"
-          value={form.observacaoValorImovel || ''}
-          onChange={handleChange}
-          rows={4}
-          placeholder="Observações adicionais sobre o valor do imóvel (opcional)..."
-          className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white outline-none focus:border-blue-400 transition resize-none"
-        />
       </div>
     </div>
   )

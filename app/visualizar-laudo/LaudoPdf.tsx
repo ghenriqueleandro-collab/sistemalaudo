@@ -170,19 +170,16 @@ function obterTextoGarantia(classificacao?: string, observacoes?: string) {
   if (classificacao === 'boa') return {
     titulo: 'O imóvel avaliado apresenta-se como boa garantia.',
     texto: 'Após análise das características apresentadas no presente laudo, entendemos que o imóvel em questão reúne condições satisfatórias para ser aceito como garantia.',
-    observacoes: observacoes || '',
   }
   if (classificacao === 'observacoes') return {
     titulo: 'O imóvel avaliado apresenta observações relevantes quanto à garantia.',
-    texto: 'Após análise das características apresentada no presente laudo, verificamos que o imóvel poderá ser aceito como garantia, porém existem ressalvas que deverão ser avaliadas pelo interessado, ficando a aceitação final a seu critério.',
-    observacoes: observacoes || '',
+    texto: `Após análise das características apresentada no presente laudo, verificamos que o imóvel poderá ser aceito como garantia, porém existem ressalvas que deverão ser avaliadas pelo interessado, ficando a aceitação final a seu critério.${observacoes ? ` Observações: ${observacoes}` : ''}`,
   }
   if (classificacao === 'negativa') return {
     titulo: 'O imóvel avaliado não é recomendado como garantia.',
-    texto: 'Após análise das características apresentada no presente laudo, entendemos que o imóvel em questão não apresenta condições adequadas para aceitação como garantia.',
-    observacoes: observacoes || '',
+    texto: `Após análise das características apresentada no presente laudo, entendemos que o imóvel em questão não apresenta condições adequadas para aceitação como garantia.${observacoes ? ` Justificativa: ${observacoes}` : ''}`,
   }
-  return { titulo: '', texto: '', observacoes: '' }
+  return { titulo: '', texto: '' }
 }
 
 const TEXTO_TERRENO_ENCRAVADO = `O terreno encravado caracteriza-se por não possuir acesso oficial a qualquer via pública, podendo ser total ou parcial. A área com encravamento total, como é o caso do avaliando, não apresenta acesso em nenhuma de suas confrontações, dependendo, assim, de imóveis vizinhos para ser alcançado. Já o encravamento parcial é caracterizado por imóvel que possui acesso oficial, porém, por qualquer motivo, seja ele natural ou não, não é possível o acesso por esta via.
@@ -594,8 +591,7 @@ export function LaudoPdf({
   const evSnapData  = (dados as any).dadosCalculoEvolutivo as any | undefined
   const isEvo       = dados.metodoAvaliacao === 'evolutivo'
   const elemsCddm   = cddmData?.elementos || []
-  const elemsEv     = evSnapData?.elementos || []           // inputs brutos (para cards)
-  const elemsEvCalc = evSnapData?.resultado?.elementos || [] // elementos calculados (para tabelas)
+  const elemsEv     = evSnapData?.elementos || []
   const elemsExibir = isEvo ? elemsEv : elemsCddm
   const temCddm     = elemsCddm.length > 0
   // Para o mapa e seções de cálculo: usar elementos do método ativo
@@ -784,7 +780,10 @@ export function LaudoPdf({
     ? 'Avaliação para fins de garantia'
     : dados.finalidade === 'execucao'
     ? 'Avaliação para fins de execução'
+    : dados.finalidade === 'locacao'
+    ? 'Avaliação para fins de locação'
     : dados.finalidade || 'Não informado'
+  const isLocacao = dados.finalidade === 'locacao'
 
   // Melhoramentos rows
   const melhorRows = [
@@ -840,11 +839,11 @@ export function LaudoPdf({
     { txt: '10. METODOLOGIA, PESQUISAS E CÁLCULOS',                                sub: false, id: 's-10' },
     ...(dados.localizacaoComparativos ? [{ txt: '10.1. LOCALIZAÇÃO DOS ELEMENTOS COMPARATIVOS', sub: true, id: 's-10-1' }] : []),
     ...(temCddm ? [{ txt: dados.localizacaoComparativos ? '10.2. HOMOGENEIZAÇÃO' : '10.1. HOMOGENEIZAÇÃO', sub: true, id: 's-10-hom' }] : []),
-    { txt: '11. VALOR DO IMÓVEL',                                                  sub: false, id: 's-11' },
+    { txt: isLocacao ? '11. VALOR DE LOCAÇÃO' : '11. VALOR DO IMÓVEL',             sub: false, id: 's-11' },
     ...(temFundamentacao ? [{ txt: '12. DETERMINAÇÃO DO GRAU DE FUNDAMENTAÇÃO',    sub: false, id: 's-12' }]                         : []),
     ...(temPrecisao ? [{ txt: '12.02 GRAU DE PRECISÃO',                            sub: true,  id: 's-12-02' }]                      : []),
     { txt: '13. CONCLUSÃO',                                                        sub: false, id: 's-13' },
-    ...(gtex.titulo ? [{ txt: '14. GARANTIA',                                      sub: false, id: 's-14' }]                         : []),
+    ...(isLocacao || gtex.titulo ? [{ txt: isLocacao ? '14. CONCLUSÕES GERAIS DE LOCAÇÃO' : '14. GARANTIA', sub: false, id: 's-14' }] : []),
     { txt: '15. ANEXOS E ASSINATURA RESPONSÁVEL TÉCNICO',                          sub: false, id: 's-15' },
     ...(dados.documentacaoPdf ? [{ txt: '15.1. DOCUMENTAÇÃO',                      sub: true,  id: 's-15-1' }]                       : []),
     ...(dados.fotos && dados.fotos.length > 0 ? [{ txt: '15.2. RELATÓRIO FOTOGRÁFICO', sub: true, id: 's-15-2' }]                    : []),
@@ -990,24 +989,26 @@ export function LaudoPdf({
           {/* Cards de valores */}
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
             <View style={[s.valueBoxDark, { flex: 1 }]}>
-              <Text style={s.vbLabelDark}>Valor de Avaliação</Text>
+              <Text style={s.vbLabelDark}>{isLocacao ? 'Valor de Locação' : 'Valor de Avaliação'}</Text>
               <Text style={s.vbNumDark}>{fm(valorArredondado)}</Text>
               <Text style={s.vbExtDark}>{valorExtenso.charAt(0).toUpperCase() + valorExtenso.slice(1)}</Text>
             </View>
-            <View style={[s.valueBoxLight, { flex: 1 }]}>
-              <Text style={s.vbLabel}>Valor de Liquidez Forçada</Text>
-              {vlf > 0 ? (
-                <>
-                  <Text style={s.vbNum}>{fm(vlf)}</Text>
-                  <Text style={s.vbExt}>{vlfExtenso.charAt(0).toUpperCase() + vlfExtenso.slice(1)}</Text>
-                  <View style={{ marginTop: 4, backgroundColor: '#fff', borderRadius: 2, paddingHorizontal: 6, paddingVertical: 2, alignSelf: 'flex-start', border: '0.5pt solid #c2d0e8' }}>
-                    <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: '#2347C6' }}>Fator {capaFatorLiq} · {capaLiqDisplay}</Text>
-                  </View>
-                </>
-              ) : (
-                <Text style={{ fontSize: 9, color: '#8FA4C7' }}>Não informado</Text>
-              )}
-            </View>
+            {!isLocacao && (
+              <View style={[s.valueBoxLight, { flex: 1 }]}>
+                <Text style={s.vbLabel}>Valor de Liquidez Forçada</Text>
+                {vlf > 0 ? (
+                  <>
+                    <Text style={s.vbNum}>{fm(vlf)}</Text>
+                    <Text style={s.vbExt}>{vlfExtenso.charAt(0).toUpperCase() + vlfExtenso.slice(1)}</Text>
+                    <View style={{ marginTop: 4, backgroundColor: '#fff', borderRadius: 2, paddingHorizontal: 6, paddingVertical: 2, alignSelf: 'flex-start', border: '0.5pt solid #c2d0e8' }}>
+                      <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: '#2347C6' }}>Fator {capaFatorLiq} · {capaLiqDisplay}</Text>
+                    </View>
+                  </>
+                ) : (
+                  <Text style={{ fontSize: 9, color: '#8FA4C7' }}>Não informado</Text>
+                )}
+              </View>
+            )}
           </View>
 
           {/* Strip de especificação */}
@@ -1104,7 +1105,11 @@ export function LaudoPdf({
         <P>Trata-se de imóvel caracterizado como {dados.tipo}, conforme características observadas em vistoria.</P>
 
         <H2 id="s-2">2. OBJETIVO</H2>
-        <P>Trata-se de avaliação para fins de {dados.finalidade === 'garantia' ? 'garantia' : 'execução'}.</P>
+        {isLocacao ? (
+          <P>Trata-se de avaliação para fins de locação, visando determinar o valor locativo de mercado do imóvel, conforme as normas da ABNT NBR 14.653.</P>
+        ) : (
+          <P>Trata-se de avaliação para fins de {dados.finalidade === 'garantia' ? 'garantia' : 'execução'}.</P>
+        )}
 
         <H2 id="s-3">3. PROPRIETÁRIO</H2>
         <P>{dados.proprietario || 'Não informado'}.</P>
@@ -1348,8 +1353,8 @@ export function LaudoPdf({
           </View>
         )}
 
-        {/* ── HOMOGENEIZAÇÃO — CDDM ────────────────────────────────────── */}
-        {temCddm && (
+        {/* ── 9.1. HOMOGENEIZAÇÃO (só comparativo) ────────────────────────── */}
+        {(temCddm || isEvo) && (
           <>
             <H3 id="s-10-hom">{dados.localizacaoComparativos ? '10.2.' : '10.1.'} Homogeneização</H3>
             <View style={s.homogTable}>
@@ -1389,239 +1394,6 @@ export function LaudoPdf({
             </View>
           </>
         )}
-
-        {/* ── HOMOGENEIZAÇÃO — EVOLUTIVO ─────────────────────────────────── */}
-        {isEvo && evSnapData?.resultado && (evSnapData?.elementos || []).length > 0 && (() => {
-          const secNum     = dados.localizacaoComparativos ? '10.2.' : '10.1.'
-          const resEv      = evSnapData.resultado
-          const avArea     = parseFloat(String(evSnapData.avaliando?.area || '0').replace(',', '.')) || 0
-          const avLocal    = parseFloat(String(evSnapData.avaliando?.notaLocal || '100').replace(',', '.')) || 100
-          const avTopo     = parseFloat(String(evSnapData.avaliando?.notaTopo  || '100').replace(',', '.')) || 100
-          const avVis      = parseFloat(String(evSnapData.avaliando?.notaVis   || '100').replace(',', '.')) || 100
-          const elemsInput = evSnapData.elementos || []
-          const fmt4       = (v: number) => v.toFixed(4).replace('.', ',')
-          const fmt2br     = (v: number) => (Math.round(v * 100) / 100).toFixed(2).replace('.', ',')
-          const pnMotor    = (v: any): number => {
-            if (v == null || v === '') return 0
-            if (typeof v === 'number') return isFinite(v) ? v : 0
-            return parseFloat(String(v).replace(/[R$\s.]/g, '').replace(',', '.')) || 0
-          }
-          const round3Ev = (v: number) => Math.round(v / 0.001) * 0.001
-
-          // Usa resultado.elementos do snapshot quando disponível; recalcula para snapshots antigos
-          const elemsCalcFinal: any[] = (elemsEvCalc.length > 0)
-            ? elemsEvCalc
-            : elemsInput.map((e: any) => {
-                const aE = pnMotor(e.areaTerreno)
-                const vO = pnMotor(e.valorOferta)
-                const fOStr = String(e.fatorOferta ?? '').trim()
-                const fO = fOStr.includes(',') ? parseFloat(fOStr.replace(/\./g, '').replace(',', '.')) || 1 : parseFloat(fOStr) || 1
-                const bE = e.tipo === 'Terreno c/ benfeitoria' ? pnMotor(e.benfElem) : 0
-                if (aE <= 0 || vO <= 0) return null
-                const vu = (vO * fO - bE) / aE
-                if (vu <= 0) return null
-                const ratio = avArea > 0 ? aE / avArea : 1
-                const fA = round3Ev(Math.pow(ratio, (ratio < 0.7 || ratio > 1.3) ? 0.125 : 0.25))
-                const fL = (pnMotor(e.fatorLocal) || 100) > 0 ? avLocal / (pnMotor(e.fatorLocal) || 100) : 1
-                const fT = (pnMotor(e.fatorTopografia) || 100) > 0 ? avTopo / (pnMotor(e.fatorTopografia) || 100) : 1
-                const fV = (pnMotor(e.fatorVisibilidade) || 100) > 0 ? avVis / (pnMotor(e.fatorVisibilidade) || 100) : 1
-                const soma = vu * (1 + (fA - 1) + (fL - 1) + (fT - 1) + (fV - 1))
-                const coef = soma / vu
-                const valido = coef >= 0.5 && coef <= 2.0
-                return { vu, fA, fL, fT, fV, soma, coef, valido }
-              })
-
-          // Helper: sub-tabela por fator
-          const TabelaFator = ({ titulo, nomeCampo, avLabel, getValElem, getFator }: {
-            titulo: string; nomeCampo: string; avLabel: string
-            getValElem: (inp: any) => number; getFator: (r: any) => number
-          }) => (
-            <View style={{ marginBottom: 6 }}>
-              <View style={{ backgroundColor: '#EFF6FF', paddingVertical: 3, paddingHorizontal: 5, borderWidth: 0.5, borderColor: CINZA, borderBottomWidth: 0 }}>
-                <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: AZUL, textTransform: 'uppercase' }}>{titulo}</Text>
-              </View>
-              <View style={s.homogTable}>
-                <View style={s.homogRowH}>
-                  <Text style={[s.homogTh,{flex:0.5,textAlign:'left',paddingLeft:4}]}>Elem.</Text>
-                  <Text style={[s.homogTh,{flex:1.2}]}>{nomeCampo}</Text>
-                  <Text style={[s.homogTh,{flex:1.0}]}>Coeficiente</Text>
-                  <Text style={[s.homogTh,{flex:1.3}]}>Diferença (R$/m²)</Text>
-                  <Text style={[s.homogThLast,{flex:1.3}]}>V.U. Calculado</Text>
-                </View>
-                {elemsCalcFinal.map((r: any, i: number) => {
-                  if (!r) return null
-                  const inp  = elemsInput[i] || {}
-                  const vu_i = r.vu ?? 0
-                  const f    = getFator(r)
-                  const dif  = (f - 1) * vu_i
-                  const vuC  = vu_i * f
-                  const isLast = i === elemsCalcFinal.length - 1
-                  return (
-                    <View key={`${titulo}-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
-                      <Text style={[s.homogTd,{flex:0.5,textAlign:'left',paddingLeft:4}]}>{i+1}</Text>
-                      <Text style={[s.homogTd,{flex:1.2}]}>{fmt2br(getValElem(inp))}</Text>
-                      <Text style={[s.homogTd,{flex:1.0,color: f !== 1 ? AZUL : TEXTO, fontFamily: f !== 1 ? 'Helvetica-Bold' : 'Helvetica'}]}>{fmt4(f)}</Text>
-                      <Text style={[s.homogTd,{flex:1.3,color: dif > 0 ? '#166534' : dif < 0 ? '#991b1b' : TEXTO}]}>{dif >= 0 ? '+' : ''}{fm(dif)}</Text>
-                      <Text style={[s.homogTdLast,{flex:1.3}]}>{fm(vuC)}/m²</Text>
-                    </View>
-                  )
-                })}
-                <View style={[s.homogRow, {backgroundColor: AZULLT}]}>
-                  <Text style={[s.homogTd,{flex:1.7,textAlign:'left',paddingLeft:4,fontFamily:'Helvetica-Bold',color:AZUL}]}>Avaliando</Text>
-                  <Text style={[s.homogTdLast,{flex:3.6,fontFamily:'Helvetica-Bold',color:AZUL,textAlign:'center'}]}>{avLabel}</Text>
-                </View>
-              </View>
-            </View>
-          )
-
-          return (
-            <>
-              <H3 id="s-10-hom">{secNum} Homogeneização — Terreno</H3>
-
-              <TabelaFator titulo="Fator Área" nomeCampo="Área (m²)"
-                avLabel={`${fmt2br(avArea)} m²`}
-                getValElem={(inp) => pnMotor(inp.areaTerreno)}
-                getFator={(r) => r.fA ?? 1} />
-
-              <TabelaFator titulo="Fator Local" nomeCampo="Local"
-                avLabel={`Nota ${fmt2br(avLocal)}`}
-                getValElem={(inp) => pnMotor(inp.fatorLocal) || 100}
-                getFator={(r) => r.fL ?? 1} />
-
-              <TabelaFator titulo="Fator Topografia" nomeCampo="Topografia"
-                avLabel={`Nota ${fmt2br(avTopo)}`}
-                getValElem={(inp) => pnMotor(inp.fatorTopografia) || 100}
-                getFator={(r) => r.fT ?? 1} />
-
-              <TabelaFator titulo="Fator Visibilidade" nomeCampo="Visibilidade"
-                avLabel={`Nota ${fmt2br(avVis)}`}
-                getValElem={(inp) => pnMotor(inp.fatorVisibilidade) || 100}
-                getFator={(r) => r.fV ?? 1} />
-
-              {/* Coeficiente Geral */}
-              <View style={{ marginBottom: 6 }}>
-                <View style={{ backgroundColor: '#EFF6FF', paddingVertical: 3, paddingHorizontal: 5, borderWidth: 0.5, borderColor: CINZA, borderBottomWidth: 0 }}>
-                  <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: AZUL, textTransform: 'uppercase' }}>Coeficiente Geral (Soma Aditiva) e Estatísticas</Text>
-                </View>
-                <View style={s.homogTable}>
-                  <View style={s.homogRowH}>
-                    <Text style={[s.homogTh,{flex:0.5,textAlign:'left',paddingLeft:4}]}>Elem.</Text>
-                    <Text style={[s.homogTh,{flex:1.2}]}>V.U. s/ fatores</Text>
-                    <Text style={[s.homogTh,{flex:1.2}]}>Somatória fatores</Text>
-                    <Text style={[s.homogTh,{flex:1.0}]}>Coef. geral</Text>
-                    <Text style={[s.homogThLast,{flex:1.2}]}>V.U. Homog.</Text>
-                  </View>
-                  {elemsCalcFinal.map((r: any, i: number) => {
-                    if (!r) return null
-                    const vu_r   = r.vu  ?? 0
-                    const fA_r   = r.fA  ?? 1
-                    const fL_r   = r.fL  ?? 1
-                    const fT_r   = r.fT  ?? 1
-                    const fV_r   = r.fV  ?? 1
-                    const soma_r = vu_r * (1 + (fA_r - 1) + (fL_r - 1) + (fT_r - 1) + (fV_r - 1))
-                    const coef_r = vu_r > 0 ? soma_r / vu_r : (r.coef ?? 1)
-                    const valido  = coef_r >= 0.5 && coef_r <= 2.0
-                    const isLast  = i === elemsCalcFinal.length - 1
-                    const td      = valido ? s.homogTd : s.homogTdOut
-                    return (
-                      <View key={`coef-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
-                        <Text style={[td,{flex:0.5,textAlign:'left',paddingLeft:4}]}>{i+1}</Text>
-                        <Text style={[td,{flex:1.2}]}>{fm(vu_r)}/m²</Text>
-                        <Text style={[td,{flex:1.2}]}>{fm(soma_r)}</Text>
-                        <Text style={[td,{flex:1.0,color: coef_r !== 1 ? AZUL : TEXTO, fontFamily:'Helvetica-Bold'}]}>{fmt4(coef_r)}</Text>
-                        <Text style={[valido ? s.homogTdLast : {...s.homogTdOut,borderRightWidth:0},{flex:1.2,fontFamily:'Helvetica-Bold',color: valido ? TEXTO : '#991b1b'}]}>{fm(soma_r)}/m²</Text>
-                      </View>
-                    )
-                  })}
-                </View>
-              </View>
-
-              {/* Estatísticas */}
-              <View style={{ flexDirection: 'row', marginTop: 5, marginBottom: 4 }}>
-                {([
-                  ['Elem. válidos', String(resEv.N ?? 0)],
-                  ['T(N-1)', String(resEv.N > 1 ? resEv.N - 1 : '—')],
-                  ['T Student', (resEv.T??0).toFixed(3).replace('.',',')],
-                  ['Desvio padrão somas', fm(resEv.desvio??0)],
-                  ['Resultado IC', fm(resEv.resultIC??0)],
-                  ['Grau de precisão', resEv.grauPrecisao ?? '—'],
-                ] as [string,string][]).map(([lbl,val]) => (
-                  <View key={lbl} style={{ flex:1, backgroundColor:AZULLT, borderWidth:0.5, borderColor:CINZA, marginRight:3, padding:4, alignItems:'center' }}>
-                    <Text style={{ fontSize:6, color:'#5a7090', marginBottom:1, textAlign:'center' }}>{lbl}</Text>
-                    <Text style={{ fontSize:8, fontFamily:'Helvetica-Bold', color:AZUL, textAlign:'center' }}>{val}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Tabela intervalos terreno */}
-              <View style={[s.homogTable, {marginBottom:4}]}>
-                <View style={s.homogRowH}>
-                  <Text style={[s.homogTh,{flex:1.5}]}>Intervalo</Text>
-                  <Text style={[s.homogTh,{flex:1.5}]}>V.U. Terreno (R$/m²)</Text>
-                  <Text style={[s.homogThLast,{flex:1.5}]}>Valor do Terreno (R$)</Text>
-                </View>
-                {([
-                  ['Mínimo',          resEv.minimo,   (resEv.minimo??0)   * avArea, false],
-                  ['Médio (adotado)', resEv.media,    (resEv.media??0)    * avArea, true ],
-                  ['Máximo',          resEv.maximo,   (resEv.maximo??0)   * avArea, false],
-                  ['Limite −30%',     resEv.lim30inf, (resEv.lim30inf??0) * avArea, false],
-                  ['Limite +30%',     resEv.lim30sup, (resEv.lim30sup??0) * avArea, false],
-                ] as [string,number,number,boolean][]).map(([lbl,vu,tot,hl],idx,arr) => (
-                  <View key={lbl} style={[idx<arr.length-1?s.homogRowB:s.homogRow, hl?{backgroundColor:AZULLT}:{}]}>
-                    <Text style={[s.homogTd,{flex:1.5,textAlign:'left',paddingLeft:5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{lbl}</Text>
-                    <Text style={[s.homogTd,{flex:1.5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{fm(vu??0)}</Text>
-                    <Text style={[s.homogTdLast,{flex:1.5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{fm(tot??0)}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <Text style={[s.legendaTxt,{marginTop:2,marginBottom:4,fontStyle:'italic',color:'#475569'}]}>
-                * Elementos com coeficiente fora do intervalo [0,5; 2,0] foram excluídos do cálculo (IBAPE).
-              </Text>
-
-              {/* VEIU */}
-              {(evSnapData.benfeitorias || []).filter((b: any) => b?.valor > 0).length > 0 && (() => {
-                const benfs: any[] = (evSnapData.benfeitorias || []).filter((b: any) => b?.valor > 0)
-                const secVEIU = dados.localizacaoComparativos ? '10.3.' : '10.2.'
-                return (
-                  <>
-                    <H3>{secVEIU} Valor das Edificações — CUB R8N depreciado (VEIU)</H3>
-                    <View style={s.homogTable}>
-                      <View style={s.homogRowH}>
-                        <Text style={[s.homogTh,{flex:1.8}]}>Edificação</Text>
-                        <Text style={[s.homogTh,{flex:0.8}]}>Área (m²)</Text>
-                        <Text style={[s.homogTh,{flex:0.9}]}>CUB R8N (R$/m²)</Text>
-                        <Text style={[s.homogTh,{flex:0.6}]}>Pc</Text>
-                        <Text style={[s.homogTh,{flex:0.7}]}>Idade (anos)</Text>
-                        <Text style={[s.homogTh,{flex:0.6}]}>Foc</Text>
-                        <Text style={[s.homogThLast,{flex:1.2}]}>Valor (R$)</Text>
-                      </View>
-                      {benfs.map((b: any, i: number) => {
-                        const isLast = i === benfs.length - 1
-                        return (
-                          <View key={`veiu-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
-                            <Text style={[s.homogTd,{flex:1.8,textAlign:'left',paddingLeft:4}]}>{b.descricao || `Edificação ${i+1}`}</Text>
-                            <Text style={[s.homogTd,{flex:0.8}]}>{b.area || '—'}</Text>
-                            <Text style={[s.homogTd,{flex:0.9}]}>{b.cub || '—'}</Text>
-                            <Text style={[s.homogTd,{flex:0.6}]}>{typeof b.Pc === 'number' ? b.Pc.toFixed(4).replace('.',',') : (b.pc || '—')}</Text>
-                            <Text style={[s.homogTd,{flex:0.7}]}>{b.idadeReal || '—'}</Text>
-                            <Text style={[s.homogTd,{flex:0.6}]}>{typeof b.Foc === 'number' ? b.Foc.toFixed(4).replace('.',',') : '—'}</Text>
-                            <Text style={[s.homogTdLast,{flex:1.2,fontFamily:'Helvetica-Bold',color:AZUL}]}>{fm(b.valor || 0)}</Text>
-                          </View>
-                        )
-                      })}
-                      <View style={[s.homogRow, {backgroundColor: AZULLT}]}>
-                        <Text style={[s.homogTd,{flex:5.4,textAlign:'right',paddingRight:6,fontFamily:'Helvetica-Bold',color:AZUL}]}>Total VEIU</Text>
-                        <Text style={[s.homogTdLast,{flex:1.2,fontFamily:'Helvetica-Bold',color:AZUL}]}>{fm(benfs.reduce((acc: number, b: any) => acc + (b.valor||0), 0))}</Text>
-                      </View>
-                    </View>
-                    <Text style={[s.legendaTxt,{marginTop:3}]}>Fórmula: Valor da Edificação = CUB R8N × Pc × Área × Foc (Ross-Heidecke)</Text>
-                  </>
-                )
-              })()}
-            </>
-          )
-        })()}
 
         {/* ── Memorial de cálculos (comparativo) ──────────────────────────── */}
         {temCddm && cddmData && (
@@ -1715,7 +1487,7 @@ export function LaudoPdf({
         {/* ────────────────────────────────────────────────────
             SEÇÃO 11 — VALOR DO IMÓVEL
         ──────────────────────────────────────────────────── */}
-        <H2 id="s-11">11. VALOR DO IMÓVEL</H2>
+        <H2 id="s-11">{isLocacao ? '11. VALOR DE LOCAÇÃO' : '11. VALOR DO IMÓVEL'}</H2>
         {/* Terreno e benfeitorias: só exibir no evolutivo ou quando preenchidos manualmente */}
         {isEvoLaudo ? (
           <>
@@ -1763,20 +1535,6 @@ export function LaudoPdf({
             )}
           </View>
         </View>
-
-        {/* Observações da seção 11 — preserva quebras de linha do textarea */}
-        {(dados as any).observacaoValorImovel?.trim() && (
-          <View style={{ marginTop: 6, marginBottom: 8 }}>
-            <Text style={[s.bold, { fontSize: 9, marginBottom: 3 }]}>Observações:</Text>
-            <View>
-              {String((dados as any).observacaoValorImovel).split('\n').map((linha: string, i: number) => (
-                <Text key={i} style={{ fontSize: 9, color: TEXTO, lineHeight: 1.5, minHeight: linha.trim() === '' ? 6 : undefined }}>
-                  {linha || ' '}
-                </Text>
-              ))}
-            </View>
-          </View>
-        )}
 
         {/* ────────────────────────────────────────────────────
             SEÇÃO 12 — FUNDAMENTAÇÃO E PRECISÃO
@@ -2108,7 +1866,19 @@ export function LaudoPdf({
         {/* ────────────────────────────────────────────────────
             SEÇÃO 14 — GARANTIA
         ──────────────────────────────────────────────────── */}
-        {gtex.titulo && (
+        {isLocacao ? (
+          <>
+            <H2 id="s-14">14. CONCLUSÕES GERAIS DE LOCAÇÃO</H2>
+            <P>Com base nas pesquisas de mercado realizadas e nas características do imóvel avaliado, conclui-se que o valor locativo determinado reflete as condições atuais do mercado imobiliário local, considerando imóveis de características semelhantes quanto à localização, padrão construtivo e estado de conservação. O valor de locação estabelecido é compatível com a realidade do mercado, podendo sofrer variações em função de condições específicas de negociação.</P>
+            {(dados as any).garantiaObservacoes?.trim() && (
+              <View style={{ marginTop: 4 }}>
+                {String((dados as any).garantiaObservacoes).split('\n').map((linha: string, i: number) => (
+                  <Text key={i} style={{ fontSize: 9, color: TEXTO, lineHeight: 1.5, minHeight: linha.trim() === '' ? 6 : undefined }}>{linha || ' '}</Text>
+                ))}
+              </View>
+            )}
+          </>
+        ) : gtex.titulo ? (
           <>
             <H2 id="s-14">14. GARANTIA</H2>
             <P><Text style={s.bold}>{gtex.titulo}</Text></P>
@@ -2116,14 +1886,12 @@ export function LaudoPdf({
             {gtex.observacoes?.trim() && (
               <View style={{ marginTop: 4 }}>
                 {String(gtex.observacoes).split('\n').map((linha: string, i: number) => (
-                  <Text key={i} style={{ fontSize: 9, color: TEXTO, lineHeight: 1.5, minHeight: linha.trim() === '' ? 6 : undefined }}>
-                    {linha || ' '}
-                  </Text>
+                  <Text key={i} style={{ fontSize: 9, color: TEXTO, lineHeight: 1.5, minHeight: linha.trim() === '' ? 6 : undefined }}>{linha || ' '}</Text>
                 ))}
               </View>
             )}
           </>
-        )}
+        ) : null}
 
         {/* ────────────────────────────────────────────────────
             SEÇÃO 15 — ANEXOS E ASSINATURA

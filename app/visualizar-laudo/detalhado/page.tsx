@@ -762,7 +762,9 @@ function VisualizarLaudoContent() {
   const capaFinalidade =
     dados.finalidade === 'garantia'   ? 'Avaliação para fins de garantia'
     : dados.finalidade === 'execucao' ? 'Avaliação para fins de execução'
+    : dados.finalidade === 'locacao'  ? 'Avaliação para fins de locação'
     : dados.finalidade               || 'Não informado'
+  const isLocacao = dados.finalidade === 'locacao'
 
   const capaMetodologia =
     dados.metodoAvaliacao === 'evolutivo'    ? 'Evolutivo'
@@ -853,7 +855,7 @@ function VisualizarLaudoContent() {
     (dados.fundamentacaoEvolutivo?.length ?? 0) > 0 ||
     (dados.fundamentacaoInferencia?.length ?? 0) > 0 ||
     (dados.precisao?.length ?? 0) > 0
-  const temGarantiaSection = !!garantiaTexto.titulo
+  const temGarantiaSection = isLocacao || !!garantiaTexto.titulo
 
   let _sn = 6
   const sn: Record<string, number> = {}
@@ -990,6 +992,8 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     ? 'Avaliação para fins de garantia'
                     : dados.finalidade === 'execucao'
                     ? 'Avaliação para fins de execução'
+                    : dados.finalidade === 'locacao'
+                    ? 'Avaliação para fins de locação'
                     : dados.finalidade || 'Avaliação'}
                 </div>
 
@@ -1002,7 +1006,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                   {[
                     { lbl: 'PROPRIETÁRIO',        val: dados.proprietario || '-' },
                     { lbl: 'SOLICITANTE',          val: dados.solicitante || 'Não informado' },
-                    { lbl: 'FINALIDADE',           val: dados.finalidade === 'garantia' ? 'Avaliação para fins de garantia' : dados.finalidade === 'execucao' ? 'Avaliação para fins de execução' : dados.finalidade || '-' },
+                    { lbl: 'FINALIDADE',           val: dados.finalidade === 'garantia' ? 'Avaliação para fins de garantia' : dados.finalidade === 'execucao' ? 'Avaliação para fins de execução' : dados.finalidade === 'locacao' ? 'Avaliação para fins de locação' : dados.finalidade || '-' },
                     { lbl: 'MATRÍCULA',            val: dados.matricula || '-' },
                     { lbl: 'RESPONSÁVEL TÉCNICO',  val: dados.responsavelNome || '-' },
                     { lbl: 'DATA DO LAUDO',        val: formatarData(dados.dataLaudo || '') },
@@ -1099,7 +1103,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 {/* Cards de valores */}
                 <div className="grid grid-cols-2 gap-2.5 mb-3">
                   <div className="value-box-dark">
-                    <div className="vb-label">Valor de Avaliação</div>
+                    <div className="vb-label">{isLocacao ? 'Valor de Locação' : 'Valor de Avaliação'}</div>
                     <div className="vb-num">{formatarMoeda(valorArredondadoLaudo)}</div>
                     <div className="vb-ext">{valorArredondadoExtenso.charAt(0).toUpperCase() + valorArredondadoExtenso.slice(1)}</div>
                   </div>
@@ -1230,7 +1234,11 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 </div>
                 <div>
                   <h2 className="font-bold text-lg titulo-laudo">2. OBJETIVO</h2>
-                  <p>Trata-se de avaliação para fins de {dados.finalidade === 'garantia' ? 'garantia' : 'execução'}.</p>
+                  {isLocacao ? (
+                    <p>Trata-se de avaliação para fins de locação, visando determinar o valor locativo de mercado do imóvel, conforme as normas da ABNT NBR 14.653.</p>
+                  ) : (
+                    <p>Trata-se de avaliação para fins de {dados.finalidade === 'garantia' ? 'garantia' : 'execução'}.</p>
+                  )}
                 </div>
                 <div>
                   <h2 className="font-bold text-lg titulo-laudo">3. PROPRIETÁRIO</h2>
@@ -1971,7 +1979,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
             <PaginaFlexivel pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
               <CabecalhoLaudo />
               <div className="mb-8 mt-8">
-                <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.valor}. VALOR DO IMÓVEL</h2>
+                <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.valor}. {isLocacao ? 'VALOR DE LOCAÇÃO' : 'VALOR DO IMÓVEL'}</h2>
                 <div className="space-y-3">
                   {dados.metodoAvaliacao === 'evolutivo' ? (
                     // ── Evolutivo: terreno + benfeitorias separados → total ──
@@ -2000,17 +2008,19 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     <div className="vb-num">{formatarMoeda(valorArredondadoLaudo)}</div>
                     <div className="vb-ext">{valorArredondadoExtenso.charAt(0).toUpperCase() + valorArredondadoExtenso.slice(1)}</div>
                   </div>
-                  <div className="value-box-light">
-                    <div className="vb-label">Valor de Liquidez Forçada</div>
-                    {valorLiquidezForcadaNumero > 0 ? (
-                      <>
-                        <div className="vb-num">{formatarMoeda(valorLiquidezForcadaNumero)}</div>
-                        <div className="vb-ext">{valorLiquidezForcadaExtenso.charAt(0).toUpperCase() + valorLiquidezForcadaExtenso.slice(1)}</div>
-                      </>
-                    ) : (
-                      <div style={{ fontSize: '9px', color: '#8FA4C7' }}>Não informado</div>
-                    )}
-                  </div>
+                  {!isLocacao && (
+                    <div className="value-box-light">
+                      <div className="vb-label">Valor de Liquidez Forçada</div>
+                      {valorLiquidezForcadaNumero > 0 ? (
+                        <>
+                          <div className="vb-num">{formatarMoeda(valorLiquidezForcadaNumero)}</div>
+                          <div className="vb-ext">{valorLiquidezForcadaExtenso.charAt(0).toUpperCase() + valorLiquidezForcadaExtenso.slice(1)}</div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: '9px', color: '#8FA4C7' }}>Não informado</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </PaginaFlexivel>
@@ -2434,12 +2444,28 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                   </div>
                 </div>
               </div>
-              {garantiaTexto.titulo && (
+              {isLocacao ? (
+                <div className="mb-8 mt-8">
+                  <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.garantia}. CONCLUSÕES GERAIS DE LOCAÇÃO</h2>
+                  <div className="space-y-4 text-justify">
+                    <p>Com base nas pesquisas de mercado realizadas e nas características do imóvel avaliado, conclui-se que o valor locativo determinado reflete as condições atuais do mercado imobiliário local, considerando imóveis de características semelhantes quanto à localização, padrão construtivo e estado de conservação. O valor de locação estabelecido é compatível com a realidade do mercado, podendo sofrer variações em função de condições específicas de negociação.</p>
+                    {dados.garantiaObservacoes?.trim() && (
+                      <p style={{ whiteSpace: 'pre-wrap' }}>{dados.garantiaObservacoes}</p>
+                    )}
+                  </div>
+                </div>
+              ) : garantiaTexto.titulo ? (
                 <div className="mb-8 mt-8">
                   <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.garantia}. GARANTIA</h2>
-                  <div className="space-y-4 text-justify"><p><strong>{garantiaTexto.titulo}</strong></p><p>{garantiaTexto.texto}</p></div>
+                  <div className="space-y-4 text-justify">
+                    <p><strong>{garantiaTexto.titulo}</strong></p>
+                    <p>{garantiaTexto.texto}</p>
+                    {garantiaTexto.observacoes?.trim() && (
+                      <p style={{ whiteSpace: 'pre-wrap' }}>{garantiaTexto.observacoes}</p>
+                    )}
+                  </div>
                 </div>
-              )}
+              ) : null}
               <div className="mb-8 mt-8">
                 <h2 className="text-2xl font-bold mb-4 titulo-laudo">{sn.anexos}. ANEXOS E ASSINATURA RESPONSÁVEL TÉCNICO</h2>
                 <div className="space-y-3 text-justify border rounded p-4">

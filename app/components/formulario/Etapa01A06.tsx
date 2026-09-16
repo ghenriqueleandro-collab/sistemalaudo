@@ -317,6 +317,7 @@ export default function Etapa01A06({
         <option value="">Selecione a finalidade</option>
         <option value="garantia">Garantia</option>
         <option value="execucao">Execução</option>
+        <option value="locacao">Locação</option>
       </select>
 
       <div className="border rounded p-4 bg-gray-50 space-y-4">
@@ -327,43 +328,13 @@ export default function Etapa01A06({
     <select
       name="metodoAvaliacao"
       value={form.metodoAvaliacao}
-      onChange={(e) => {
-        const novoMetodo = e.target.value
-        const metodoAnterior = form.metodoAvaliacao
-        if (novoMetodo === metodoAnterior) return
-        // Limpa snapshot do método anterior ao trocar, evitando dados fantasma
-        setFormDirect?.((prev: any) => ({
-          ...prev,
-          metodoAvaliacao: novoMetodo,
-          ...(novoMetodo === 'evolutivo'
-            ? {
-                dadosCalculoCDDM: undefined,
-                elementosComparativos: [],
-                valorTerreno: '',
-                valorBenfeitorias: '',
-                valorTotal: '',
-                modoValorImovel: 'separado',
-              }
-            : {
-                dadosCalculoEvolutivo: undefined,
-                valorTerreno: '',
-                valorBenfeitorias: '',
-                modoValorImovel: 'total',
-              }
-          ),
-        }))
-      }}
+      onChange={handleChange}
       className="w-full border p-2 rounded bg-white"
     >
       <option value="">Selecione</option>
       <option value="comparativo">Método Comparativo</option>
       <option value="evolutivo">Método Evolutivo</option>
     </select>
-    {form.metodoAvaliacao && (
-      <p className="text-xs text-amber-600 mt-1">
-        ⚠️ Ao alterar o método, os dados de cálculo do método anterior serão removidos. Preencha o novo cálculo antes de gerar o laudo.
-      </p>
-    )}
   </div>
 
   <div>
