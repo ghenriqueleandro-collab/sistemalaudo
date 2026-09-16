@@ -1,4 +1,5 @@
 'use client'
+// build-trigger: locacao-option
 
 import { useState } from 'react'
 import { flushSync } from 'react-dom'
@@ -317,7 +318,6 @@ export default function Etapa01A06({
         <option value="">Selecione a finalidade</option>
         <option value="garantia">Garantia</option>
         <option value="execucao">Execução</option>
-        <option value="locacao">Locação</option>
       </select>
 
       <div className="border rounded p-4 bg-gray-50 space-y-4">
