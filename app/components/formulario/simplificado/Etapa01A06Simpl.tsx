@@ -496,6 +496,7 @@ export default function Etapa01A06({
               <option value="">Selecione a finalidade</option>
               <option value="garantia">Garantia</option>
               <option value="execucao">Execução</option>
+              <option value="locacao">Locação</option>
             </select>
           </div>
         </div>
