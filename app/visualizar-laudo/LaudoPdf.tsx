@@ -179,7 +179,7 @@ function obterTextoGarantia(classificacao?: string, observacoes?: string) {
     titulo: 'O imóvel avaliado não é recomendado como garantia.',
     texto: `Após análise das características apresentada no presente laudo, entendemos que o imóvel em questão não apresenta condições adequadas para aceitação como garantia.${observacoes ? ` Justificativa: ${observacoes}` : ''}`,
   }
-  return { titulo: '', texto: '' }
+  return { titulo: '', texto: '', observacoes: '' }
 }
 
 const TEXTO_TERRENO_ENCRAVADO = `O terreno encravado caracteriza-se por não possuir acesso oficial a qualquer via pública, podendo ser total ou parcial. A área com encravamento total, como é o caso do avaliando, não apresenta acesso em nenhuma de suas confrontações, dependendo, assim, de imóveis vizinhos para ser alcançado. Já o encravamento parcial é caracterizado por imóvel que possui acesso oficial, porém, por qualquer motivo, seja ele natural ou não, não é possível o acesso por esta via.
