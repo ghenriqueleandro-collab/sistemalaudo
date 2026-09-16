@@ -126,14 +126,15 @@ export default function Etapa01A06({
 
     // ── 3. Pontos de referência via Overpass (tenta múltiplos mirrors) ──────────
     try {
-      // Query simplificada e mais compatível
-      const overpassQuery =
+      // Busca progressiva com raios crescentes e tipos amplos
+      // Inclui pontos urbanos, rurais e industriais
+      const buildOverpassQuery = (raio: number) =>
         `[out:json][timeout:30];` +
         `(` +
-        `nwr["name"]["amenity"~"^(hospital|bank|pharmacy|school|place_of_worship|police|college|university|fuel|courthouse|town_hall)$"](around:6000,${lat},${lon});` +
-        `nwr["name"]["shop"~"^(supermarket|mall)$"](around:6000,${lat},${lon});` +
-        `nwr["name"]["leisure"~"^(stadium)$"](around:6000,${lat},${lon});` +
-        `);out center 60;`
+        `nwr["name"]["amenity"~"^(hospital|bank|pharmacy|school|place_of_worship|police|college|university|fuel|courthouse|town_hall)$"](around:${raio},${lat},${lon});` +
+        `nwr["name"]["shop"~"^(supermarket|mall)$"](around:${raio},${lat},${lon});` +
+        `nwr["name"]["leisure"~"^(stadium)$"](around:${raio},${lat},${lon});` +
+        `);out center 100;`
 
       const mirrors = [
         'https://overpass-api.de/api/interpreter',
@@ -141,21 +142,29 @@ export default function Etapa01A06({
         'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
       ]
 
+      // Tenta raios crescentes: 3km → 8km → 20km
+      const raios = [3000, 8000, 20000]
       let dadosOver: any = null
-      for (const mirror of mirrors) {
-        try {
-          const res = await fetch(mirror, {
-            method: 'POST',
-            body: `data=${encodeURIComponent(overpassQuery)}`,
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            signal: AbortSignal.timeout(20000),
-          })
-          if (!res.ok) continue
-          const json = await res.json()
-          if (json?.elements?.length > 0) { dadosOver = json; break }
-        } catch {
-          continue
+
+      for (const raio of raios) {
+        const overpassQuery = buildOverpassQuery(raio)
+        for (const mirror of mirrors) {
+          try {
+            const res = await fetch(mirror, {
+              method: 'POST',
+              body: `data=${encodeURIComponent(overpassQuery)}`,
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              signal: AbortSignal.timeout(20000),
+            })
+            if (!res.ok) continue
+            const json = await res.json()
+            if (json?.elements?.length >= 3) { dadosOver = json; break }
+            if (json?.elements?.length > 0 && !dadosOver) dadosOver = json // guarda mesmo com poucos
+          } catch {
+            continue
+          }
         }
+        if (dadosOver?.elements?.length >= 3) break // suficiente, não precisa ampliar raio
       }
 
       if (!dadosOver) throw new Error('Todos os mirrors Overpass falharam')
