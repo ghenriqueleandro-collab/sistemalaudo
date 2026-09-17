@@ -335,7 +335,7 @@ export default function Etapa01A06({
           type="checkbox"
           name="semVistoriaPresencial"
           checked={!!form.semVistoriaPresencial}
-          onChange={(e) => setForm({ ...form, semVistoriaPresencial: e.target.checked })}
+          onChange={(e) => setFormDirect?.((prev: any) => ({ ...prev, semVistoriaPresencial: e.target.checked }))}
           className="h-4 w-4 rounded border-slate-300 accent-amber-500"
         />
         <span className="text-sm font-medium text-amber-800">
