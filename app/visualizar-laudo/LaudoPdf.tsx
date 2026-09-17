@@ -806,8 +806,8 @@ export function LaudoPdf({
 
   // Derived booleans for conditional sections
   const temSolicitante = !!dados.solicitante?.trim()
-  const acabamentosPreenchidos = (dados.acabamentos || []).filter(
-    (a) => a.ambiente?.trim() || a.acabamento?.trim()
+  const acabamentosPreenchidos = (Array.isArray(dados.acabamentos) ? dados.acabamentos : []).filter(
+    (a) => a && (a.ambiente?.trim() || a.acabamento?.trim())
   )
   const temAcabamentos = acabamentosPreenchidos.length > 0
   const temConsideracoes =
@@ -1001,7 +1001,14 @@ export function LaudoPdf({
               <Text style={s.vbNumDark}>{fm(valorArredondado)}</Text>
               <Text style={s.vbExtDark}>{valorExtenso.charAt(0).toUpperCase() + valorExtenso.slice(1)}</Text>
             </View>
-            {!isLocacao && (
+            {isLocacao ? (
+              <View style={[s.valueBoxLight, { flex: 1 }]}>
+                <Text style={s.vbLabel}>Liquidez</Text>
+                <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#17325C', marginTop: 4 }}>
+                  {dados.liquidez === 'alta' ? 'Alta' : dados.liquidez === 'media' ? 'Média' : dados.liquidez === 'baixa' ? 'Baixa' : dados.liquidez || 'Média'}
+                </Text>
+              </View>
+            ) : (
               <View style={[s.valueBoxLight, { flex: 1 }]}>
                 <Text style={s.vbLabel}>Valor de Liquidez Forçada</Text>
                 {vlf > 0 ? (
@@ -1141,7 +1148,7 @@ export function LaudoPdf({
         )}
         <Bullet>Em informações obtidas junto a agentes do mercado imobiliário local (vendedores, compradores, intermediários e etc).</Bullet>
         <P>Na presente avaliação considerou-se a documentação apresentada.</P>
-        <P>Considerou-se também que o imóvel está livre e desembaraçado de quaisquer ônus, em condições de ser imediatamente comercializado.</P>
+        <P>Considerou-se, ainda, que o imóvel se encontra livre e desembaraçado de quaisquer ônus, gravames ou restrições que possam interferir na determinação de seu valor.</P>
         {(dados as any).semVistoriaPresencial ? (
           <P>Não foram efetuadas investigações quanto à correção dos documentos fornecidos; as informações obtidas foram tomadas como de boa-fé, tanto referente às documentações como às informações obtidas de terceiros. Não foi realizado estudo ambiental e de contaminação para o imóvel avaliando, bem como análises estruturais nas edificações, como ensaios e análises físicas. O presente laudo foi elaborado sem vistoria presencial ao imóvel.</P>
         ) : (

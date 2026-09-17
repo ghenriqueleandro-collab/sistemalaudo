@@ -612,7 +612,15 @@ function VisualizarLaudoContent() {
             divisoes: parsed.divisoes || [],
             iptu: parsed.iptu || '',
             solicitante: parsed.solicitante || '',
-            acabamentos: parsed.acabamentos || [],
+            acabamentos: await (async () => {
+              const raw = parsed.acabamentos
+              if (!raw) return []
+              if (typeof raw === 'string' && raw.startsWith('__ref__:')) {
+                const resolved = await resolverJsonRef(raw)
+                return Array.isArray(resolved) ? resolved : []
+              }
+              return Array.isArray(raw) ? raw : []
+            })(),
             resumoMercado: parsed.resumoMercado || [],
             consideracoesMercado: parsed.consideracoesMercado || '',
             liquidez: parsed.liquidez || '',
@@ -1269,7 +1277,7 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                       <li>Em informações obtidas junto a agentes do mercado imobiliário local (vendedores, compradores, intermediários e etc).</li>
                     </ul>
                     <p>Na presente avaliação considerou-se a documentação apresentada.</p>
-                    <p>Considerou-se também que o imóvel está livre e desembaraçado de quaisquer ônus, em condições de ser imediatamente comercializado.</p>
+                    <p>Considerou-se, ainda, que o imóvel se encontra livre e desembaraçado de quaisquer ônus, gravames ou restrições que possam interferir na determinação de seu valor.</p>
                     {(dados as any).semVistoriaPresencial ? (
                       <p>Não foram efetuadas investigações quanto à correção dos documentos fornecidos; as informações obtidas foram tomadas como de boa-fé, tanto referente às documentações como às informações obtidas de terceiros. Não foi realizado estudo ambiental e de contaminação para o imóvel avaliando, bem como análises estruturais nas edificações, como ensaios e análises físicas. O presente laudo foi elaborado sem vistoria presencial ao imóvel.</p>
                     ) : (
