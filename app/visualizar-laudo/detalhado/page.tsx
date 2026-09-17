@@ -613,9 +613,9 @@ function VisualizarLaudoContent() {
             iptu: parsed.iptu || '',
             solicitante: parsed.solicitante || '',
             acabamentos: await (async () => {
-              const raw = parsed.acabamentos
+              const raw = (parsed as any).acabamentos
               if (!raw) return []
-              if (typeof raw === 'string' && raw.startsWith('__ref__:')) {
+              if (typeof raw === 'string' && (raw as string).startsWith('__ref__:')) {
                 const resolved = await resolverJsonRef(raw)
                 return Array.isArray(resolved) ? resolved : []
               }
