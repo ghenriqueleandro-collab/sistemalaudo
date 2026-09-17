@@ -706,11 +706,18 @@ export function LaudoPdf({
         <View key="link" style={s.elemRowB}>
           <View style={[bl,{width:L1}]}><Text>Link</Text></View>
           <View style={[bvL,{flex:1}]}>
-            <Text style={{fontSize:6.3,color:AZUL2}}>{tr(String(el.link), mx1)}</Text>
+            <Text style={{fontSize:6.3,color:AZUL2}}>{String(el.link)}</Text>
           </View>
         </View>
       ) : null,
-      r1('Obs.', el.observacoes),
+      el.observacoes ? (
+        <View key="obs" style={s.elemRowB}>
+          <View style={[bl,{width:L1}]}><Text>Obs.</Text></View>
+          <View style={[bvL,{flex:1}]}>
+            <Text style={{fontSize:7.5}}>{String(el.observacoes)}</Text>
+          </View>
+        </View>
+      ) : null,
     ].filter(Boolean)
 
     if (linhas.length === 0) return null
