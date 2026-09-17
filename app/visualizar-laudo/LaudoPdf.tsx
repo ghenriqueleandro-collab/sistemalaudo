@@ -1110,7 +1110,11 @@ export function LaudoPdf({
         <H2 id="s-1">1. IMÓVEL</H2>
         <P>A presente avaliação tem por objetivo determinar o valor de mercado do imóvel localizado em:</P>
         <P>{dados.endereco}.</P>
-        <P>Trata-se de imóvel caracterizado como {dados.tipo}, conforme características observadas em vistoria.</P>
+        {(dados as any).semVistoriaPresencial ? (
+          <P>Trata-se de imóvel caracterizado como {dados.tipo}, conforme características obtidas por pesquisa documental e informações fornecidas pelo solicitante, sem vistoria presencial.</P>
+        ) : (
+          <P>Trata-se de imóvel caracterizado como {dados.tipo}, conforme características observadas em vistoria.</P>
+        )}
 
         <H2 id="s-2">2. OBJETIVO</H2>
         {isLocacao ? (
@@ -1132,11 +1136,17 @@ export function LaudoPdf({
         <H2 id="s-4">4. OBSERVAÇÕES PRELIMINARES</H2>
         <P>Este laudo fundamenta-se no que estabelecem as normas técnicas da ABNT, Avaliação de Bens, registradas como NBR 14653- Parte 1 (Procedimentos Gerais) e Parte 2 (Imóveis Urbanos), e baseia-se:</P>
         <Bullet>Na documentação fornecida;</Bullet>
-        <Bullet>Em informações constatadas "in loco" quando da vistoria ao imóvel.</Bullet>
+        {!(dados as any).semVistoriaPresencial && (
+          <Bullet>Em informações constatadas "in loco" quando da vistoria ao imóvel.</Bullet>
+        )}
         <Bullet>Em informações obtidas junto a agentes do mercado imobiliário local (vendedores, compradores, intermediários e etc).</Bullet>
         <P>Na presente avaliação considerou-se a documentação apresentada.</P>
         <P>Considerou-se também que o imóvel está livre e desembaraçado de quaisquer ônus, em condições de ser imediatamente comercializado.</P>
-        <P>Não foram efetuadas investigações quanto a correção dos documentos fornecidos; as observações "in loco" foram feitas sem instrumentos de medição; as informações obtidas foram tomadas como de boa-fé, tanto referente às documentações como às informações obtidas de terceiros. Não foi realizado estudo ambiental e de contaminação para o imóvel avaliando, bem como análises estruturais nas edificações, como ensaios e análises físicas.</P>
+        {(dados as any).semVistoriaPresencial ? (
+          <P>Não foram efetuadas investigações quanto à correção dos documentos fornecidos; as informações obtidas foram tomadas como de boa-fé, tanto referente às documentações como às informações obtidas de terceiros. Não foi realizado estudo ambiental e de contaminação para o imóvel avaliando, bem como análises estruturais nas edificações, como ensaios e análises físicas. O presente laudo foi elaborado sem vistoria presencial ao imóvel.</P>
+        ) : (
+          <P>Não foram efetuadas investigações quanto a correção dos documentos fornecidos; as observações "in loco" foram feitas sem instrumentos de medição; as informações obtidas foram tomadas como de boa-fé, tanto referente às documentações como às informações obtidas de terceiros. Não foi realizado estudo ambiental e de contaminação para o imóvel avaliando, bem como análises estruturais nas edificações, como ensaios e análises físicas.</P>
+        )}
         <P>A avaliadora signatária não possui qualquer inclinação comercial referente ao imóvel em questão, sendo totalmente isenta de interesses. Não foram disponibilizadas informações contábeis, financeiras ou relativas ao fundo de comércio. O presente laudo desconsidera eventuais ativos intangíveis, marcas, dados financeiros, volume de vendas, carteira de clientes, softwares, investimentos, máquinas, equipamentos, produtos, matériasprimas, entre outros ativos que não estejam diretamente vinculados às edificações e ao terreno.</P>
 
         <H2 id="s-5">5. CARACTERIZAÇÃO DA REGIÃO</H2>

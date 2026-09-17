@@ -1233,7 +1233,11 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                   <h2 className="font-bold text-lg titulo-laudo">1. IMÓVEL</h2>
                   <p>A presente avaliação tem por objetivo determinar o valor de mercado do imóvel localizado em:</p>
                   <p>{dados.endereco}.</p>
-                  <p>Trata-se de imóvel caracterizado como {dados.tipo}, conforme características observadas em vistoria.</p>
+                  {(dados as any).semVistoriaPresencial ? (
+                    <p>Trata-se de imóvel caracterizado como {dados.tipo}, conforme características obtidas por pesquisa documental e informações fornecidas pelo solicitante, sem vistoria presencial.</p>
+                  ) : (
+                    <p>Trata-se de imóvel caracterizado como {dados.tipo}, conforme características observadas em vistoria.</p>
+                  )}
                 </div>
                 <div>
                   <h2 className="font-bold text-lg titulo-laudo">2. OBJETIVO</h2>
@@ -1259,12 +1263,18 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     <p>Este laudo fundamenta-se no que estabelecem as normas técnicas da ABNT, Avaliação de Bens, registradas como NBR 14653- Parte 1 (Procedimentos Gerais) e Parte 2 (Imóveis Urbanos), e baseia-se:</p>
                     <ul className="list-disc pl-6 space-y-1">
                       <li>Na documentação fornecida;</li>
-                      <li>Em informações constatadas &quot;in loco&quot; quando da vistoria ao imóvel.</li>
+                      {!(dados as any).semVistoriaPresencial && (
+                        <li>Em informações constatadas &quot;in loco&quot; quando da vistoria ao imóvel.</li>
+                      )}
                       <li>Em informações obtidas junto a agentes do mercado imobiliário local (vendedores, compradores, intermediários e etc).</li>
                     </ul>
                     <p>Na presente avaliação considerou-se a documentação apresentada.</p>
                     <p>Considerou-se também que o imóvel está livre e desembaraçado de quaisquer ônus, em condições de ser imediatamente comercializado.</p>
-                    <p>Não foram efetuadas investigações quanto a correção dos documentos fornecidos; as observações &quot;in loco&quot; foram feitas sem instrumentos de medição; as informações obtidas foram tomadas como de boa-fé, tanto referente às documentações como às informações obtidas de terceiros. Não foi realizado estudo ambiental e de contaminação para o imóvel avaliando, bem como análises estruturais nas edificações, como ensaios e análises físicas.</p>
+                    {(dados as any).semVistoriaPresencial ? (
+                      <p>Não foram efetuadas investigações quanto à correção dos documentos fornecidos; as informações obtidas foram tomadas como de boa-fé, tanto referente às documentações como às informações obtidas de terceiros. Não foi realizado estudo ambiental e de contaminação para o imóvel avaliando, bem como análises estruturais nas edificações, como ensaios e análises físicas. O presente laudo foi elaborado sem vistoria presencial ao imóvel.</p>
+                    ) : (
+                      <p>Não foram efetuadas investigações quanto a correção dos documentos fornecidos; as observações &quot;in loco&quot; foram feitas sem instrumentos de medição; as informações obtidas foram tomadas como de boa-fé, tanto referente às documentações como às informações obtidas de terceiros. Não foi realizado estudo ambiental e de contaminação para o imóvel avaliando, bem como análises estruturais nas edificações, como ensaios e análises físicas.</p>
+                    )}
                     <p>A avaliadora signatária não possui qualquer inclinação comercial referente ao imóvel em questão, sendo totalmente isenta de interesses. Não foram disponibilizadas informações contábeis, financeiras ou relativas ao fundo de comércio. O presente laudo desconsidera eventuais ativos intangíveis, marcas, dados financeiros, volume de vendas, carteira de clientes, softwares, investimentos, máquinas, equipamentos, produtos, matériasprimas, entre outros ativos que não estejam diretamente vinculados às edificações e ao terreno.</p>
                   </div>
                 </div>
