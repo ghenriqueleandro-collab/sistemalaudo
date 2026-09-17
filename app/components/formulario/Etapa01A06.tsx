@@ -329,23 +329,6 @@ export default function Etapa01A06({
         <option value="locacao">Locação</option>
       </select>
 
-      {/* Tipo de vistoria */}
-      <label className="flex items-center gap-3 cursor-pointer rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 hover:bg-amber-100 transition">
-        <input
-          type="checkbox"
-          name="semVistoriaPresencial"
-          checked={!!form.semVistoriaPresencial}
-          onChange={(e) => setFormDirect?.((prev: any) => ({ ...prev, semVistoriaPresencial: e.target.checked }))}
-          className="h-4 w-4 rounded border-slate-300 accent-amber-500"
-        />
-        <span className="text-sm font-medium text-amber-800">
-          Laudo realizado sem vistoria presencial
-        </span>
-        <span className="ml-auto text-xs text-amber-600">
-          O laudo não fará menção a observações in loco
-        </span>
-      </label>
-
       <div className="border rounded p-4 bg-gray-50 space-y-4">
   <h3 className="text-lg font-bold">Definições iniciais do laudo</h3>
 
@@ -814,4 +797,4 @@ export default function Etapa01A06({
 
     </div>
   )
-}// v-semvistoria-1 
+}
