@@ -1100,9 +1100,11 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 {/* Strip de áreas */}
                 <div className="grid grid-cols-3 gap-2 mb-3">
                   {([
-                    { label: 'ÁREA DE TERRENO',     value: formatarArea(dados.areaTerrenoTotal) || '-', unit: '' },
-                    { label: 'ÁREA CONSTRUÍDA',     value: formatarArea(dados.areaConstruidaTotal) || '0', unit: '' },
-                    { label: 'FATOR DE LIQUIDAÇÃO FORÇADA', value: capaFatorLiquidacao,              unit: capaLiquidezDisplay },
+                    { label: 'ÁREA DE TERRENO',  value: formatarArea(dados.areaTerrenoTotal) || '-', unit: '' },
+                    { label: 'ÁREA CONSTRUÍDA',  value: formatarArea(dados.areaConstruidaTotal) || '0', unit: '' },
+                    isLocacao
+                      ? { label: 'LIQUIDEZ', value: dados.liquidez === 'alta' ? 'Alta' : dados.liquidez === 'media' ? 'Média' : dados.liquidez === 'baixa' ? 'Baixa' : dados.liquidez || '-', unit: '' }
+                      : { label: 'FATOR DE LIQUIDAÇÃO', value: capaFatorLiquidacao, unit: capaLiquidezDisplay },
                   ] as { label: string; value: string; unit: string }[]).map((card, idx) => (
                     <div key={idx} className="rounded text-center px-3 py-2" style={{ border: '1px solid #d0daea', background: '#f5f8fc' }}>
                       <div style={{ fontSize: '6px', fontWeight: 700, color: '#8FA4C7', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>{card.label}</div>
@@ -1118,20 +1120,29 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                     <div className="vb-num">{formatarMoeda(valorArredondadoLaudo)}</div>
                     <div className="vb-ext">{valorArredondadoExtenso.charAt(0).toUpperCase() + valorArredondadoExtenso.slice(1)}</div>
                   </div>
-                  <div className="value-box-light">
-                    <div className="vb-label">Valor de Liquidez Forçada</div>
-                    {valorLiquidezForcadaNumero > 0 ? (
-                      <>
-                        <div className="vb-num">{formatarMoeda(valorLiquidezForcadaNumero)}</div>
-                        <div className="vb-ext">{valorLiquidezForcadaExtenso.charAt(0).toUpperCase() + valorLiquidezForcadaExtenso.slice(1)}</div>
-                        <div className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded" style={{ fontSize: '7.5px', fontWeight: 700, color: '#2347C6', background: '#fff', border: '0.5px solid #c2d0e8' }}>
-                          Fator {capaFatorLiquidacao} · {capaLiquidezDisplay}
-                        </div>
-                      </>
-                    ) : (
-                      <div style={{ fontSize: '9px', color: '#8FA4C7' }}>Não informado</div>
-                    )}
-                  </div>
+                  {isLocacao ? (
+                    <div className="value-box-light">
+                      <div className="vb-label">Liquidez</div>
+                      <div style={{ fontSize: '22px', fontWeight: 700, color: '#17325C', marginTop: '4px' }}>
+                        {dados.liquidez === 'alta' ? 'Alta' : dados.liquidez === 'media' ? 'Média' : dados.liquidez === 'baixa' ? 'Baixa' : dados.liquidez || '-'}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="value-box-light">
+                      <div className="vb-label">Valor de Liquidez Forçada</div>
+                      {valorLiquidezForcadaNumero > 0 ? (
+                        <>
+                          <div className="vb-num">{formatarMoeda(valorLiquidezForcadaNumero)}</div>
+                          <div className="vb-ext">{valorLiquidezForcadaExtenso.charAt(0).toUpperCase() + valorLiquidezForcadaExtenso.slice(1)}</div>
+                          <div className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded" style={{ fontSize: '7.5px', fontWeight: 700, color: '#2347C6', background: '#fff', border: '0.5px solid #c2d0e8' }}>
+                            Fator {capaFatorLiquidacao} · {capaLiquidezDisplay}
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: '9px', color: '#8FA4C7' }}>Não informado</div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {/* Strip de especificação */}
                 <div className="grid grid-cols-3 gap-2 mb-4">

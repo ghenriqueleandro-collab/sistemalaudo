@@ -982,9 +982,11 @@ export function LaudoPdf({
           {/* Strip de áreas */}
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
             {([
-              { label: 'ÁREA DE TERRENO',     value: formatarArea(dados.areaTerrenoTotal) || '-', unit: '' },
-              { label: 'ÁREA CONSTRUÍDA',     value: formatarArea(dados.areaConstruidaTotal) || '0', unit: '' },
-              { label: 'FATOR DE LIQUIDAÇÃO', value: capaFatorLiq,                    unit: capaLiqDisplay },
+              { label: 'ÁREA DE TERRENO',  value: formatarArea(dados.areaTerrenoTotal) || '-', unit: '' },
+              { label: 'ÁREA CONSTRUÍDA',  value: formatarArea(dados.areaConstruidaTotal) || '0', unit: '' },
+              isLocacao
+                ? { label: 'LIQUIDEZ', value: dados.liquidez === 'alta' ? 'Alta' : dados.liquidez === 'media' ? 'Média' : dados.liquidez === 'baixa' ? 'Baixa' : dados.liquidez || '-', unit: '' }
+                : { label: 'FATOR DE LIQUIDAÇÃO', value: capaFatorLiq, unit: capaLiqDisplay },
             ] as { label: string; value: string; unit: string }[]).map((card, idx) => (
               <View key={idx} style={{ flex: 1, border: '1pt solid #d0daea', borderRadius: 3, paddingHorizontal: 10, paddingVertical: 7, backgroundColor: '#f5f8fc', alignItems: 'center' }}>
                 <Text style={{ fontSize: 6, fontFamily: 'Helvetica-Bold', color: '#8FA4C7', letterSpacing: 0.8, marginBottom: 2 }}>{card.label}</Text>
@@ -1975,4 +1977,3 @@ export function LaudoPdf({
     </Document>
   )
 }
-// v-laudopdf-2 
