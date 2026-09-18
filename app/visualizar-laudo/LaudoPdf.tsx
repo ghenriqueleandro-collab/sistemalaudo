@@ -998,19 +998,13 @@ export function LaudoPdf({
 
           {/* Cards de valores */}
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-            <View style={[s.valueBoxDark, { flex: 1 }]}>
+            {/* Locação: valor ocupa largura total */}
+            <View style={[s.valueBoxDark, { flex: isLocacao ? 2 : 1 }]}>
               <Text style={s.vbLabelDark}>{isLocacao ? 'Valor de Locação' : 'Valor de Avaliação'}</Text>
               <Text style={s.vbNumDark}>{fm(valorArredondado)}</Text>
               <Text style={s.vbExtDark}>{valorExtenso.charAt(0).toUpperCase() + valorExtenso.slice(1)}</Text>
             </View>
-            {isLocacao ? (
-              <View style={[s.valueBoxLight, { flex: 1 }]}>
-                <Text style={s.vbLabel}>Liquidez</Text>
-                <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#17325C', marginTop: 4 }}>
-                  {dados.liquidez === 'alta' ? 'Alta' : dados.liquidez === 'media' ? 'Média' : dados.liquidez === 'baixa' ? 'Baixa' : dados.liquidez || 'Média'}
-                </Text>
-              </View>
-            ) : (
+            {!isLocacao && (
               <View style={[s.valueBoxLight, { flex: 1 }]}>
                 <Text style={s.vbLabel}>Valor de Liquidez Forçada</Text>
                 {vlf > 0 ? (

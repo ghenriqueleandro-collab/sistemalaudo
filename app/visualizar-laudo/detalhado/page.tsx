@@ -1114,20 +1114,13 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                   ))}
                 </div>
                 {/* Cards de valores */}
-                <div className="grid grid-cols-2 gap-2.5 mb-3">
+                <div className={isLocacao ? "grid grid-cols-1 gap-2.5 mb-3" : "grid grid-cols-2 gap-2.5 mb-3"}>
                   <div className="value-box-dark">
                     <div className="vb-label">{isLocacao ? 'Valor de Locação' : 'Valor de Avaliação'}</div>
                     <div className="vb-num">{formatarMoeda(valorArredondadoLaudo)}</div>
                     <div className="vb-ext">{valorArredondadoExtenso.charAt(0).toUpperCase() + valorArredondadoExtenso.slice(1)}</div>
                   </div>
-                  {isLocacao ? (
-                    <div className="value-box-light">
-                      <div className="vb-label">Liquidez</div>
-                      <div style={{ fontSize: '22px', fontWeight: 700, color: '#17325C', marginTop: '4px' }}>
-                        {dados.liquidez === 'alta' ? 'Alta' : dados.liquidez === 'media' ? 'Média' : dados.liquidez === 'baixa' ? 'Baixa' : dados.liquidez || '-'}
-                      </div>
-                    </div>
-                  ) : (
+                  {!isLocacao && (
                     <div className="value-box-light">
                       <div className="vb-label">Valor de Liquidez Forçada</div>
                       {valorLiquidezForcadaNumero > 0 ? (
