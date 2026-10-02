@@ -285,7 +285,22 @@ const T_STUDENT: Record<number, number> = {
 
 function pn(s: string): number {
   if (!s) return 0
-  return parseFloat(s.replace(/[R$\s.]/g, '').replace(',', '.')) || 0
+  const str = String(s).trim().replace(/[R$\s]/g, '')
+  // Detecta formato: se termina em ",XX" (2 dígitos) = separador decimal BR
+  // Se contém apenas ponto (sem vírgula) = formato invariante do input[type=number]
+  if (str.includes(',')) {
+    // Formato BR: pontos são separadores de milhar, vírgula é decimal
+    return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0
+  }
+  // Formato invariante (input[type=number] retorna "179.77"):
+  // Se há exatamente um ponto e não é separador de milhar (≤3 dígitos após), é decimal
+  const partes = str.split('.')
+  if (partes.length === 2 && partes[1].length <= 6) {
+    // ponto decimal inglês — usa direto
+    return parseFloat(str) || 0
+  }
+  // Múltiplos pontos = separadores de milhar BR sem vírgula (ex: "1.000.000")
+  return parseFloat(str.replace(/\./g, '')) || 0
 }
 
 function fmt(v: number, dec = 2): string {
@@ -1079,20 +1094,20 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
             <div className="grid grid-cols-5 gap-3 mt-3">
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1.5">Área (m²) *</label>
-                <input type="number" value={elem.area} onChange={e => updateElem(abaAtiva, 'area', e.target.value)}
+                <input type="text" inputMode="decimal" value={elem.area} onChange={e => updateElem(abaAtiva, 'area', e.target.value)}
                   placeholder="0,00" className={cls} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1.5">Dormitórios</label>
-                <input type="number" value={elem.dormitorios} onChange={e => updateElem(abaAtiva, 'dormitorios', e.target.value)} className={cls} />
+                <input type="text" inputMode="numeric" value={elem.dormitorios} onChange={e => updateElem(abaAtiva, 'dormitorios', e.target.value)} className={cls} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1.5">Suítes</label>
-                <input type="number" value={elem.suites} onChange={e => updateElem(abaAtiva, 'suites', e.target.value)} className={cls} />
+                <input type="text" inputMode="numeric" value={elem.suites} onChange={e => updateElem(abaAtiva, 'suites', e.target.value)} className={cls} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1.5">Vagas</label>
-                <input type="number" value={elem.vagas} onChange={e => updateElem(abaAtiva, 'vagas', e.target.value)} className={cls} />
+                <input type="text" inputMode="numeric" value={elem.vagas} onChange={e => updateElem(abaAtiva, 'vagas', e.target.value)} className={cls} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1.5">Empreendimento</label>
