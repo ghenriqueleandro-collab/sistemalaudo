@@ -396,6 +396,13 @@ function FotoElem({ foto, onChange, onRemover }: {
 
 // ─── Motor de cálculo (replica exatamente as fórmulas da planilha) ───────────
 
+// Entrada nula para elementos sem área/valor — preserva alinhamento de índices
+const RESULTADO_ELEM_ZERO: ResultElem = {
+  vu: 0, fatorArea: 1, fatorLocal: 1, fatorPadrao: 1, fatorFOC: 1,
+  fatorAndar: 1, fatorVaga: 1, coefGeral: 1, vuHomog: 0, vuHomogDisplay: 0,
+  residuo: 0, saneado: true,
+}
+
 function calcularResultado(
   elementos: ElementoCDDM[],
   avaliando: AvalianoCDDM,
@@ -408,11 +415,17 @@ function calcularResultado(
   const fAndarAv     = pn(avaliando.fatorAndar) || 100
   const idadeAv      = pn((avaliando as any).idadeAparente || '0')
 
-  const elemsValidos = elementos.filter(e => pn(e.area) > 0 && pn(e.valorOferta) > 0)
+  // Calcula resultado para TODOS os elementos, mantendo alinhamento 1:1 com o array
+  // original. Elementos sem área/valor recebem entrada zero (vu = 0).
+  const round3 = (v: number) => Math.round(v / 0.001) * 0.001
 
-  const parciais: ResultElem[] = elemsValidos.map(e => {
-    const area        = pn(e.area)
-    const valOfer     = pn(e.valorOferta)
+  const parciais: ResultElem[] = elementos.map(e => {
+    const area     = pn(e.area)
+    const valOfer  = pn(e.valorOferta)
+
+    // Elemento sem dados suficientes — retorna entrada zero
+    if (area <= 0 || valOfer <= 0) return { ...RESULTADO_ELEM_ZERO }
+
     const fOfer       = pn(e.fatorOferta) || 0.90
     const fLocalElem  = pn(e.fatorLocal) || 100
     const fAndarElem  = pn(e.fatorAndar) || 100
@@ -422,15 +435,14 @@ function calcularResultado(
     const idadeElem   = pn(e.idade || '0')
 
     // VU = Valor Líquido / Área
-    const vu = area > 0 ? (valOfer * fOfer) / area : 0
+    const vu = (valOfer * fOfer) / area
 
     // Fator Área — fórmula exata da planilha:
     // E5 = ROUND((C5/C53)^exp / 0.001, 0) × 0.001
     // onde C5 = área do elemento, C53 = área do avaliando → ratio = elem/av
     // exp = 0.125 se ratio < 0.7 ou > 1.3; senão = 0.25
-    const round3 = (v: number) => Math.round(v / 0.001) * 0.001
     const fatorArea = (() => {
-      if (area <= 0 || areaAv <= 0) return 1
+      if (areaAv <= 0) return 1
       const ratio = area / areaAv
       return round3(Math.pow(ratio, (ratio < 0.7 || ratio > 1.3) ? 0.125 : 0.25))
     })()
@@ -467,17 +479,9 @@ function calcularResultado(
     }
   })
 
-  if (parciais.length === 0) {
-    return {
-      elementos: parciais, media: 0, mediaSaneada: 0, desvioPadrao: 0,
-      coefVariacao: 0, tStudent: 1.533, resultado: 0, intervaloConfianca: 0,
-      limiteInferior: 0, limiteSuperior: 0, limiteInf30: 0, limiteSup30: 0,
-      grauPrecisao: '-',
-    }
-  }
+  // Estatísticas — somente sobre elementos válidos (vu > 0)
+  const vus = parciais.filter(p => p.vuHomog > 0).map(p => p.vuHomog)
 
-  // Média bruta
-  const vus = parciais.map(p => p.vuHomog).filter(v => v > 0)
   if (vus.length === 0) {
     return {
       elementos: parciais, media: 0, mediaSaneada: 0, desvioPadrao: 0,
@@ -487,14 +491,16 @@ function calcularResultado(
     }
   }
 
-  const media     = vus.reduce((a, b) => a + b, 0) / vus.length
-  const limInf30  = media * 0.70
-  const limSup30  = media * 1.30
+  const media    = vus.reduce((a, b) => a + b, 0) / vus.length
+  const limInf30 = media * 0.70
+  const limSup30 = media * 1.30
 
   // Saneamento: flag visual — todos incluídos no cálculo
-  parciais.forEach(p => { p.saneado = p.vuHomog >= limInf30 && p.vuHomog <= limSup30 })
-  const vusSaneados = vus
-  const n           = vusSaneados.length
+  parciais.forEach(p => {
+    if (p.vuHomog > 0) p.saneado = p.vuHomog >= limInf30 && p.vuHomog <= limSup30
+  })
+
+  const n          = vus.length
   const mediaSaneada = media
 
   // Resíduos: variação por fator vs VU bruto (fórmula planilha)
@@ -504,7 +510,7 @@ function calcularResultado(
 
   // Desvio padrão amostral
   const desvioPadrao = n > 1
-    ? Math.sqrt(vusSaneados.reduce((acc, v) => acc + (v - mediaSaneada) ** 2, 0) / (n - 1))
+    ? Math.sqrt(vus.reduce((acc, v) => acc + (v - mediaSaneada) ** 2, 0) / (n - 1))
     : 0
 
   const coefVariacao = mediaSaneada > 0 ? (desvioPadrao / mediaSaneada) * 100 : 0
@@ -750,13 +756,16 @@ export default function EtapaCalculoCDDM({ form, setForm, fatoresCDDMAtivos, onS
     setForm((prev: any) => ({
       ...prev,
       dadosCalculoCDDM: {
-        // Mescla dados descritivos (logradouro, bairro, tipo, etc.) com campos calculados
-        elementos: resultado.elementos.map((el, idx) => ({
-          ...elementos[idx],          // todos os campos preenchidos pelo usuário
-          ...el,                      // campos calculados sobrescrevem (vu, fatores, etc.)
-          valorUnitarioOferta: el.vu,
-          vuHomog: el.vuHomogDisplay ?? el.vuHomog,
-        })),
+        // resultado.elementos é alinhado 1:1 com elementos[] — idx corresponde diretamente.
+        // Filtra apenas os válidos (vu > 0) para o snapshot de PDF/visualização.
+        elementos: resultado.elementos
+          .map((el, idx) => ({
+            ...elementos[idx],          // todos os campos preenchidos pelo usuário
+            ...el,                      // campos calculados sobrescrevem (vu, fatores, etc.)
+            valorUnitarioOferta: el.vu,
+            vuHomog: el.vuHomogDisplay ?? el.vuHomog,
+          }))
+          .filter(el => el.vu > 0),    // somente os preenchidos vão para o PDF
         avaliando: { area: pn(avaliando.area), padraoConstrutivo: avaliando.padraoConstrutivo, estadoConservacao: avaliando.estadoConservacao },
         media: resultado.media, mediaSaneada: resultado.mediaSaneada,
         desvioPadrao: resultado.desvioPadrao, coefVariacao: resultado.coefVariacao,
