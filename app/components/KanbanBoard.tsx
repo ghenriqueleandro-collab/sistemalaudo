@@ -444,6 +444,60 @@ function ModalCard({
   )
 }
 
+// ─── Descrição inline editável ───────────────────────────────────────────────
+
+function DescricaoInline({
+  card,
+  onSalvar,
+}: {
+  card: Card
+  onSalvar: (id: string, descricao: string) => void
+}) {
+  const [editando, setEditando] = useState(false)
+  const [texto, setTexto] = useState(card.descricao)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => { setTexto(card.descricao) }, [card.descricao])
+
+  function handleFoco() {
+    setEditando(true)
+    setTimeout(() => textareaRef.current?.focus(), 0)
+  }
+
+  function handleBlur() {
+    setEditando(false)
+    if (texto !== card.descricao) onSalvar(card.id, texto)
+  }
+
+  return (
+    <div className="mb-2">
+      {editando ? (
+        <textarea
+          ref={textareaRef}
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          onBlur={handleBlur}
+          rows={3}
+          placeholder="Observações..."
+          className="w-full resize-none rounded-lg border border-blue-300 bg-white px-2 py-1.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={handleFoco}
+          className={`w-full rounded-lg border border-dashed px-2 py-1.5 text-left text-xs transition hover:border-blue-300 hover:bg-blue-50 ${
+            texto
+              ? 'border-slate-200 text-slate-500 italic'
+              : 'border-slate-200 text-slate-400'
+          }`}
+        >
+          {texto || 'Adicionar observação…'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ─── Card Kanban ──────────────────────────────────────────────────────────────
 
 function KanbanCard({
@@ -452,12 +506,14 @@ function KanbanCard({
   onEditar,
   onIniciarLaudo,
   onArquivar,
+  onSalvarDescricao,
 }: {
   card: Card
   onMover: (status: StatusKanban) => void
   onEditar: () => void
   onIniciarLaudo: () => void
   onArquivar: () => void
+  onSalvarDescricao: (id: string, descricao: string) => void
 }) {
   const [menuAberto, setMenuAberto] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -556,11 +612,8 @@ function KanbanCard({
       )}
 
       {/* Descrição */}
-      {card.descricao && (
-        <p className="text-xs text-slate-400 line-clamp-2 mb-2 italic">
-          {card.descricao}
-        </p>
-      )}
+      {/* Observação — sempre visível, editável inline */}
+      <DescricaoInline card={card} onSalvar={onSalvarDescricao} />
 
       {/* Chips de prazo e prioridade */}
       <div className="flex flex-wrap items-center gap-1.5 mb-3">
@@ -580,7 +633,9 @@ function KanbanCard({
       {/* Botão Iniciar laudo / Abrir laudo */}
       {temLaudo ? (
         <a
-          href={`/laudos/${card.laudoId}`}
+          href={card.tipoLaudo === 'simplificado'
+            ? `/laudo/simplificado?id=${card.laudoId}`
+            : `/novo-laudo?id=${card.laudoId}`}
           className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -706,7 +761,10 @@ export default function KanbanBoard({ onLaudoIniciado }: KanbanBoardProps) {
       // Atualiza card local com o laudoId
       setCards(cs => cs.map(c => c.id === card.id ? { ...c, laudoId: laudo.id } : c))
       onLaudoIniciado?.()
-      router.push(`/laudos/${laudo.id}`)
+      const rota = card.tipoLaudo === 'simplificado'
+        ? `/laudo/simplificado?id=${laudo.id}`
+        : `/novo-laudo?id=${laudo.id}`
+      router.push(rota)
     } catch (e: any) {
       alert(e.message || 'Erro ao iniciar laudo.')
     } finally {
@@ -722,6 +780,16 @@ export default function KanbanBoard({ onLaudoIniciado }: KanbanBoardProps) {
       setConfirmArquivar(null)
     } catch (e: any) {
       alert(e.message || 'Erro ao arquivar card.')
+    }
+  }
+
+  // Salvar descrição inline
+  async function handleSalvarDescricao(cardId: string, descricao: string) {
+    try {
+      await apiAtualizarCard(cardId, { descricao })
+      setCards(cs => cs.map(c => c.id === cardId ? { ...c, descricao } : c))
+    } catch {
+      // falha silenciosa
     }
   }
 
@@ -819,6 +887,7 @@ export default function KanbanBoard({ onLaudoIniciado }: KanbanBoardProps) {
                             onEditar={() => handleEditar(card)}
                             onIniciarLaudo={() => handleIniciarLaudo(card)}
                             onArquivar={() => setConfirmArquivar(card.id)}
+                            onSalvarDescricao={(id, desc) => handleSalvarDescricao(id, desc)}
                           />
                         ))
                       )}
