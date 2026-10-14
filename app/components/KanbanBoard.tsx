@@ -44,6 +44,7 @@ interface Card {
   prazoEntrega: string      // 'YYYY-MM-DD'
   prioridade: 'urgente' | 'normal' | 'baixa'
   descricao: string
+  observacaoCliente: string
   statusAcompanhamento: StatusKanban
   laudoId: string | null
   arquivado: boolean
@@ -120,6 +121,7 @@ const CARD_VAZIO: CardFormData = {
   prazoEntrega: '',
   prioridade: 'normal',
   descricao: '',
+  observacaoCliente: '',
   statusAcompanhamento: 'levantamento_documentos',
 }
 
@@ -212,6 +214,12 @@ async function apiArquivarCard(id: string): Promise<Card> {
   return r.json()
 }
 
+async function apiListarEmpresas(): Promise<{ id: string; nome: string }[]> {
+  const r = await fetch('/api/empresas')
+  if (!r.ok) return []
+  return r.json()
+}
+
 async function apiIniciarLaudo(cardId: string): Promise<{ id: string }> {
   const r = await fetch(`/api/cards/${cardId}/iniciar-laudo`, { method: 'POST' })
   if (!r.ok) {
@@ -249,10 +257,23 @@ function ModalCard({
     prazoEntrega: card.prazoEntrega,
     prioridade: card.prioridade,
     descricao: card.descricao,
+    observacaoCliente: card.observacaoCliente ?? '',
     statusAcompanhamento: card.statusAcompanhamento,
   })
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+  const [empresas, setEmpresas] = useState<{ id: string; nome: string }[]>([])
+  const [clienteCustom, setClienteCustom] = useState(false)
+
+  useEffect(() => {
+    apiListarEmpresas().then(lista => {
+      setEmpresas(lista)
+      // Se o valor atual não está na lista, mostra campo livre
+      if (card.cliente && !lista.find(e => e.nome === card.cliente)) {
+        setClienteCustom(true)
+      }
+    })
+  }, [])
 
   function campo(k: keyof CardFormData) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -353,7 +374,47 @@ function ModalCard({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>Cliente / Contratante</label>
-              <input className={inputCls} value={form.cliente} onChange={campo('cliente')} placeholder="Nome do solicitante" />
+              {!clienteCustom ? (
+                <div className="flex gap-1.5">
+                  <select
+                    className={`${inputCls} flex-1`}
+                    value={form.cliente}
+                    onChange={e => {
+                      if (e.target.value === '__outro__') {
+                        setClienteCustom(true)
+                        setForm(f => ({ ...f, cliente: '' }))
+                      } else {
+                        setForm(f => ({ ...f, cliente: e.target.value }))
+                      }
+                    }}
+                  >
+                    <option value="">Selecione a empresa</option>
+                    {empresas.map(e => (
+                      <option key={e.id} value={e.nome}>{e.nome}</option>
+                    ))}
+                    <option value="__outro__">+ Digitar nome…</option>
+                  </select>
+                </div>
+              ) : (
+                <div className="flex gap-1.5">
+                  <input
+                    className={`${inputCls} flex-1`}
+                    value={form.cliente}
+                    onChange={campo('cliente')}
+                    placeholder="Nome do contratante"
+                    autoFocus
+                  />
+                  {empresas.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => { setClienteCustom(false); setForm(f => ({ ...f, cliente: '' })) }}
+                      className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-500 hover:bg-slate-50 transition whitespace-nowrap"
+                    >
+                      ← Lista
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <label className={labelCls}>Finalidade</label>
@@ -405,15 +466,30 @@ function ModalCard({
             </div>
           </div>
 
-          {/* Descrição */}
+          {/* Descrição interna */}
           <div>
-            <label className={labelCls}>Descrição / Observações</label>
+            <label className={labelCls}>Descrição / Observações internas</label>
             <textarea
               className={`${inputCls} resize-none`}
-              rows={3}
+              rows={2}
               value={form.descricao}
               onChange={campo('descricao')}
-              placeholder="Pendências, próximos passos, informações relevantes…"
+              placeholder="Pendências, próximos passos, informações internas…"
+            />
+          </div>
+
+          {/* Observação para o cliente */}
+          <div>
+            <label className={labelCls}>
+              Observação para o cliente
+              <span className="ml-1.5 normal-case font-normal text-slate-400">(visível no portal)</span>
+            </label>
+            <textarea
+              className={`${inputCls} resize-none`}
+              rows={2}
+              value={form.observacaoCliente}
+              onChange={campo('observacaoCliente')}
+              placeholder="Ex: Aguardando matrícula atualizada. Daremos continuidade após o recebimento."
             />
           </div>
 
@@ -451,13 +527,13 @@ function DescricaoInline({
   onSalvar,
 }: {
   card: Card
-  onSalvar: (id: string, descricao: string) => void
+  onSalvar: (id: string, observacaoCliente: string) => void
 }) {
   const [editando, setEditando] = useState(false)
-  const [texto, setTexto] = useState(card.descricao)
+  const [texto, setTexto] = useState(card.observacaoCliente ?? '')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => { setTexto(card.descricao) }, [card.descricao])
+  useEffect(() => { setTexto(card.observacaoCliente ?? '') }, [card.observacaoCliente])
 
   function handleFoco() {
     setEditando(true)
@@ -466,11 +542,14 @@ function DescricaoInline({
 
   function handleBlur() {
     setEditando(false)
-    if (texto !== card.descricao) onSalvar(card.id, texto)
+    if (texto !== (card.observacaoCliente ?? '')) onSalvar(card.id, texto)
   }
 
   return (
     <div className="mb-2">
+      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+        Obs. para o cliente
+      </p>
       {editando ? (
         <textarea
           ref={textareaRef}
@@ -478,7 +557,7 @@ function DescricaoInline({
           onChange={(e) => setTexto(e.target.value)}
           onBlur={handleBlur}
           rows={3}
-          placeholder="Observações..."
+          placeholder="Mensagem visível ao cliente no portal…"
           className="w-full resize-none rounded-lg border border-blue-300 bg-white px-2 py-1.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
         />
       ) : (
@@ -491,7 +570,7 @@ function DescricaoInline({
               : 'border-slate-200 text-slate-400'
           }`}
         >
-          {texto || 'Adicionar observação…'}
+          {texto || 'Adicionar observação para o cliente…'}
         </button>
       )}
     </div>
@@ -783,11 +862,11 @@ export default function KanbanBoard({ onLaudoIniciado }: KanbanBoardProps) {
     }
   }
 
-  // Salvar descrição inline
-  async function handleSalvarDescricao(cardId: string, descricao: string) {
+  // Salvar observação para o cliente inline
+  async function handleSalvarDescricao(cardId: string, observacaoCliente: string) {
     try {
-      await apiAtualizarCard(cardId, { descricao })
-      setCards(cs => cs.map(c => c.id === cardId ? { ...c, descricao } : c))
+      await apiAtualizarCard(cardId, { observacaoCliente })
+      setCards(cs => cs.map(c => c.id === cardId ? { ...c, observacaoCliente } : c))
     } catch {
       // falha silenciosa
     }

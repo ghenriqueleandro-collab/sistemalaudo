@@ -68,6 +68,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
     //      card.prazoEntrega        → laudo.prazoEntrega
     //      card.prioridade          → laudo.prioridade
     //      card.descricao           → laudo.descricao
+    //      card.observacaoCliente   → laudo.observacaoCliente
     //      card.statusAcompanhamento → laudo.statusAcompanhamento
     const laudo = {
       // Identificação
@@ -98,6 +99,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
       prazoEntrega: card.prazoEntrega ?? '',
       prioridade: card.prioridade ?? 'normal',
       descricao: card.descricao ?? '',
+      observacaoCliente: card.observacaoCliente ?? '',
 
       // Status
       statusAcompanhamento: card.statusAcompanhamento ?? 'levantamento_documentos',
