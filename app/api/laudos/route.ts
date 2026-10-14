@@ -39,6 +39,9 @@ export async function GET() {
 }
 
 // POST /api/laudos → cria ou atualiza laudo (upsert por ID)
+// Quando o laudo tem cardId vinculado, sincroniza de volta ao card:
+//   laudo.statusAcompanhamento → card.statusAcompanhamento
+//   laudo.observacaoCliente    → card.observacaoCliente
 export async function POST(request: NextRequest) {
   try {
     const dados = await request.json()
@@ -55,10 +58,32 @@ export async function POST(request: NextRequest) {
       atualizadoEm: agora,
     }
 
-    await Promise.all([
+    const operacoes: Promise<any>[] = [
       redis.set(`laudo:${id}`, laudo),
       redis.sadd('laudo_ids', id),
-    ])
+    ]
+
+    // Sincroniza campos relevantes de volta ao card vinculado
+    const cardId = laudo.cardId ?? existente?.cardId
+    if (cardId) {
+      const card = await redis.get<any>(`card:${cardId}`)
+      if (card) {
+        const camposSync: Record<string, any> = { atualizadoEm: agora }
+
+        if (dados.statusAcompanhamento !== undefined) {
+          camposSync.statusAcompanhamento = dados.statusAcompanhamento
+        }
+        if (dados.observacaoCliente !== undefined) {
+          camposSync.observacaoCliente = dados.observacaoCliente
+        }
+
+        operacoes.push(
+          redis.set(`card:${cardId}`, { ...card, ...camposSync })
+        )
+      }
+    }
+
+    await Promise.all(operacoes)
 
     return NextResponse.json(laudo, { status: existente ? 200 : 201 })
   } catch (erro) {
