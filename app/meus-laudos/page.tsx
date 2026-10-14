@@ -1,8 +1,10 @@
 /**
  * SALVAR EM: src/app/meus-laudos/page.tsx
  *
- * Integra o modal de criação de laudo (migrado de agendamentos)
- * com o dashboard e lista de laudos originais.
+ * Integra o KanbanBoard no topo da página (acima dos cards de dashboard).
+ * Alterações em relação à versão anterior:
+ *   1. Import de KanbanBoard adicionado
+ *   2. <KanbanBoard onLaudoIniciado={carregarDados} /> inserido antes dos cards de status
  */
 
 'use client'
@@ -11,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import AppShell from '../components/AppShell'
+import KanbanBoard from '../components/KanbanBoard'
 import {
   excluirLaudo,
   filtrarLaudos,
@@ -44,7 +47,7 @@ const statusVistoriaLabel: Record<string, string> = {
   finalizado:             'Finalizado',
 }
 
-// ─── Helpers geocodificação ───────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function haversineMetros(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371000
@@ -94,7 +97,7 @@ export default function MeusLaudosPage() {
   const [excluindoId, setExcluindoId] = useState<string | null>(null)
   const [solicitandoId, setSolicitandoId] = useState<string | null>(null)
 
-  // Modal criação
+  // Modal criação de laudo direto
   const [empresas, setEmpresas] = useState<{ id: string; nome: string }[]>([])
   const [mostrarModal, setMostrarModal] = useState(false)
   const [criandoLaudo, setCriandoLaudo] = useState(false)
@@ -147,8 +150,7 @@ export default function MeusLaudosPage() {
   )
 
   const laudosFiltrados = useMemo(() => {
-    // filtrarLaudos exige todos os campos de FiltrosLaudo
-    let resultado = filtrarLaudos(laudos, {
+    return filtrarLaudos(laudos, {
       busca,
       status: filtroAcomp,
       cidade: '',
@@ -156,10 +158,9 @@ export default function MeusLaudosPage() {
       finalidade: '',
       tipoLaudo: '',
     })
-    return resultado
   }, [laudos, busca, filtroAcomp])
 
-  // ─── Permissões de exclusão ──────────────────────────────────────────────
+  // ─── Permissões ──────────────────────────────────────────────────────────
 
   const perfil = (session?.user as any)?.perfil
   const usuarioEmail = session?.user?.email || ''
@@ -233,29 +234,40 @@ export default function MeusLaudosPage() {
         if (logradouro) campos['endereco'] = [logradouro, bairro, cidade, estado, cep].filter(Boolean).join(', ')
       }
       try {
-        const delta = 0.015
-        const bbox = `${lat - delta},${lng - delta},${lat + delta},${lng + delta}`
-        const query = `[out:json][timeout:10];(node["amenity"](${bbox});node["shop"](${bbox});node["highway"="bus_stop"](${bbox}););out body;`
-        const resOv = await fetch('https://overpass-api.de/api/interpreter', {
-          method: 'POST', body: query, headers: { 'Content-Type': 'text/plain' },
-        })
-        if (resOv.ok) {
+        const deltas = [0.015, 0.05, 0.15]
+        const buildQuery = (d: number) => {
+          const b = `${lat-d},${lng-d},${lat+d},${lng+d}`
+          return `[out:json][timeout:25];(node["amenity"](${b});node["shop"](${b});node["highway"="bus_stop"](${b});node["tourism"](${b});node["leisure"](${b});way["name"](${b}););out center;`
+        }
+        let unicos: { nome: string; dist: number }[] = []
+        for (const delta of deltas) {
+          const resOv = await fetch('https://overpass-api.de/api/interpreter', {
+            method: 'POST', body: buildQuery(delta), headers: { 'Content-Type': 'text/plain' },
+          })
+          if (!resOv.ok) continue
           const ov = await resOv.json()
-          const pontos = (ov.elements || [])
-            .filter((el: any) => el.tags?.name)
-            .map((el: any) => ({ nome: el.tags.name, dist: haversineMetros(lat, lng, el.lat, el.lon) }))
-            .sort((a: any, b: any) => a.dist - b.dist)
-          const unicos: { nome: string; dist: number }[] = []
+          const elems = (ov.elements || []).filter((el: any) => el.tags?.name)
+          const pontos = elems.map((el: any) => {
+            const elLat = el.lat ?? el.center?.lat
+            const elLon = el.lon ?? el.center?.lon
+            if (!elLat || !elLon) return null
+            return { nome: el.tags.name, dist: haversineMetros(lat, lng, elLat, elLon) }
+          }).filter(Boolean).sort((a: any, b: any) => a.dist - b.dist)
           const vistos = new Set<string>()
+          unicos = []
           for (const p of pontos) {
-            if (!vistos.has(p.nome)) { vistos.add(p.nome); unicos.push(p) }
+            if (!vistos.has(p.nome)) { vistos.add(p.nome); unicos.push(p as { nome: string; dist: number }) }
             if (unicos.length >= 5) break
           }
-          if (unicos[0]) { campos['referencia1'] = unicos[0].nome; campos['distancia1'] = formatarDistancia(unicos[0].dist) }
-          if (unicos[1]) { campos['referencia2'] = unicos[1].nome; campos['distancia2'] = formatarDistancia(unicos[1].dist) }
-          if (unicos[2]) { campos['referencia3'] = unicos[2].nome; campos['distancia3'] = formatarDistancia(unicos[2].dist) }
-          if (unicos[3]) { campos['referencia4'] = unicos[3].nome; campos['distancia4'] = formatarDistancia(unicos[3].dist) }
-          if (unicos[4]) { campos['referencia5'] = unicos[4].nome; campos['distancia5'] = formatarDistancia(unicos[4].dist) }
+          if (unicos.length >= 3) break
+        }
+        if (unicos[0]) { campos['referencia1'] = unicos[0].nome; campos['distancia1'] = formatarDistancia(unicos[0].dist) }
+        if (unicos[1]) { campos['referencia2'] = unicos[1].nome; campos['distancia2'] = formatarDistancia(unicos[1].dist) }
+        if (unicos[2]) { campos['referencia3'] = unicos[2].nome; campos['distancia3'] = formatarDistancia(unicos[2].dist) }
+        if (unicos[3]) { campos['referencia4'] = unicos[3].nome; campos['distancia4'] = formatarDistancia(unicos[3].dist) }
+        if (unicos[4]) { campos['referencia5'] = unicos[4].nome; campos['distancia5'] = formatarDistancia(unicos[4].dist) }
+        if (unicos.length === 0) {
+          setMsgCoords({ tipo: 'ok', texto: 'Endereço preenchido. Nenhum ponto de referência encontrado nas proximidades — preencha manualmente.' })
         }
       } catch { /* overpass falhou — silencioso */ }
       if (Object.keys(campos).length > 0) setNovoLaudo((prev) => ({ ...prev, ...campos }))
@@ -267,7 +279,7 @@ export default function MeusLaudosPage() {
     }
   }
 
-  // ─── Criar laudo ──────────────────────────────────────────────────────────
+  // ─── Criar laudo direto (modal legado) ────────────────────────────────────
 
   async function criarNovoLaudo() {
     if (!novoLaudo.endereco && !novoLaudo.coordenadasImovel) {
@@ -325,12 +337,24 @@ export default function MeusLaudosPage() {
           {perfil !== 'cliente' && (
             <button
               onClick={() => setMostrarModal(true)}
-              className="inline-flex items-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#0f3d68,#2563eb)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition"
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition"
             >
               <span className="text-lg leading-none">+</span>
-              Novo laudo
+              Laudo avulso
             </button>
           )}
+        </div>
+
+        {/* ── Quadro Kanban de demandas ── */}
+        {perfil !== 'cliente' && (
+          <KanbanBoard onLaudoIniciado={carregarDados} />
+        )}
+
+        {/* ── Separador ── */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex-1 h-px bg-slate-200" />
+          <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Laudos cadastrados</span>
+          <div className="flex-1 h-px bg-slate-200" />
         </div>
 
         {/* Cards de dashboard */}
@@ -405,17 +429,14 @@ export default function MeusLaudosPage() {
                         {laudo.solicitante || '—'}
                       </p>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {/* Status de acompanhamento — único status principal */}
                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cfgAcomp.classe}`}>
                           {formatarStatusAcompanhamento(stAcomp)}
                         </span>
-                        {/* Status de vistoria — só quando relevante */}
                         {laudo.statusVistoria && laudo.statusVistoria !== 'aguardando_agendamento' && (
                           <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700">
                             {statusVistoriaLabel[laudo.statusVistoria] || laudo.statusVistoria}
                           </span>
                         )}
-                        {/* Tipo */}
                         <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-600">
                           {laudo.tipoLaudo === 'simplificado' ? 'Simplificado' : 'Detalhado'}
                         </span>
@@ -455,12 +476,12 @@ export default function MeusLaudosPage() {
         </div>
       </section>
 
-      {/* ── Modal de criação ── */}
+      {/* ── Modal de criação direta (laudo avulso sem card) ── */}
       {mostrarModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 overflow-y-auto py-8 px-4">
           <div className="w-full max-w-2xl rounded-[28px] border border-slate-200 bg-white p-8 shadow-xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-slate-950">Iniciar novo laudo</h2>
+              <h2 className="text-xl font-semibold text-slate-950">Iniciar laudo avulso</h2>
               <button
                 onClick={() => { setMostrarModal(false); setMsgCoords(null); setNovoLaudo(NOVO_LAUDO_INICIAL) }}
                 className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
