@@ -585,6 +585,7 @@ function KanbanCard({
   onEditar,
   onIniciarLaudo,
   onArquivar,
+  onExcluir,
   onSalvarDescricao,
 }: {
   card: Card
@@ -592,6 +593,7 @@ function KanbanCard({
   onEditar: () => void
   onIniciarLaudo: () => void
   onArquivar: () => void
+  onExcluir: () => void
   onSalvarDescricao: (id: string, descricao: string) => void
 }) {
   const [menuAberto, setMenuAberto] = useState(false)
@@ -671,6 +673,16 @@ function KanbanCard({
                   Arquivar (encerrar)
                 </button>
               )}
+              {/* Excluir — sempre disponível */}
+              <button
+                onClick={() => { setMenuAberto(false); onExcluir() }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-slate-100 mt-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Excluir card
+              </button>
             </div>
           )}
         </div>
@@ -756,8 +768,9 @@ export default function KanbanBoard({ onLaudoIniciado }: KanbanBoardProps) {
   const [modalAberto, setModalAberto] = useState(false)
   const [cardEditando, setCardEditando] = useState<(CardFormData & { id?: string }) | null>(null)
 
-  // Confirmação de arquivar
+  // Confirmação de arquivar / excluir
   const [confirmArquivar, setConfirmArquivar] = useState<string | null>(null)
+  const [confirmExcluir, setConfirmExcluir] = useState<string | null>(null)
 
   // Iniciando laudo (loading por card)
   const [iniciandoId, setIniciandoId] = useState<string | null>(null)
@@ -860,6 +873,17 @@ export default function KanbanBoard({ onLaudoIniciado }: KanbanBoardProps) {
       setConfirmArquivar(null)
     } catch (e: any) {
       alert(e.message || 'Erro ao arquivar card.')
+    }
+  }
+
+  // Excluir card permanentemente
+  async function handleExcluir(cardId: string) {
+    try {
+      await fetch(`/api/cards/${cardId}`, { method: 'DELETE' })
+      setCards(cs => cs.filter(c => c.id !== cardId))
+      setConfirmExcluir(null)
+    } catch (e: any) {
+      alert(e.message || 'Erro ao excluir card.')
     }
   }
 
@@ -967,6 +991,7 @@ export default function KanbanBoard({ onLaudoIniciado }: KanbanBoardProps) {
                             onEditar={() => handleEditar(card)}
                             onIniciarLaudo={() => handleIniciarLaudo(card)}
                             onArquivar={() => setConfirmArquivar(card.id)}
+                            onExcluir={() => setConfirmExcluir(card.id)}
                             onSalvarDescricao={(id, desc) => handleSalvarDescricao(id, desc)}
                           />
                         ))
@@ -1034,6 +1059,46 @@ export default function KanbanBoard({ onLaudoIniciado }: KanbanBoardProps) {
                 className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition"
               >
                 Arquivar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirmação de excluir ── */}
+      {confirmExcluir && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(15,23,42,0.5)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setConfirmExcluir(null) }}
+        >
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+            <h3 className="mb-1 text-base font-semibold text-slate-900">Excluir card?</h3>
+            <p className="mb-5 text-sm text-slate-500">
+              Esta ação não pode ser desfeita. O card será removido permanentemente.
+              {cards.find(c => c.id === confirmExcluir)?.laudoId && (
+                <span className="mt-1 block font-medium text-amber-600">
+                  ⚠️ Este card já possui um laudo vinculado. O laudo não será excluído.
+                </span>
+              )}
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmExcluir(null)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleExcluir(confirmExcluir)}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition"
+              >
+                Excluir
               </button>
             </div>
           </div>
