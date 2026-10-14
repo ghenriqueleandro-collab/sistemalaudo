@@ -4,8 +4,7 @@
 
 import { Redis } from '@upstash/redis'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getToken } from 'next-auth/jwt'
 
 const redis = new Redis({
   url: process.env.KV_REST_API_URL!,
@@ -40,7 +39,7 @@ export async function GET(request: NextRequest) {
 // POST /api/cards → cria novo card
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
     const dados = await request.json()
 
     const id = crypto.randomUUID()
@@ -51,7 +50,7 @@ export async function POST(request: NextRequest) {
       id,
       criadoEm: agora,
       atualizadoEm: agora,
-      criadoPor: session?.user?.email ?? 'desconhecido',
+      criadoPor: (token?.email as string) ?? 'desconhecido',
 
       // Dados do imóvel (pré-preenchimento do laudo futuro)
       titulo: dados.titulo?.trim() ?? '',

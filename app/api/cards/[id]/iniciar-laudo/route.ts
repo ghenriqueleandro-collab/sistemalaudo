@@ -20,8 +20,7 @@
 
 import { Redis } from '@upstash/redis'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getToken } from 'next-auth/jwt'
 
 const redis = new Redis({
   url: process.env.KV_REST_API_URL!,
@@ -33,7 +32,7 @@ type Params = { params: Promise<{ id: string }> }
 export async function POST(_req: NextRequest, { params }: Params) {
   try {
     const { id: cardId } = await params
-    const session = await getServerSession(authOptions)
+    const token = await getToken({ req: _req, secret: process.env.NEXTAUTH_SECRET })
 
     // 1. Busca o card
     const card = await redis.get<any>(`card:${cardId}`)
@@ -76,7 +75,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
       cardId,                                       // vínculo reverso
       criadoEm: agora,
       atualizadoEm: agora,
-      criadoPor: session?.user?.email ?? card.criadoPor ?? 'desconhecido',
+      criadoPor: (token?.email as string) ?? card.criadoPor ?? 'desconhecido',
 
       // Dados do imóvel (vindos do card)
       titulo: card.titulo ?? '',
