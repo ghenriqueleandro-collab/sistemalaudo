@@ -806,6 +806,7 @@ export default function KanbanBoard({ onLaudoIniciado }: KanbanBoardProps) {
       prazoEntrega: card.prazoEntrega,
       prioridade: card.prioridade,
       descricao: card.descricao,
+      observacaoCliente: card.observacaoCliente ?? '',
       statusAcompanhamento: card.statusAcompanhamento,
     })
     setModalAberto(true)
