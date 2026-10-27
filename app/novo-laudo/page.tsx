@@ -360,9 +360,12 @@ export default function NovoLaudoPage() {
     setLaudoModificado(true)
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked
-      setForm({ ...form, [name]: checked })
+      // Usa callback para evitar stale closure: se o form ainda não terminou de
+      // carregar assincronamente quando o usuário digita, o spread de `form`
+      // capturado pela closure seria o estado vazio, apagando todos os campos.
+      setForm((prev) => ({ ...prev, [name]: checked }))
     } else {
-      setForm({ ...form, [name]: value })
+      setForm((prev) => ({ ...prev, [name]: value }))
     }
   }
 

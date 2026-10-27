@@ -38,7 +38,7 @@ export default function EtapaGarantia({ form, setForm }: Props) {
               className="w-full border rounded p-2 min-h-[100px]"
               placeholder="Observações complementares sobre a locação..."
               value={form.garantiaObservacoes || ''}
-              onChange={(e) => setForm({ ...form, garantiaObservacoes: e.target.value })}
+              onChange={(e) => setForm((prev) => ({ ...prev, garantiaObservacoes: e.target.value }))}
             />
           </div>
         </div>
@@ -48,7 +48,7 @@ export default function EtapaGarantia({ form, setForm }: Props) {
           <select
             className="w-full border rounded p-2"
             value={form.garantiaClassificacao}
-            onChange={(e) => setForm({ ...form, garantiaClassificacao: e.target.value })}
+            onChange={(e) => setForm((prev) => ({ ...prev, garantiaClassificacao: e.target.value }))}
           >
             <option value="">Selecione a classificação</option>
             <option value="boa">Imóvel aceito como boa garantia</option>
@@ -65,7 +65,7 @@ export default function EtapaGarantia({ form, setForm }: Props) {
                   : 'Digite as observações ou justificativa'
               }
               value={form.garantiaObservacoes || ''}
-              onChange={(e) => setForm({ ...form, garantiaObservacoes: e.target.value })}
+              onChange={(e) => setForm((prev) => ({ ...prev, garantiaObservacoes: e.target.value }))}
             />
           )}
         </div>

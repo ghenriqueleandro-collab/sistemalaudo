@@ -51,7 +51,12 @@ export async function POST(request: NextRequest) {
 
     const existente = await redis.get<any>(`laudo:${id}`)
 
+    // Merge com existente para que campos não enviados no payload não sejam
+    // apagados. Isso protege contra saves parciais (ex: unmount durante carregamento)
+    // sobrescreverem o laudo salvo com valores em branco.
+    // Os campos enviados em `dados` têm prioridade sobre os existentes.
     const laudo = {
+      ...(existente ?? {}),
       ...dados,
       id,
       criadoEm: existente?.criadoEm ?? dados.criadoEm ?? agora,

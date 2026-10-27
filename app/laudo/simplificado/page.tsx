@@ -161,9 +161,14 @@ export default function LaudoSimplificadoPage() {
   const [laudoId, setLaudoId] = useState('')
   const [editandoLaudoExistente, setEditandoLaudoExistente] = useState(false)
   const [formPronto, setFormPronto] = useState(false)
+  const [laudoModificado, setLaudoModificado] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [laudoUuid, setLaudoUuid] = useState('')
+
+  // Refs para uso seguro dentro de cleanup de useEffect (evita closure stale)
+  const formProntoRef = useRef(false)
+  const laudoModificadoRef = useRef(false)
 
   // Sincroniza divisões com acabamentos
   useEffect(() => {
@@ -315,9 +320,10 @@ export default function LaudoSimplificadoPage() {
     const { name, value, type } = e.target
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked
-      setForm({ ...form, [name]: checked })
+      // Usa callback para evitar stale closure — mesmo motivo do novo-laudo/page.tsx
+      setForm((prev) => ({ ...prev, [name]: checked }))
     } else {
-      setForm({ ...form, [name]: value })
+      setForm((prev) => ({ ...prev, [name]: value }))
     }
   }
 
@@ -628,7 +634,9 @@ export default function LaudoSimplificadoPage() {
     try {
       const status = obterStatusLaudo()
 
-      const CHUNK_KB = 900
+      // CHUNK_KB = 700: garante que base64 * (4/3) fique abaixo do limite 1MB do Upstash.
+      // 900 * 1024 * (4/3) ≈ 1.17 MB → excede o limite e falha silenciosamente.
+      const CHUNK_KB = 700
       async function salvarChunk(chave: string, dado: string): Promise<boolean> {
         try {
           const res = await fetch('/api/laudo-midias', {
@@ -646,7 +654,9 @@ export default function LaudoSimplificadoPage() {
         const chunkSize = CHUNK_KB * 1024 * (4 / 3)
         if (tamanho <= chunkSize) {
           const ok = await salvarChunk(chave, dado)
-          return ok ? `__ref__:${chave}` : dado
+          // Em caso de falha: retorna '' para não inflar o payload principal com
+          // base64 bruto (evita rejeição por tamanho do Redis no próximo save).
+          return ok ? `__ref__:${chave}` : ''
         }
         const chunks: string[] = []
         for (let i = 0; i < tamanho; i += chunkSize) {
@@ -655,8 +665,9 @@ export default function LaudoSimplificadoPage() {
         const results = await Promise.all(
           chunks.map((chunk, i) => salvarChunk(`${chave}__c${i}`, chunk))
         )
+        // Se algum chunk falhar, retorna '' pelo mesmo motivo.
         if (results.every(Boolean)) return `__chunks__:${chave}:${chunks.length}`
-        return dado
+        return ''
       }
 
       const fotosComRef = await Promise.all(
@@ -738,9 +749,14 @@ export default function LaudoSimplificadoPage() {
   const saveRef = useRef<(silencioso?: boolean) => Promise<void>>(async () => {})
   useEffect(() => { saveRef.current = executarSave })
 
+  // ── Mantém refs sincronizados para uso seguro em cleanup de useEffect ──────
+  useEffect(() => { formProntoRef.current = formPronto }, [formPronto])
+  useEffect(() => { laudoModificadoRef.current = laudoModificado }, [laudoModificado])
+
   // ── Auto-save com debounce de 2s (campos gerais) ─────────────────────────
   useEffect(() => {
     if (!formPronto || !laudoUuid) return
+    setLaudoModificado(true)
     const timer = setTimeout(() => { saveRef.current(true) }, 2000)
     return () => clearTimeout(timer)
   }, [form, fotos, divisoes, acabamentos, fundamentacao, fundamentacaoInferencia,
@@ -766,8 +782,16 @@ export default function LaudoSimplificadoPage() {
   }, [])
 
   // ── Salva ao desmontar (navegação interna Next.js) ────────────────────────
+  // IMPORTANTE: só salva se o form foi totalmente carregado (formProntoRef) E
+  // houve pelo menos uma modificação (laudoModificadoRef). Sem esses guards,
+  // um unmount durante o carregamento assíncrono sobrescrevia o laudo com
+  // um form vazio, causando perda total de dados.
   useEffect(() => {
-    return () => { saveRef.current(true) }
+    return () => {
+      if (formProntoRef.current && laudoModificadoRef.current) {
+        saveRef.current(true)
+      }
+    }
   }, [])
 
   // ─── RENDER ───────────────────────────────────────────────────────────────────
