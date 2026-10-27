@@ -18,6 +18,7 @@ import EtapaAnexosAssinatura from '../components/formulario/EtapaAnexosAssinatur
 import { EtapaId } from '../components/formulario/etapas'
 import AppShell from '../components/AppShell'
 import EtapaClienteStatus from '../components/formulario/EtapaClienteStatus'
+import ModalRestaurarLaudo from '../components/ModalRestaurarLaudo'
 
 
 export default function NovoLaudoPage() {
@@ -141,6 +142,7 @@ export default function NovoLaudoPage() {
   const [laudoModificado, setLaudoModificado] = useState(false)
   const laudoModificadoRef = useRef(false)
   const [laudoUuid, setLaudoUuid] = useState(() => crypto.randomUUID())
+  const [modalRestaurar, setModalRestaurar] = useState(false)
 
   // Sincroniza as divisões internas com a lista de acabamentos
   // preservando os valores já preenchidos pelo usuário
@@ -1063,6 +1065,15 @@ export default function NovoLaudoPage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
+            {editandoLaudoExistente && (
+              <button
+                onClick={() => setModalRestaurar(true)}
+                className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-100 transition"
+                title="Recuperar uma versão anterior deste laudo"
+              >
+                🔄 Recuperar versão
+              </button>
+            )}
             <Link
               href={laudoUuid ? `/visualizar-laudo?id=${encodeURIComponent(laudoUuid)}` : '/visualizar-laudo'}
               target="_blank"
@@ -1232,6 +1243,18 @@ export default function NovoLaudoPage() {
         metodoAvaliacao={form.metodoAvaliacao}
         tratamentoDados={form.tratamentoDados}
       />
+
+      {/* Modal de restauração de backup */}
+      {modalRestaurar && (
+        <ModalRestaurarLaudo
+          laudoId={laudoUuid}
+          onRestaurado={() => {
+            setModalRestaurar(false)
+            window.location.reload()
+          }}
+          onFechar={() => setModalRestaurar(false)}
+        />
+      )}
 
     </AppShell>
   )

@@ -68,6 +68,21 @@ export async function POST(request: NextRequest) {
       redis.sadd('laudo_ids', id),
     ]
 
+    // Backup automático: guarda a versão anterior antes de sobrescrever.
+    // Mantém as últimas 3 versões em laudo:{id}:historico (lista Redis).
+    // Só faz backup se já existia um laudo salvo anteriormente.
+    if (existente) {
+      const snapshot = {
+        ...existente,
+        _backupEm: agora,
+      }
+      operacoes.push(
+        redis.lpush(`laudo:${id}:historico`, JSON.stringify(snapshot)).then(() =>
+          redis.ltrim(`laudo:${id}:historico`, 0, 2)
+        )
+      )
+    }
+
     // Sincroniza campos relevantes de volta ao card vinculado
     const cardId = laudo.cardId ?? existente?.cardId
     if (cardId) {
