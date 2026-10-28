@@ -592,7 +592,7 @@ export function LaudoPdf({
   const evSnapData  = (dados as any).dadosCalculoEvolutivo as any | undefined
   const isEvo       = dados.metodoAvaliacao === 'evolutivo'
   const elemsCddm   = cddmData?.elementos || []
-  const elemsEv     = evSnapData?.elementos || []
+  const elemsEv     = evSnapData?.resultado?.elementos || []
   const elemsExibir = isEvo ? elemsEv : elemsCddm
   const temCddm     = elemsCddm.length > 0
   // Para o mapa e seções de cálculo: usar elementos do método ativo
@@ -1374,45 +1374,94 @@ export function LaudoPdf({
           </View>
         )}
 
-        {/* ── 9.1. HOMOGENEIZAÇÃO (só comparativo) ────────────────────────── */}
-        {(temCddm || isEvo) && (
+        {/* ── HOMOGENEIZAÇÃO ───────────────────────────────────────────────── */}
+        {(temCddm || (isEvo && elemsEv.length > 0)) && (
           <>
             <H3 id="s-10-hom">{dados.localizacaoComparativos ? '10.2.' : '10.1.'} Homogeneização</H3>
-            <View style={s.homogTable}>
-              <View style={s.homogRowH}>
-                <Text style={[s.homogTh,{flex:0.6}]}>Elem.</Text>
-                <Text style={[s.homogTh,{flex:1.1}]}>VU/m²</Text>
-                <Text style={[s.homogTh,{flex:0.8}]}>F.Local</Text>
-                <Text style={[s.homogTh,{flex:0.8}]}>F.Padrão</Text>
-                <Text style={[s.homogTh,{flex:0.8}]}>F.FOC</Text>
-                <Text style={[s.homogTh,{flex:0.8}]}>F.Andar</Text>
-                <Text style={[s.homogTh,{flex:0.8}]}>F.Vaga</Text>
-                <Text style={[s.homogTh,{flex:0.8}]}>F.Área</Text>
-                <Text style={[s.homogThLast,{flex:1.2}]}>VU/m² Hom.</Text>
-              </View>
-              {elemsCddm.map((el: any, i: number) => {
-                const isLast = i === elemsCddm.length - 1
-                const td = el.saneado ? s.homogTd : s.homogTdOut
-                return (
-                  <View key={`h-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
-                    <Text style={[td,{flex:0.6}]}>{i+1}</Text>
-                    <Text style={[td,{flex:1.1}]}>{fm(el.valorUnitarioOferta || 0)}</Text>
-                    <Text style={[td,{flex:0.8}]}>{(el.fatorLocal||1).toFixed(4).replace('.', ',')}</Text>
-                    <Text style={[td,{flex:0.8}]}>{(el.fatorPadrao||1).toFixed(4).replace('.', ',')}</Text>
-                    <Text style={[td,{flex:0.8}]}>{(el.fatorFOC||1).toFixed(4).replace('.', ',')}</Text>
-                    <Text style={[td,{flex:0.8}]}>{(el.fatorAndar||1).toFixed(4).replace('.', ',')}</Text>
-                    <Text style={[td,{flex:0.8}]}>{(el.fatorVaga||1).toFixed(4).replace('.', ',')}</Text>
-                    <Text style={[td,{flex:0.8}]}>{(el.fatorArea||1).toFixed(4).replace('.', ',')}</Text>
-                    <Text style={[el.saneado ? s.homogTdLast : {...s.homogTdOut,borderRightWidth:0},{flex:1.2}]}>{fm(el.vuHomog || 0)}</Text>
+
+            {/* Tabela CDDM (Comparativo Direto de Dados de Mercado) */}
+            {!isEvo && (
+              <>
+                <View style={s.homogTable}>
+                  <View style={s.homogRowH}>
+                    <Text style={[s.homogTh,{flex:0.6}]}>Elem.</Text>
+                    <Text style={[s.homogTh,{flex:1.1}]}>VU/m²</Text>
+                    <Text style={[s.homogTh,{flex:0.8}]}>F.Local</Text>
+                    <Text style={[s.homogTh,{flex:0.8}]}>F.Padrão</Text>
+                    <Text style={[s.homogTh,{flex:0.8}]}>F.FOC</Text>
+                    <Text style={[s.homogTh,{flex:0.8}]}>F.Andar</Text>
+                    <Text style={[s.homogTh,{flex:0.8}]}>F.Vaga</Text>
+                    <Text style={[s.homogTh,{flex:0.8}]}>F.Área</Text>
+                    <Text style={[s.homogThLast,{flex:1.2}]}>VU/m² Hom.</Text>
                   </View>
-                )
-              })}
-            </View>
-            <View style={s.legendaWrap}>
-              <Text style={[s.legendaTxt,{fontFamily:'Helvetica-Bold',marginBottom:2}]}>Legenda dos fatores aplicados:</Text>
-              <Text style={s.legendaTxt}>F.Local = Fator de Localização    F.Padrão = Fator de Padrão Construtivo    F.FOC = Fator de Obsolescência e Conservação</Text>
-              <Text style={s.legendaTxt}>F.Andar = Fator de Andar    F.Vaga = Fator de Vaga de Garagem    F.Área = Fator de Adequação por Área</Text>
-            </View>
+                  {elemsCddm.map((el: any, i: number) => {
+                    const isLast = i === elemsCddm.length - 1
+                    const td = el.saneado ? s.homogTd : s.homogTdOut
+                    return (
+                      <View key={`h-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
+                        <Text style={[td,{flex:0.6}]}>{i+1}</Text>
+                        <Text style={[td,{flex:1.1}]}>{fm(el.valorUnitarioOferta || 0)}</Text>
+                        <Text style={[td,{flex:0.8}]}>{(el.fatorLocal||1).toFixed(4).replace('.', ',')}</Text>
+                        <Text style={[td,{flex:0.8}]}>{(el.fatorPadrao||1).toFixed(4).replace('.', ',')}</Text>
+                        <Text style={[td,{flex:0.8}]}>{(el.fatorFOC||1).toFixed(4).replace('.', ',')}</Text>
+                        <Text style={[td,{flex:0.8}]}>{(el.fatorAndar||1).toFixed(4).replace('.', ',')}</Text>
+                        <Text style={[td,{flex:0.8}]}>{(el.fatorVaga||1).toFixed(4).replace('.', ',')}</Text>
+                        <Text style={[td,{flex:0.8}]}>{(el.fatorArea||1).toFixed(4).replace('.', ',')}</Text>
+                        <Text style={[el.saneado ? s.homogTdLast : {...s.homogTdOut,borderRightWidth:0},{flex:1.2}]}>{fm(el.vuHomog || 0)}</Text>
+                      </View>
+                    )
+                  })}
+                </View>
+                <View style={s.legendaWrap}>
+                  <Text style={[s.legendaTxt,{fontFamily:'Helvetica-Bold',marginBottom:2}]}>Legenda dos fatores aplicados:</Text>
+                  <Text style={s.legendaTxt}>F.Local = Fator de Localização    F.Padrão = Fator de Padrão Construtivo    F.FOC = Fator de Obsolescência e Conservação</Text>
+                  <Text style={s.legendaTxt}>F.Andar = Fator de Andar    F.Vaga = Fator de Vaga de Garagem    F.Área = Fator de Adequação por Área</Text>
+                </View>
+              </>
+            )}
+
+            {/* Tabela Evolutivo (terreno): fatores Área, Local, Topografia, Visibilidade */}
+            {isEvo && elemsEv.length > 0 && (
+              <>
+                <View style={s.homogTable}>
+                  <View style={s.homogRowH}>
+                    <Text style={[s.homogTh,{flex:0.6}]}>Elem.</Text>
+                    <Text style={[s.homogTh,{flex:1.2}]}>VU Terreno</Text>
+                    <Text style={[s.homogTh,{flex:0.9}]}>F.Área</Text>
+                    <Text style={[s.homogTh,{flex:0.9}]}>F.Local</Text>
+                    <Text style={[s.homogTh,{flex:0.9}]}>F.Topo</Text>
+                    <Text style={[s.homogTh,{flex:0.9}]}>F.Vis</Text>
+                    <Text style={[s.homogTh,{flex:1.0}]}>Coef.</Text>
+                    <Text style={[s.homogThLast,{flex:1.2}]}>VU/m² Hom.</Text>
+                  </View>
+                  {elemsEv.map((el: any, i: number) => {
+                    if (!el) return null
+                    const isLast = i === elemsEv.length - 1
+                    const ok = el.valido !== false
+                    const td = ok ? s.homogTd : s.homogTdOut
+                    const f4 = (v: number) => (v ?? 1).toFixed(4).replace('.', ',')
+                    return (
+                      <View key={`ev-h-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
+                        <Text style={[td,{flex:0.6}]}>{i+1}</Text>
+                        <Text style={[td,{flex:1.2}]}>{fm(el.vu || 0)}</Text>
+                        <Text style={[td,{flex:0.9}]}>{f4(el.fA)}</Text>
+                        <Text style={[td,{flex:0.9}]}>{f4(el.fL)}</Text>
+                        <Text style={[td,{flex:0.9}]}>{f4(el.fT)}</Text>
+                        <Text style={[td,{flex:0.9}]}>{f4(el.fV)}</Text>
+                        <Text style={[td,{flex:1.0}]}>{f4(el.coef)}</Text>
+                        <Text style={[ok ? s.homogTdLast : {...s.homogTdOut,borderRightWidth:0},{flex:1.2}]}>{fm(el.soma || 0)}</Text>
+                      </View>
+                    )
+                  })}
+                </View>
+                <View style={s.legendaWrap}>
+                  <Text style={[s.legendaTxt,{fontFamily:'Helvetica-Bold',marginBottom:2}]}>Legenda dos fatores aplicados:</Text>
+                  <Text style={s.legendaTxt}>F.Área = Fator de Adequação por Área    F.Local = Fator de Localização    F.Topo = Fator de Topografia    F.Vis = Fator de Visibilidade</Text>
+                  <Text style={s.legendaTxt}>Coef. = Coeficiente Geral (soma aditiva)    VU/m² Hom. = Valor Unitário Homogeneizado do Terreno (R$/m²)</Text>
+                  <Text style={s.legendaTxt}>Elementos descartados (Coef. fora do intervalo 0,5–2,0 — critério IBAPE) são exibidos em cinza e não entram nas estatísticas.</Text>
+                </View>
+              </>
+            )}
           </>
         )}
 
