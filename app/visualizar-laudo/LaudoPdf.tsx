@@ -846,7 +846,7 @@ export function LaudoPdf({
     { txt: '9. GLOSSÁRIO DE TERMOS TÉCNICOS (ABNT NBR 14653-2)',                   sub: false, id: 's-9' },
     { txt: '10. METODOLOGIA, PESQUISAS E CÁLCULOS',                                sub: false, id: 's-10' },
     ...(dados.localizacaoComparativos ? [{ txt: '10.1. LOCALIZAÇÃO DOS ELEMENTOS COMPARATIVOS', sub: true, id: 's-10-1' }] : []),
-    ...(temCddm ? [{ txt: dados.localizacaoComparativos ? '10.2. HOMOGENEIZAÇÃO' : '10.1. HOMOGENEIZAÇÃO', sub: true, id: 's-10-hom' }] : []),
+    ...((temCddm || (isEvo && elemsEv.length > 0)) ? [{ txt: dados.localizacaoComparativos ? '10.2. HOMOGENEIZAÇÃO' : '10.1. HOMOGENEIZAÇÃO', sub: true, id: 's-10-hom' }] : []),
     { txt: isLocacao ? '11. VALOR DE LOCAÇÃO' : '11. VALOR DO IMÓVEL',             sub: false, id: 's-11' },
     ...(temFundamentacao ? [{ txt: '12. DETERMINAÇÃO DO GRAU DE FUNDAMENTAÇÃO',    sub: false, id: 's-12' }]                         : []),
     ...(temPrecisao ? [{ txt: '12.02 GRAU DE PRECISÃO',                            sub: true,  id: 's-12-02' }]                      : []),
@@ -1551,6 +1551,137 @@ export function LaudoPdf({
                 </View>
               ))}
             </View>
+          </>
+        )}
+
+        {/* ── Cálculo Evolutivo: terreno + benfeitorias ───────────────────── */}
+        {isEvo && evSnapData && (
+          <>
+            {/* Estatísticas do terreno */}
+            {evSnapData.resultado && (
+              <>
+                <View style={{ flexDirection: 'row', marginTop: 5, marginBottom: 4 }}>
+                  {[
+                    ['Elementos válidos', `${elemsEv.filter((e: any) => e.valido !== false).length} de ${elemsEv.length}`],
+                    ['Média homogeneizada', fm(evSnapData.resultado.media ?? 0)],
+                    ['VU Terreno adotado', fm(evSnapData.resultado.media ?? 0)],
+                  ].map(([lbl,val]) => (
+                    <View key={lbl} style={{ flex:1, backgroundColor:AZULLT, borderWidth:0.5, borderColor:CINZA, marginRight:4, padding:5, alignItems:'center' }}>
+                      <Text style={{ fontSize:6.5, color:'#5a7090', marginBottom:2 }}>{lbl}</Text>
+                      <Text style={{ fontSize:9, fontFamily:'Helvetica-Bold', color:AZUL }}>{val}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Tabela resumo do terreno */}
+                <View style={[s.homogTable, {marginBottom:6}]}>
+                  <View style={s.homogRowH}>
+                    <Text style={[s.homogTh,{flex:1.5}]}>Intervalo</Text>
+                    <Text style={[s.homogTh,{flex:1.5}]}>VU/m² (R$)</Text>
+                    <Text style={[s.homogThLast,{flex:1.5}]}>Valor terreno (R$)</Text>
+                  </View>
+                  {(() => {
+                    const r = evSnapData.resultado
+                    const area = evSnapData.avaliando?.area ?? 0
+                    const rows: [string, number, boolean][] = [
+                      ['Mínimo (IC)',         r.minimo  ?? 0, false],
+                      ['Médio adotado',       r.media   ?? 0, true],
+                      ['Máximo (IC)',         r.maximo  ?? 0, false],
+                      ['Limite −30%',         r.lim30inf?? 0, false],
+                      ['Limite +30%',         r.lim30sup?? 0, false],
+                    ]
+                    return rows.map(([lbl,vu,hl], idx) => (
+                      <View key={lbl} style={[idx<rows.length-1?s.homogRowB:s.homogRow, hl?{backgroundColor:AZULLT}:{}]}>
+                        <Text style={[s.homogTd,{flex:1.5,textAlign:'left',paddingLeft:5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{lbl}</Text>
+                        <Text style={[s.homogTd,{flex:1.5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{fm(vu)}</Text>
+                        <Text style={[s.homogTdLast,{flex:1.5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{fm(vu * area)}</Text>
+                      </View>
+                    ))
+                  })()}
+                </View>
+              </>
+            )}
+
+            {/* Tabela de benfeitorias (VEIU) */}
+            {(() => {
+              const benfs = (evSnapData.benfeitorias || []).filter((b: any) => b && b.valor > 0)
+              if (benfs.length === 0) return null
+              return (
+                <>
+                  <View style={{ backgroundColor: AZUL, paddingVertical: 3, paddingHorizontal: 5, marginTop: 4 }}>
+                    <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center' }}>
+                      VALOR DAS EDIFICAÇÕES — CUB R8N DEPRECIADO (VEIU)
+                    </Text>
+                  </View>
+                  <View style={[s.homogTable, { marginBottom: 4 }]}>
+                    <View style={s.homogRowH}>
+                      <Text style={[s.homogTh,{flex:2.0}]}>Edificação</Text>
+                      <Text style={[s.homogTh,{flex:0.8}]}>Pc</Text>
+                      <Text style={[s.homogTh,{flex:0.7}]}>Ir</Text>
+                      <Text style={[s.homogTh,{flex:0.7}]}>R</Text>
+                      <Text style={[s.homogTh,{flex:0.8}]}>%v</Text>
+                      <Text style={[s.homogTh,{flex:0.8}]}>Ka</Text>
+                      <Text style={[s.homogTh,{flex:0.8}]}>Eo</Text>
+                      <Text style={[s.homogTh,{flex:0.8}]}>Foc</Text>
+                      <Text style={[s.homogTh,{flex:0.9}]}>Área m²</Text>
+                      <Text style={[s.homogThLast,{flex:1.5}]}>Valor (R$)</Text>
+                    </View>
+                    {benfs.map((b: any, i: number) => {
+                      const isLast = i === benfs.length - 1
+                      const f2 = (v: number) => (v ?? 0).toFixed(4).replace('.', ',')
+                      const pct = b.pctVida != null ? `${b.pctVida.toFixed(1).replace('.',',')}%` : '—'
+                      const desc = (b.descricao || `Edificação ${i+1}`).slice(0, 22)
+                      return (
+                        <View key={i} style={isLast ? s.homogRow : s.homogRowB}>
+                          <Text style={[s.homogTd,{flex:2.0,textAlign:'left',paddingLeft:4}]}>{desc}</Text>
+                          <Text style={[s.homogTd,{flex:0.8}]}>{f2(b.Pc ?? b.pc)}</Text>
+                          <Text style={[s.homogTd,{flex:0.7}]}>{b.Ir ?? b.ir ?? '—'}</Text>
+                          <Text style={[s.homogTd,{flex:0.7}]}>{f2(b.R ?? b.r)}</Text>
+                          <Text style={[s.homogTd,{flex:0.8}]}>{pct}</Text>
+                          <Text style={[s.homogTd,{flex:0.8}]}>{f2(b.Ka)}</Text>
+                          <Text style={[s.homogTd,{flex:0.8}]}>{b.Ec != null ? `${(b.Ec*100).toFixed(2).replace('.',',')}%` : '—'}</Text>
+                          <Text style={[s.homogTd,{flex:0.8}]}>{f2(b.Foc)}</Text>
+                          <Text style={[s.homogTd,{flex:0.9}]}>{(b.area ?? 0).toLocaleString('pt-BR',{maximumFractionDigits:2})}</Text>
+                          <Text style={[s.homogTdLast,{flex:1.5,fontFamily:'Helvetica-Bold',color:AZUL}]}>{fm(b.valor ?? 0)}</Text>
+                        </View>
+                      )
+                    })}
+                    {/* Linha de total */}
+                    <View style={[s.homogRow, {backgroundColor: AZULLT}]}>
+                      <Text style={[s.homogTd,{flex:8.3,textAlign:'right',paddingRight:4,fontFamily:'Helvetica-Bold',color:AZUL}]}>Total benfeitorias</Text>
+                      <Text style={[s.homogTdLast,{flex:1.5,fontFamily:'Helvetica-Bold',color:AZUL}]}>{fm(evSnapData.valorBenfeitorias ?? 0)}</Text>
+                    </View>
+                  </View>
+                  <View style={s.legendaWrap}>
+                    <Text style={[s.legendaTxt,{fontFamily:'Helvetica-Bold',marginBottom:2}]}>Legenda — fórmula VEIU (Ross-Heidecke):</Text>
+                    <Text style={s.legendaTxt}>Pc = Coef. Padrão Construtivo    Ir = Vida referencial (anos)    R = Valor residual    %v = Vida consumida (Ie/Ir)</Text>
+                    <Text style={s.legendaTxt}>Ka = Depreciação por idade [1−0,5(v+v²)]    Eo = Estado de conservação (Ross-Heidecke)    Foc = Fator de obsolescência/conservação</Text>
+                    <Text style={s.legendaTxt}>Valor = CUB R8N × Pc × Área × Foc</Text>
+                  </View>
+                </>
+              )
+            })()}
+
+            {/* Resumo evolutivo: terreno + benfeitorias + valor final */}
+            {(evSnapData.valorTerreno > 0 || evSnapData.valorBenfeitorias > 0) && (
+              <View style={[s.homogTable, {marginTop: 6, marginBottom: 4}]}>
+                <View style={{ backgroundColor: AZUL, paddingVertical: 3, paddingHorizontal: 5 }}>
+                  <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center' }}>COMPOSIÇÃO DO VALOR — MÉTODO EVOLUTIVO</Text>
+                </View>
+                <View style={s.homogRowB}>
+                  <Text style={[s.homogTd,{flex:3,textAlign:'left',paddingLeft:5}]}>Valor do Terreno</Text>
+                  <Text style={[s.homogTdLast,{flex:2,fontFamily:'Helvetica-Bold'}]}>{fm(evSnapData.valorTerreno ?? 0)}</Text>
+                </View>
+                <View style={s.homogRowB}>
+                  <Text style={[s.homogTd,{flex:3,textAlign:'left',paddingLeft:5}]}>Valor das Benfeitorias (VEIU)</Text>
+                  <Text style={[s.homogTdLast,{flex:2,fontFamily:'Helvetica-Bold'}]}>{fm(evSnapData.valorBenfeitorias ?? 0)}</Text>
+                </View>
+                <View style={[s.homogRow,{backgroundColor:AZULLT}]}>
+                  <Text style={[s.homogTd,{flex:3,textAlign:'left',paddingLeft:5,fontFamily:'Helvetica-Bold',color:AZUL}]}>Valor Final do Imóvel</Text>
+                  <Text style={[s.homogTdLast,{flex:2,fontFamily:'Helvetica-Bold',color:AZUL}]}>{fm(evSnapData.valorFinal ?? 0)}</Text>
+                </View>
+              </View>
+            )}
           </>
         )}
 
