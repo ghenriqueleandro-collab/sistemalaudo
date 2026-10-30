@@ -592,8 +592,12 @@ export function LaudoPdf({
   const evSnapData  = (dados as any).dadosCalculoEvolutivo as any | undefined
   const isEvo       = dados.metodoAvaliacao === 'evolutivo'
   const elemsCddm   = cddmData?.elementos || []
+  // elemsEv: elementos CALCULADOS (com fatores) — usados na tabela de homogeneização
   const elemsEv     = evSnapData?.resultado?.elementos || []
-  const elemsExibir = isEvo ? elemsEv : elemsCddm
+  // elemsEvBrutos: elementos de pesquisa (com endereço, foto, valorOferta etc.) — usados nos cards
+  const elemsEvBrutos = evSnapData?.elementos || []
+  // elemsExibir: elementos de pesquisa a exibir nos cards (seção 10)
+  const elemsExibir = isEvo ? elemsEvBrutos : elemsCddm
   const temCddm     = elemsCddm.length > 0
   // Para o mapa e seções de cálculo: usar elementos do método ativo
   const temElementosCalculo = elemsExibir.length > 0
@@ -610,7 +614,9 @@ export function LaudoPdf({
     const vLiqNum = vOfNum > 0 ? vOfNum * fOf : 0
     const vOf  = vOfNum > 0 ? fm(vOfNum) : ''
     const vLiq = vLiqNum > 0 && Math.abs(vLiqNum - vOfNum) > 1 ? fm(vLiqNum) : ''
-    const vuOf = el.valorUnitarioOferta > 0 ? fm(el.valorUnitarioOferta) : (el.vuTerreno > 0 ? fm(el.vuTerreno) : '')
+    const areaEl = pnEl(el.areaTerreno) || pnEl(el.area) || 0
+    const vuCalc = vLiqNum > 0 && areaEl > 0 ? vLiqNum / areaEl : 0
+    const vuOf = el.valorUnitarioOferta > 0 ? fm(el.valorUnitarioOferta) : (el.vuTerreno > 0 ? fm(el.vuTerreno) : (vuCalc > 0 ? fm(vuCalc) : ''))
     const cidadeUF = [el.cidade, el.uf].filter(Boolean).join(' · ')
     const foto = el.foto || ''
 
@@ -696,7 +702,7 @@ export function LaudoPdf({
       r1('Coordenadas', el.coordenadas),
       r1('Fonte', el.fonte),
       r3('Conservação', focLabel(el.estadoConservacao), 'Idade', el.idadeAparente > 0 ? `${el.idadeAparente} anos` : (el.idade ? `${el.idade} anos` : ''), 'Andar', el.andar > 0 ? String(el.andar) : ''),
-      el.areaTerreno > 0 ? r2('Área terreno', `${Number(el.areaTerreno).toLocaleString('pt-BR')} m²`, 'Área construída', el.areaConstruida > 0 ? `${Number(el.areaConstruida).toLocaleString('pt-BR')} m²` : '') : null,
+      pnEl(el.areaTerreno) > 0 ? r2('Área terreno', `${pnEl(el.areaTerreno).toLocaleString('pt-BR')} m²`, 'Área construída', pnEl(el.areaConstruida) > 0 ? `${pnEl(el.areaConstruida).toLocaleString('pt-BR')} m²` : '') : null,
       r2('Área c./útil', el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '', 'Padrão', el.padraoConstrutivo),
       r3('Dormitórios', el.dormitorios > 0 ? String(el.dormitorios) : '', 'Suítes', el.suites > 0 ? String(el.suites) : '', 'Vagas', el.vagas > 0 ? String(el.vagas) : ''),
       r3('Valor oferta', vOf, 'Vl. líquido', vLiq !== vOf ? vLiq : '', 'V.U./m²', vuOf),
