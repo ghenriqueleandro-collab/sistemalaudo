@@ -1144,6 +1144,8 @@ export default function NovoLaudoPage() {
               toggleFatorCDDM={toggleFatorCDDM}
               tipoImovelCDDM={(form as any).tipoImovelCDDM}
               setTipoImovelCDDM={setTipoImovelCDDM}
+              incluirApresentacao={(form as any).incluirApresentacao}
+              textoApresentacao={(form as any).textoApresentacao}
             />
           )}
 

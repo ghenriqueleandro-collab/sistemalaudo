@@ -85,6 +85,8 @@ type Props = {
   toggleFatorCDDM?: (fator: 'local' | 'padrao' | 'foc' | 'andar' | 'vaga') => void
   tipoImovelCDDM?: '' | 'isolado' | 'fracao'
   setTipoImovelCDDM?: (tipo: 'isolado' | 'fracao') => void
+  incluirApresentacao?: boolean
+  textoApresentacao?: string
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -110,6 +112,8 @@ export default function Etapa01A06({
   toggleFatorCDDM,
   tipoImovelCDDM,
   setTipoImovelCDDM,
+  incluirApresentacao,
+  textoApresentacao,
 }: Props) {
   const fatores = fatoresCDDMAtivos ?? { local: true, padrao: true, foc: true, andar: true, vaga: true }
   const isFracao = tipoImovelCDDM === 'fracao'
@@ -496,28 +500,10 @@ export default function Etapa01A06({
               <option value="">Selecione a finalidade</option>
               <option value="garantia">Garantia</option>
               <option value="execucao">Execução</option>
-              <option value="locacao">Locação</option>
             </select>
           </div>
         </div>
       </SectionCard>
-
-      {/* ── Tipo de vistoria ──────────────────────────────────────────────────── */}
-      <label className="flex items-center gap-3 cursor-pointer rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 hover:bg-amber-100 transition">
-        <input
-          type="checkbox"
-          name="semVistoriaPresencial"
-          checked={!!form.semVistoriaPresencial}
-          onChange={(e) => setFormDirect?.((prev: any) => ({ ...prev, semVistoriaPresencial: e.target.checked }))}
-          className="h-4 w-4 rounded border-slate-300 accent-amber-500"
-        />
-        <span className="text-sm font-medium text-amber-800">
-          Laudo realizado sem vistoria presencial
-        </span>
-        <span className="ml-auto text-xs text-amber-600">
-          O laudo não fará menção a observações in loco
-        </span>
-      </label>
 
       {/* ── Definições iniciais do laudo ──────────────────────────────────────── */}
       <SectionCard title="Definições iniciais do laudo">
@@ -1079,6 +1065,41 @@ export default function Etapa01A06({
               </div>
             ))}
           </div>
+        )}
+      </SectionCard>
+
+      {/* ── Apresentação / Introdução (opcional) ──────────────────────────────── */}
+      <SectionCard title="Apresentação / Introdução">
+        <p className="text-xs text-slate-500 leading-relaxed">
+          Página opcional que aparece antes do sumário — recomendada para clientes institucionais e processos judiciais.
+        </p>
+
+        <label className="flex items-center gap-3 cursor-pointer select-none">
+          <div className="relative flex-shrink-0">
+            <input
+              type="checkbox"
+              name="incluirApresentacao"
+              checked={Boolean(incluirApresentacao)}
+              onChange={handleChange}
+              className="sr-only"
+            />
+            <div className={`w-10 h-5 rounded-full transition-colors ${incluirApresentacao ? 'bg-blue-600' : 'bg-slate-200'}`} />
+            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${incluirApresentacao ? 'translate-x-5' : 'translate-x-0.5'}`} />
+          </div>
+          <span className="text-sm font-medium text-slate-700">
+            {incluirApresentacao ? 'Incluir página de Apresentação no laudo' : 'Não incluir página de Apresentação'}
+          </span>
+        </label>
+
+        {incluirApresentacao && (
+          <textarea
+            name="textoApresentacao"
+            value={textoApresentacao || ''}
+            onChange={handleChange}
+            placeholder={"Escreva a apresentação do laudo aqui. Exemplo:\n\nPrezado(a) cliente,\n\nÉ com satisfação que apresentamos o presente Laudo de Avaliação, elaborado em conformidade com as normas técnicas da ABNT NBR 14653..."}
+            rows={10}
+            className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition resize-y"
+          />
         )}
       </SectionCard>
 
