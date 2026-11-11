@@ -1037,12 +1037,12 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
                 <div className="mt-10 mb-2 h-[1px] bg-[#C9D3E6]" />
                 <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
                   <CabecalhoLaudoCompleto />
-                  <div className="flex-1 pt-6">
-                    <h2 className="font-bold text-2xl titulo-laudo mb-4" style={{ color: '#17325C' }}>
+                  <div className="mt-8 mb-8">
+                    <h2 className="font-bold text-2xl titulo-laudo mb-2" style={{ color: '#17325C' }}>
                       Apresentação / Introdução
                     </h2>
-                    <div className="h-[2px] bg-[#C9D3E6] mb-6" />
-                    <div className="text-[13px] leading-relaxed whitespace-pre-line text-slate-700">
+                    <div className="h-[1px] bg-[#C9D3E6] mb-6" />
+                    <div className="text-[13px] leading-relaxed whitespace-pre-line text-slate-700 text-justify">
                       {(dados as any).textoApresentacao}
                     </div>
                   </div>
