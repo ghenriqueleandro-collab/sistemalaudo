@@ -829,6 +829,23 @@ Valor de Mercado: Quantia mais provável pela qual um bem pode ser negociado, em
               .value-box-light .vb-ext   { font-size: 9px; color: #5a7090; margin-top: 2px; }
             `}</style>
 
+            {/* ══ APRESENTAÇÃO / INTRODUÇÃO (opcional) ══════════════ */}
+            {(dados as any).incluirApresentacao && (dados as any).textoApresentacao && (
+              <>
+                <div className="mt-10 mb-2 h-[1px] bg-[#C9D3E6]" />
+                <Pagina pagina={proximaPagina()} dataLaudo={dados.dataLaudo}>
+                  <CabecalhoLaudoCompleto />
+                  <h2 className="font-bold text-2xl titulo-laudo mb-6" style={{ color: '#17325C' }}>
+                    Apresentação / Introdução
+                  </h2>
+                  <div className="text-[13px] leading-relaxed whitespace-pre-line text-slate-700">
+                    {(dados as any).textoApresentacao}
+                  </div>
+                  <RodapeLaudo dataLaudo={dados.dataLaudo} />
+                </Pagina>
+              </>
+            )}
+
             {/* Laudo simplificado */}
             {(() => {
               const SecHeader = ({ num, titulo }: { num: string; titulo: string }) => (
