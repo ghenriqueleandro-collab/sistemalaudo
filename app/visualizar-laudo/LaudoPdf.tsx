@@ -85,6 +85,8 @@ export type DadosLaudo = {
   responsavelRegistro?: string
   documentacaoPdf?: string
   documentacaoPdfPaginas?: string[]
+  incluirApresentacao?: boolean
+  textoApresentacao?: string
   localizacaoComparativos?: string
   calculoPdf?: string
   calculoPdfPaginas?: string[]
@@ -170,7 +172,6 @@ function obterTextoGarantia(classificacao?: string, observacoes?: string) {
   if (classificacao === 'boa') return {
     titulo: 'O imóvel avaliado apresenta-se como boa garantia.',
     texto: 'Após análise das características apresentadas no presente laudo, entendemos que o imóvel em questão reúne condições satisfatórias para ser aceito como garantia.',
-    observacoes: observacoes || '',
   }
   if (classificacao === 'observacoes') return {
     titulo: 'O imóvel avaliado apresenta observações relevantes quanto à garantia.',
@@ -180,7 +181,7 @@ function obterTextoGarantia(classificacao?: string, observacoes?: string) {
     titulo: 'O imóvel avaliado não é recomendado como garantia.',
     texto: `Após análise das características apresentada no presente laudo, entendemos que o imóvel em questão não apresenta condições adequadas para aceitação como garantia.${observacoes ? ` Justificativa: ${observacoes}` : ''}`,
   }
-  return { titulo: '', texto: '', observacoes: '' }
+  return { titulo: '', texto: '' }
 }
 
 const TEXTO_TERRENO_ENCRAVADO = `O terreno encravado caracteriza-se por não possuir acesso oficial a qualquer via pública, podendo ser total ou parcial. A área com encravamento total, como é o caso do avaliando, não apresenta acesso em nenhuma de suas confrontações, dependendo, assim, de imóveis vizinhos para ser alcançado. Já o encravamento parcial é caracterizado por imóvel que possui acesso oficial, porém, por qualquer motivo, seja ele natural ou não, não é possível o acesso por esta via.
@@ -592,12 +593,8 @@ export function LaudoPdf({
   const evSnapData  = (dados as any).dadosCalculoEvolutivo as any | undefined
   const isEvo       = dados.metodoAvaliacao === 'evolutivo'
   const elemsCddm   = cddmData?.elementos || []
-  // elemsEv: elementos CALCULADOS (com fatores) — usados na tabela de homogeneização
-  const elemsEv     = evSnapData?.resultado?.elementos || []
-  // elemsEvBrutos: elementos de pesquisa (com endereço, foto, valorOferta etc.) — usados nos cards
-  const elemsEvBrutos = evSnapData?.elementos || []
-  // elemsExibir: elementos de pesquisa a exibir nos cards (seção 10)
-  const elemsExibir = isEvo ? elemsEvBrutos : elemsCddm
+  const elemsEv     = evSnapData?.elementos || []
+  const elemsExibir = isEvo ? elemsEv : elemsCddm
   const temCddm     = elemsCddm.length > 0
   // Para o mapa e seções de cálculo: usar elementos do método ativo
   const temElementosCalculo = elemsExibir.length > 0
@@ -614,9 +611,7 @@ export function LaudoPdf({
     const vLiqNum = vOfNum > 0 ? vOfNum * fOf : 0
     const vOf  = vOfNum > 0 ? fm(vOfNum) : ''
     const vLiq = vLiqNum > 0 && Math.abs(vLiqNum - vOfNum) > 1 ? fm(vLiqNum) : ''
-    const areaEl = pnEl(el.areaTerreno) || pnEl(el.area) || 0
-    const vuCalc = vLiqNum > 0 && areaEl > 0 ? vLiqNum / areaEl : 0
-    const vuOf = el.valorUnitarioOferta > 0 ? fm(el.valorUnitarioOferta) : (el.vuTerreno > 0 ? fm(el.vuTerreno) : (vuCalc > 0 ? fm(vuCalc) : ''))
+    const vuOf = el.valorUnitarioOferta > 0 ? fm(el.valorUnitarioOferta) : (el.vuTerreno > 0 ? fm(el.vuTerreno) : '')
     const cidadeUF = [el.cidade, el.uf].filter(Boolean).join(' · ')
     const foto = el.foto || ''
 
@@ -702,7 +697,7 @@ export function LaudoPdf({
       r1('Coordenadas', el.coordenadas),
       r1('Fonte', el.fonte),
       r3('Conservação', focLabel(el.estadoConservacao), 'Idade', el.idadeAparente > 0 ? `${el.idadeAparente} anos` : (el.idade ? `${el.idade} anos` : ''), 'Andar', el.andar > 0 ? String(el.andar) : ''),
-      pnEl(el.areaTerreno) > 0 ? r2('Área terreno', `${pnEl(el.areaTerreno).toLocaleString('pt-BR')} m²`, 'Área construída', pnEl(el.areaConstruida) > 0 ? `${pnEl(el.areaConstruida).toLocaleString('pt-BR')} m²` : '') : null,
+      el.areaTerreno > 0 ? r2('Área terreno', `${Number(el.areaTerreno).toLocaleString('pt-BR')} m²`, 'Área construída', el.areaConstruida > 0 ? `${Number(el.areaConstruida).toLocaleString('pt-BR')} m²` : '') : null,
       r2('Área c./útil', el.area > 0 ? `${el.area.toLocaleString('pt-BR')} m²` : '', 'Padrão', el.padraoConstrutivo),
       r3('Dormitórios', el.dormitorios > 0 ? String(el.dormitorios) : '', 'Suítes', el.suites > 0 ? String(el.suites) : '', 'Vagas', el.vagas > 0 ? String(el.vagas) : ''),
       r3('Valor oferta', vOf, 'Vl. líquido', vLiq !== vOf ? vLiq : '', 'V.U./m²', vuOf),
@@ -712,18 +707,11 @@ export function LaudoPdf({
         <View key="link" style={s.elemRowB}>
           <View style={[bl,{width:L1}]}><Text>Link</Text></View>
           <View style={[bvL,{flex:1}]}>
-            <Text style={{fontSize:6.3,color:AZUL2}}>{String(el.link)}</Text>
+            <Text style={{fontSize:6.3,color:AZUL2}}>{tr(String(el.link), mx1)}</Text>
           </View>
         </View>
       ) : null,
-      el.observacoes ? (
-        <View key="obs" style={s.elemRowB}>
-          <View style={[bl,{width:L1}]}><Text>Obs.</Text></View>
-          <View style={[bvL,{flex:1}]}>
-            <Text style={{fontSize:7.5}}>{String(el.observacoes)}</Text>
-          </View>
-        </View>
-      ) : null,
+      r1('Obs.', el.observacoes),
     ].filter(Boolean)
 
     if (linhas.length === 0) return null
@@ -794,10 +782,7 @@ export function LaudoPdf({
     ? 'Avaliação para fins de garantia'
     : dados.finalidade === 'execucao'
     ? 'Avaliação para fins de execução'
-    : dados.finalidade === 'locacao'
-    ? 'Avaliação para fins de locação'
     : dados.finalidade || 'Não informado'
-  const isLocacao = dados.finalidade === 'locacao'
 
   // Melhoramentos rows
   const melhorRows = [
@@ -812,8 +797,8 @@ export function LaudoPdf({
 
   // Derived booleans for conditional sections
   const temSolicitante = !!dados.solicitante?.trim()
-  const acabamentosPreenchidos = (Array.isArray(dados.acabamentos) ? dados.acabamentos : []).filter(
-    (a) => a && (a.ambiente?.trim() || a.acabamento?.trim())
+  const acabamentosPreenchidos = (dados.acabamentos || []).filter(
+    (a) => a.ambiente?.trim() || a.acabamento?.trim()
   )
   const temAcabamentos = acabamentosPreenchidos.length > 0
   const temConsideracoes =
@@ -836,6 +821,7 @@ export function LaudoPdf({
   // Sumário items — cada item tem id de âncora para links internos
   const sumSections: { txt: string; sub: boolean; id: string }[] = [
     { txt: 'CAPA RESUMO',                                                         sub: false, id: 'capa-resumo' },
+    ...(dados.incluirApresentacao && dados.textoApresentacao?.trim() ? [{ txt: 'APRESENTAÇÃO', sub: false, id: 'apresentacao' }] : []),
     { txt: 'SUMÁRIO',                                                              sub: false, id: 'sumario' },
     { txt: '1. IMÓVEL',                                                            sub: false, id: 's-1' },
     { txt: '2. OBJETIVO',                                                          sub: false, id: 's-2' },
@@ -852,12 +838,12 @@ export function LaudoPdf({
     { txt: '9. GLOSSÁRIO DE TERMOS TÉCNICOS (ABNT NBR 14653-2)',                   sub: false, id: 's-9' },
     { txt: '10. METODOLOGIA, PESQUISAS E CÁLCULOS',                                sub: false, id: 's-10' },
     ...(dados.localizacaoComparativos ? [{ txt: '10.1. LOCALIZAÇÃO DOS ELEMENTOS COMPARATIVOS', sub: true, id: 's-10-1' }] : []),
-    ...((temCddm || (isEvo && elemsEv.length > 0)) ? [{ txt: dados.localizacaoComparativos ? '10.2. HOMOGENEIZAÇÃO' : '10.1. HOMOGENEIZAÇÃO', sub: true, id: 's-10-hom' }] : []),
-    { txt: isLocacao ? '11. VALOR DE LOCAÇÃO' : '11. VALOR DO IMÓVEL',             sub: false, id: 's-11' },
+    ...(temCddm ? [{ txt: dados.localizacaoComparativos ? '10.2. HOMOGENEIZAÇÃO' : '10.1. HOMOGENEIZAÇÃO', sub: true, id: 's-10-hom' }] : []),
+    { txt: '11. VALOR DO IMÓVEL',                                                  sub: false, id: 's-11' },
     ...(temFundamentacao ? [{ txt: '12. DETERMINAÇÃO DO GRAU DE FUNDAMENTAÇÃO',    sub: false, id: 's-12' }]                         : []),
     ...(temPrecisao ? [{ txt: '12.02 GRAU DE PRECISÃO',                            sub: true,  id: 's-12-02' }]                      : []),
     { txt: '13. CONCLUSÃO',                                                        sub: false, id: 's-13' },
-    ...(isLocacao || gtex.titulo ? [{ txt: isLocacao ? '14. CONCLUSÕES GERAIS DE LOCAÇÃO' : '14. GARANTIA', sub: false, id: 's-14' }] : []),
+    ...(gtex.titulo ? [{ txt: '14. GARANTIA',                                      sub: false, id: 's-14' }]                         : []),
     { txt: '15. ANEXOS E ASSINATURA RESPONSÁVEL TÉCNICO',                          sub: false, id: 's-15' },
     ...(dados.documentacaoPdf ? [{ txt: '15.1. DOCUMENTAÇÃO',                      sub: true,  id: 's-15-1' }]                       : []),
     ...(dados.fotos && dados.fotos.length > 0 ? [{ txt: '15.2. RELATÓRIO FOTOGRÁFICO', sub: true, id: 's-15-2' }]                    : []),
@@ -988,11 +974,9 @@ export function LaudoPdf({
           {/* Strip de áreas */}
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
             {([
-              { label: 'ÁREA DE TERRENO',  value: formatarArea(dados.areaTerrenoTotal) || '-', unit: '' },
-              { label: 'ÁREA CONSTRUÍDA',  value: formatarArea(dados.areaConstruidaTotal) || '0', unit: '' },
-              isLocacao
-                ? { label: 'LIQUIDEZ', value: dados.liquidez === 'alta' ? 'Alta' : dados.liquidez === 'media' ? 'Média' : dados.liquidez === 'baixa' ? 'Baixa' : dados.liquidez || '-', unit: '' }
-                : { label: 'FATOR DE LIQUIDAÇÃO', value: capaFatorLiq, unit: capaLiqDisplay },
+              { label: 'ÁREA DE TERRENO',     value: formatarArea(dados.areaTerrenoTotal) || '-', unit: '' },
+              { label: 'ÁREA CONSTRUÍDA',     value: formatarArea(dados.areaConstruidaTotal) || '0', unit: '' },
+              { label: 'FATOR DE LIQUIDAÇÃO', value: capaFatorLiq,                    unit: capaLiqDisplay },
             ] as { label: string; value: string; unit: string }[]).map((card, idx) => (
               <View key={idx} style={{ flex: 1, border: '1pt solid #d0daea', borderRadius: 3, paddingHorizontal: 10, paddingVertical: 7, backgroundColor: '#f5f8fc', alignItems: 'center' }}>
                 <Text style={{ fontSize: 6, fontFamily: 'Helvetica-Bold', color: '#8FA4C7', letterSpacing: 0.8, marginBottom: 2 }}>{card.label}</Text>
@@ -1004,28 +988,25 @@ export function LaudoPdf({
 
           {/* Cards de valores */}
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-            {/* Locação: valor ocupa largura total */}
-            <View style={[s.valueBoxDark, { flex: isLocacao ? 2 : 1 }]}>
-              <Text style={s.vbLabelDark}>{isLocacao ? 'Valor de Locação' : 'Valor de Avaliação'}</Text>
+            <View style={[s.valueBoxDark, { flex: 1 }]}>
+              <Text style={s.vbLabelDark}>Valor de Avaliação</Text>
               <Text style={s.vbNumDark}>{fm(valorArredondado)}</Text>
               <Text style={s.vbExtDark}>{valorExtenso.charAt(0).toUpperCase() + valorExtenso.slice(1)}</Text>
             </View>
-            {!isLocacao && (
-              <View style={[s.valueBoxLight, { flex: 1 }]}>
-                <Text style={s.vbLabel}>Valor de Liquidez Forçada</Text>
-                {vlf > 0 ? (
-                  <>
-                    <Text style={s.vbNum}>{fm(vlf)}</Text>
-                    <Text style={s.vbExt}>{vlfExtenso.charAt(0).toUpperCase() + vlfExtenso.slice(1)}</Text>
-                    <View style={{ marginTop: 4, backgroundColor: '#fff', borderRadius: 2, paddingHorizontal: 6, paddingVertical: 2, alignSelf: 'flex-start', border: '0.5pt solid #c2d0e8' }}>
-                      <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: '#2347C6' }}>Fator {capaFatorLiq} · {capaLiqDisplay}</Text>
-                    </View>
-                  </>
-                ) : (
-                  <Text style={{ fontSize: 9, color: '#8FA4C7' }}>Não informado</Text>
-                )}
-              </View>
-            )}
+            <View style={[s.valueBoxLight, { flex: 1 }]}>
+              <Text style={s.vbLabel}>Valor de Liquidez Forçada</Text>
+              {vlf > 0 ? (
+                <>
+                  <Text style={s.vbNum}>{fm(vlf)}</Text>
+                  <Text style={s.vbExt}>{vlfExtenso.charAt(0).toUpperCase() + vlfExtenso.slice(1)}</Text>
+                  <View style={{ marginTop: 4, backgroundColor: '#fff', borderRadius: 2, paddingHorizontal: 6, paddingVertical: 2, alignSelf: 'flex-start', border: '0.5pt solid #c2d0e8' }}>
+                    <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: '#2347C6' }}>Fator {capaFatorLiq} · {capaLiqDisplay}</Text>
+                  </View>
+                </>
+              ) : (
+                <Text style={{ fontSize: 9, color: '#8FA4C7' }}>Não informado</Text>
+              )}
+            </View>
           </View>
 
           {/* Strip de especificação */}
@@ -1077,6 +1058,25 @@ export function LaudoPdf({
       </Page>
 
       {/* ════════════════════════════════════════════════════
+          PÁGINA OPCIONAL — APRESENTAÇÃO / INTRODUÇÃO
+          Aparece apenas quando incluirApresentacao === true
+      ════════════════════════════════════════════════════ */}
+      {dados.incluirApresentacao && dados.textoApresentacao?.trim() && (
+        <Page size="A4" style={s.page}>
+          <Header logoUrl={logoUrl} />
+          <Footer dataLaudo={dados.dataLaudo} />
+
+          <H2 id="apresentacao">APRESENTAÇÃO</H2>
+
+          {(dados.textoApresentacao || '').split(/\n\s*\n+/).filter(Boolean).map((paragrafo, idx) => (
+            <Text key={idx} style={[s.p, { marginBottom: 8 }]}>
+              {paragrafo.replace(/\n+/g, ' ').trim()}
+            </Text>
+          ))}
+        </Page>
+      )}
+
+      {/* ════════════════════════════════════════════════════
           PÁGINA 3 — SUMÁRIO (página exclusiva)
       ════════════════════════════════════════════════════ */}
       <Page size="A4" style={s.page}>
@@ -1119,18 +1119,10 @@ export function LaudoPdf({
         <H2 id="s-1">1. IMÓVEL</H2>
         <P>A presente avaliação tem por objetivo determinar o valor de mercado do imóvel localizado em:</P>
         <P>{dados.endereco}.</P>
-        {(dados as any).semVistoriaPresencial ? (
-          <P>Trata-se de imóvel caracterizado como {dados.tipo}, conforme características obtidas por pesquisa documental e informações fornecidas pelo solicitante, sem vistoria presencial.</P>
-        ) : (
-          <P>Trata-se de imóvel caracterizado como {dados.tipo}, conforme características observadas em vistoria.</P>
-        )}
+        <P>Trata-se de imóvel caracterizado como {dados.tipo}, conforme características observadas em vistoria.</P>
 
         <H2 id="s-2">2. OBJETIVO</H2>
-        {isLocacao ? (
-          <P>Trata-se de avaliação para fins de locação, visando determinar o valor locativo de mercado do imóvel, conforme as normas da ABNT NBR 14.653.</P>
-        ) : (
-          <P>Trata-se de avaliação para fins de {dados.finalidade === 'garantia' ? 'garantia' : 'execução'}.</P>
-        )}
+        <P>Trata-se de avaliação para fins de {dados.finalidade === 'garantia' ? 'garantia' : 'execução'}.</P>
 
         <H2 id="s-3">3. PROPRIETÁRIO</H2>
         <P>{dados.proprietario || 'Não informado'}.</P>
@@ -1145,18 +1137,12 @@ export function LaudoPdf({
         <H2 id="s-4">4. OBSERVAÇÕES PRELIMINARES</H2>
         <P>Este laudo fundamenta-se no que estabelecem as normas técnicas da ABNT, Avaliação de Bens, registradas como NBR 14653- Parte 1 (Procedimentos Gerais) e Parte 2 (Imóveis Urbanos), e baseia-se:</P>
         <Bullet>Na documentação fornecida;</Bullet>
-        {!(dados as any).semVistoriaPresencial && (
-          <Bullet>Em informações constatadas "in loco" quando da vistoria ao imóvel.</Bullet>
-        )}
+        <Bullet>Em informações constatadas "in loco" quando da vistoria ao imóvel.</Bullet>
         <Bullet>Em informações obtidas junto a agentes do mercado imobiliário local (vendedores, compradores, intermediários e etc).</Bullet>
         <P>Na presente avaliação considerou-se a documentação apresentada.</P>
-        <P>Considerou-se, ainda, que o imóvel se encontra livre e desembaraçado de quaisquer ônus, gravames ou restrições que possam interferir na determinação de seu valor.</P>
-        {(dados as any).semVistoriaPresencial ? (
-          <P>Não foram efetuadas investigações quanto à correção dos documentos fornecidos; as informações obtidas foram tomadas como de boa-fé, tanto referente às documentações como às informações obtidas de terceiros. Não foi realizado estudo ambiental e de contaminação para o imóvel avaliando, bem como análises estruturais nas edificações, como ensaios e análises físicas. O presente laudo foi elaborado sem vistoria presencial ao imóvel.</P>
-        ) : (
-          <P>Não foram efetuadas investigações quanto a correção dos documentos fornecidos; as observações "in loco" foram feitas sem instrumentos de medição; as informações obtidas foram tomadas como de boa-fé, tanto referente às documentações como às informações obtidas de terceiros. Não foi realizado estudo ambiental e de contaminação para o imóvel avaliando, bem como análises estruturais nas edificações, como ensaios e análises físicas.</P>
-        )}
-        <P>A avaliadora signatária não possui qualquer inclinação comercial referente ao imóvel em questão, sendo totalmente isenta de interesses. Não foram disponibilizadas informações contábeis, financeiras ou relativas ao fundo de comércio. O presente laudo desconsidera eventuais ativos intangíveis, marcas, dados financeiros, volume de vendas, carteira de clientes, softwares, investimentos, máquinas, equipamentos, produtos, matérias-primas, entre outros ativos que não estejam diretamente vinculados às edificações e ao terreno.</P>
+        <P>Considerou-se também que o imóvel está livre e desembaraçado de quaisquer ônus, em condições de ser imediatamente comercializado.</P>
+        <P>Não foram efetuadas investigações quanto a correção dos documentos fornecidos; as observações "in loco" foram feitas sem instrumentos de medição; as informações obtidas foram tomadas como de boa-fé, tanto referente às documentações como às informações obtidas de terceiros. Não foi realizado estudo ambiental e de contaminação para o imóvel avaliando, bem como análises estruturais nas edificações, como ensaios e análises físicas.</P>
+        <P>A avaliadora signatária não possui qualquer inclinação comercial referente ao imóvel em questão, sendo totalmente isenta de interesses. Não foram disponibilizadas informações contábeis, financeiras ou relativas ao fundo de comércio. O presente laudo desconsidera eventuais ativos intangíveis, marcas, dados financeiros, volume de vendas, carteira de clientes, softwares, investimentos, máquinas, equipamentos, produtos, matériasprimas, entre outros ativos que não estejam diretamente vinculados às edificações e ao terreno.</P>
 
         <H2 id="s-5">5. CARACTERIZAÇÃO DA REGIÃO</H2>
         <P>O imóvel avaliado encontra-se inserido em região com acesso a pontos de referência relevantes da localidade, destacando-se:</P>
@@ -1380,94 +1366,45 @@ export function LaudoPdf({
           </View>
         )}
 
-        {/* ── HOMOGENEIZAÇÃO ───────────────────────────────────────────────── */}
-        {(temCddm || (isEvo && elemsEv.length > 0)) && (
+        {/* ── 9.1. HOMOGENEIZAÇÃO (só comparativo) ────────────────────────── */}
+        {(temCddm || isEvo) && (
           <>
             <H3 id="s-10-hom">{dados.localizacaoComparativos ? '10.2.' : '10.1.'} Homogeneização</H3>
-
-            {/* Tabela CDDM (Comparativo Direto de Dados de Mercado) */}
-            {!isEvo && (
-              <>
-                <View style={s.homogTable}>
-                  <View style={s.homogRowH}>
-                    <Text style={[s.homogTh,{flex:0.6}]}>Elem.</Text>
-                    <Text style={[s.homogTh,{flex:1.1}]}>VU/m²</Text>
-                    <Text style={[s.homogTh,{flex:0.8}]}>F.Local</Text>
-                    <Text style={[s.homogTh,{flex:0.8}]}>F.Padrão</Text>
-                    <Text style={[s.homogTh,{flex:0.8}]}>F.FOC</Text>
-                    <Text style={[s.homogTh,{flex:0.8}]}>F.Andar</Text>
-                    <Text style={[s.homogTh,{flex:0.8}]}>F.Vaga</Text>
-                    <Text style={[s.homogTh,{flex:0.8}]}>F.Área</Text>
-                    <Text style={[s.homogThLast,{flex:1.2}]}>VU/m² Hom.</Text>
+            <View style={s.homogTable}>
+              <View style={s.homogRowH}>
+                <Text style={[s.homogTh,{flex:0.6}]}>Elem.</Text>
+                <Text style={[s.homogTh,{flex:1.1}]}>VU/m²</Text>
+                <Text style={[s.homogTh,{flex:0.8}]}>F.Local</Text>
+                <Text style={[s.homogTh,{flex:0.8}]}>F.Padrão</Text>
+                <Text style={[s.homogTh,{flex:0.8}]}>F.FOC</Text>
+                <Text style={[s.homogTh,{flex:0.8}]}>F.Andar</Text>
+                <Text style={[s.homogTh,{flex:0.8}]}>F.Vaga</Text>
+                <Text style={[s.homogTh,{flex:0.8}]}>F.Área</Text>
+                <Text style={[s.homogThLast,{flex:1.2}]}>VU/m² Hom.</Text>
+              </View>
+              {elemsCddm.map((el: any, i: number) => {
+                const isLast = i === elemsCddm.length - 1
+                const td = el.saneado ? s.homogTd : s.homogTdOut
+                return (
+                  <View key={`h-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
+                    <Text style={[td,{flex:0.6}]}>{i+1}</Text>
+                    <Text style={[td,{flex:1.1}]}>{fm(el.valorUnitarioOferta || 0)}</Text>
+                    <Text style={[td,{flex:0.8}]}>{(el.fatorLocal||1).toFixed(4).replace('.', ',')}</Text>
+                    <Text style={[td,{flex:0.8}]}>{(el.fatorPadrao||1).toFixed(4).replace('.', ',')}</Text>
+                    <Text style={[td,{flex:0.8}]}>{(el.fatorFOC||1).toFixed(4).replace('.', ',')}</Text>
+                    <Text style={[td,{flex:0.8}]}>{(el.fatorAndar||1).toFixed(4).replace('.', ',')}</Text>
+                    <Text style={[td,{flex:0.8}]}>{(el.fatorVaga||1).toFixed(4).replace('.', ',')}</Text>
+                    <Text style={[td,{flex:0.8}]}>{(el.fatorArea||1).toFixed(4).replace('.', ',')}</Text>
+                    <Text style={[el.saneado ? s.homogTdLast : {...s.homogTdOut,borderRightWidth:0},{flex:1.2}]}>{fm(el.vuHomog || 0)}</Text>
                   </View>
-                  {elemsCddm.map((el: any, i: number) => {
-                    const isLast = i === elemsCddm.length - 1
-                    const td = el.saneado ? s.homogTd : s.homogTdOut
-                    return (
-                      <View key={`h-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
-                        <Text style={[td,{flex:0.6}]}>{i+1}</Text>
-                        <Text style={[td,{flex:1.1}]}>{fm(el.valorUnitarioOferta || 0)}</Text>
-                        <Text style={[td,{flex:0.8}]}>{(el.fatorLocal||1).toFixed(4).replace('.', ',')}</Text>
-                        <Text style={[td,{flex:0.8}]}>{(el.fatorPadrao||1).toFixed(4).replace('.', ',')}</Text>
-                        <Text style={[td,{flex:0.8}]}>{(el.fatorFOC||1).toFixed(4).replace('.', ',')}</Text>
-                        <Text style={[td,{flex:0.8}]}>{(el.fatorAndar||1).toFixed(4).replace('.', ',')}</Text>
-                        <Text style={[td,{flex:0.8}]}>{(el.fatorVaga||1).toFixed(4).replace('.', ',')}</Text>
-                        <Text style={[td,{flex:0.8}]}>{(el.fatorArea||1).toFixed(4).replace('.', ',')}</Text>
-                        <Text style={[el.saneado ? s.homogTdLast : {...s.homogTdOut,borderRightWidth:0},{flex:1.2}]}>{fm(el.vuHomog || 0)}</Text>
-                      </View>
-                    )
-                  })}
-                </View>
-                <View style={s.legendaWrap}>
-                  <Text style={[s.legendaTxt,{fontFamily:'Helvetica-Bold',marginBottom:2}]}>Legenda dos fatores aplicados:</Text>
-                  <Text style={s.legendaTxt}>F.Local = Fator de Localização    F.Padrão = Fator de Padrão Construtivo    F.FOC = Fator de Obsolescência e Conservação</Text>
-                  <Text style={s.legendaTxt}>F.Andar = Fator de Andar    F.Vaga = Fator de Vaga de Garagem    F.Área = Fator de Adequação por Área</Text>
-                </View>
-              </>
-            )}
-
-            {/* Tabela Evolutivo (terreno): fatores Área, Local, Topografia, Visibilidade */}
-            {isEvo && elemsEv.length > 0 && (
-              <>
-                <View style={s.homogTable}>
-                  <View style={s.homogRowH}>
-                    <Text style={[s.homogTh,{flex:0.6}]}>Elem.</Text>
-                    <Text style={[s.homogTh,{flex:1.2}]}>VU Terreno</Text>
-                    <Text style={[s.homogTh,{flex:0.9}]}>F.Área</Text>
-                    <Text style={[s.homogTh,{flex:0.9}]}>F.Local</Text>
-                    <Text style={[s.homogTh,{flex:0.9}]}>F.Topo</Text>
-                    <Text style={[s.homogTh,{flex:0.9}]}>F.Vis</Text>
-                    <Text style={[s.homogTh,{flex:1.0}]}>Coef.</Text>
-                    <Text style={[s.homogThLast,{flex:1.2}]}>VU/m² Hom.</Text>
-                  </View>
-                  {elemsEv.map((el: any, i: number) => {
-                    if (!el) return null
-                    const isLast = i === elemsEv.length - 1
-                    const ok = el.valido !== false
-                    const td = ok ? s.homogTd : s.homogTdOut
-                    const f4 = (v: number) => (v ?? 1).toFixed(4).replace('.', ',')
-                    return (
-                      <View key={`ev-h-${i}`} style={isLast ? s.homogRow : s.homogRowB}>
-                        <Text style={[td,{flex:0.6}]}>{i+1}</Text>
-                        <Text style={[td,{flex:1.2}]}>{fm(el.vu || 0)}</Text>
-                        <Text style={[td,{flex:0.9}]}>{f4(el.fA)}</Text>
-                        <Text style={[td,{flex:0.9}]}>{f4(el.fL)}</Text>
-                        <Text style={[td,{flex:0.9}]}>{f4(el.fT)}</Text>
-                        <Text style={[td,{flex:0.9}]}>{f4(el.fV)}</Text>
-                        <Text style={[td,{flex:1.0}]}>{f4(el.coef)}</Text>
-                        <Text style={[ok ? s.homogTdLast : {...s.homogTdOut,borderRightWidth:0},{flex:1.2}]}>{fm(el.soma || 0)}</Text>
-                      </View>
-                    )
-                  })}
-                </View>
-                <View style={s.legendaWrap}>
-                  <Text style={[s.legendaTxt,{fontFamily:'Helvetica-Bold',marginBottom:2}]}>Legenda dos fatores aplicados:</Text>
-                  <Text style={s.legendaTxt}>F.Área = Fator de Adequação por Área    F.Local = Fator de Localização    F.Topo = Fator de Topografia    F.Vis = Fator de Visibilidade</Text>
-                  <Text style={s.legendaTxt}>Coef. = Coeficiente Geral (soma aditiva)    VU/m² Hom. = Valor Unitário Homogeneizado do Terreno (R$/m²)</Text>
-                  <Text style={s.legendaTxt}>Elementos descartados (Coef. fora do intervalo 0,5–2,0 — critério IBAPE) são exibidos em cinza e não entram nas estatísticas.</Text>
-                </View>
-              </>
-            )}
+                )
+              })}
+            </View>
+            <View style={s.legendaWrap}>
+              <Text style={[s.legendaTxt,{fontFamily:'Helvetica-Bold',marginBottom:2}]}>Legenda dos fatores aplicados:</Text>
+              <Text style={s.legendaTxt}>F.Local = Fator de Localização    F.Padrão = Fator de Padrão Construtivo    F.FOC = Fator de Obsolescência e Conservação</Text>
+              <Text style={s.legendaTxt}>F.Andar = Fator de Andar    F.Vaga = Fator de Vaga de Garagem    F.Área = Fator de Adequação por Área</Text>
+            </View>
           </>
         )}
 
@@ -1560,141 +1497,10 @@ export function LaudoPdf({
           </>
         )}
 
-        {/* ── Cálculo Evolutivo: terreno + benfeitorias ───────────────────── */}
-        {isEvo && evSnapData && (
-          <>
-            {/* Estatísticas do terreno */}
-            {evSnapData.resultado && (
-              <>
-                <View style={{ flexDirection: 'row', marginTop: 5, marginBottom: 4 }}>
-                  {[
-                    ['Elementos válidos', `${elemsEv.filter((e: any) => e.valido !== false).length} de ${elemsEv.length}`],
-                    ['Média homogeneizada', fm(evSnapData.resultado.media ?? 0)],
-                    ['VU Terreno adotado', fm(evSnapData.resultado.media ?? 0)],
-                  ].map(([lbl,val]) => (
-                    <View key={lbl} style={{ flex:1, backgroundColor:AZULLT, borderWidth:0.5, borderColor:CINZA, marginRight:4, padding:5, alignItems:'center' }}>
-                      <Text style={{ fontSize:6.5, color:'#5a7090', marginBottom:2 }}>{lbl}</Text>
-                      <Text style={{ fontSize:9, fontFamily:'Helvetica-Bold', color:AZUL }}>{val}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Tabela resumo do terreno */}
-                <View style={[s.homogTable, {marginBottom:6}]}>
-                  <View style={s.homogRowH}>
-                    <Text style={[s.homogTh,{flex:1.5}]}>Intervalo</Text>
-                    <Text style={[s.homogTh,{flex:1.5}]}>VU/m² (R$)</Text>
-                    <Text style={[s.homogThLast,{flex:1.5}]}>Valor terreno (R$)</Text>
-                  </View>
-                  {(() => {
-                    const r = evSnapData.resultado
-                    const area = evSnapData.avaliando?.area ?? 0
-                    const rows: [string, number, boolean][] = [
-                      ['Mínimo (IC)',         r.minimo  ?? 0, false],
-                      ['Médio adotado',       r.media   ?? 0, true],
-                      ['Máximo (IC)',         r.maximo  ?? 0, false],
-                      ['Limite −30%',         r.lim30inf?? 0, false],
-                      ['Limite +30%',         r.lim30sup?? 0, false],
-                    ]
-                    return rows.map(([lbl,vu,hl], idx) => (
-                      <View key={lbl} style={[idx<rows.length-1?s.homogRowB:s.homogRow, hl?{backgroundColor:AZULLT}:{}]}>
-                        <Text style={[s.homogTd,{flex:1.5,textAlign:'left',paddingLeft:5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{lbl}</Text>
-                        <Text style={[s.homogTd,{flex:1.5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{fm(vu)}</Text>
-                        <Text style={[s.homogTdLast,{flex:1.5,fontFamily:hl?'Helvetica-Bold':'Helvetica',color:hl?AZUL:TEXTO}]}>{fm(vu * area)}</Text>
-                      </View>
-                    ))
-                  })()}
-                </View>
-              </>
-            )}
-
-            {/* Tabela de benfeitorias (VEIU) */}
-            {(() => {
-              const benfs = (evSnapData.benfeitorias || []).filter((b: any) => b && b.valor > 0)
-              if (benfs.length === 0) return null
-              return (
-                <>
-                  <View style={{ backgroundColor: AZUL, paddingVertical: 3, paddingHorizontal: 5, marginTop: 4 }}>
-                    <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center' }}>
-                      VALOR DAS EDIFICAÇÕES — CUB R8N DEPRECIADO (VEIU)
-                    </Text>
-                  </View>
-                  <View style={[s.homogTable, { marginBottom: 4 }]}>
-                    <View style={s.homogRowH}>
-                      <Text style={[s.homogTh,{flex:2.0}]}>Edificação</Text>
-                      <Text style={[s.homogTh,{flex:0.8}]}>Pc</Text>
-                      <Text style={[s.homogTh,{flex:0.7}]}>Ir</Text>
-                      <Text style={[s.homogTh,{flex:0.7}]}>R</Text>
-                      <Text style={[s.homogTh,{flex:0.8}]}>%v</Text>
-                      <Text style={[s.homogTh,{flex:0.8}]}>Ka</Text>
-                      <Text style={[s.homogTh,{flex:0.8}]}>Eo</Text>
-                      <Text style={[s.homogTh,{flex:0.8}]}>Foc</Text>
-                      <Text style={[s.homogTh,{flex:0.9}]}>Área m²</Text>
-                      <Text style={[s.homogThLast,{flex:1.5}]}>Valor (R$)</Text>
-                    </View>
-                    {benfs.map((b: any, i: number) => {
-                      const isLast = i === benfs.length - 1
-                      const f2 = (v: number) => (v ?? 0).toFixed(4).replace('.', ',')
-                      const pct = b.pctVida != null ? `${b.pctVida.toFixed(1).replace('.',',')}%` : '—'
-                      const desc = (b.descricao || `Edificação ${i+1}`).slice(0, 22)
-                      return (
-                        <View key={i} style={isLast ? s.homogRow : s.homogRowB}>
-                          <Text style={[s.homogTd,{flex:2.0,textAlign:'left',paddingLeft:4}]}>{desc}</Text>
-                          <Text style={[s.homogTd,{flex:0.8}]}>{f2(b.Pc ?? b.pc)}</Text>
-                          <Text style={[s.homogTd,{flex:0.7}]}>{b.Ir ?? b.ir ?? '—'}</Text>
-                          <Text style={[s.homogTd,{flex:0.7}]}>{f2(b.R ?? b.r)}</Text>
-                          <Text style={[s.homogTd,{flex:0.8}]}>{pct}</Text>
-                          <Text style={[s.homogTd,{flex:0.8}]}>{f2(b.Ka)}</Text>
-                          <Text style={[s.homogTd,{flex:0.8}]}>{b.Ec != null ? `${(b.Ec*100).toFixed(2).replace('.',',')}%` : '—'}</Text>
-                          <Text style={[s.homogTd,{flex:0.8}]}>{f2(b.Foc)}</Text>
-                          <Text style={[s.homogTd,{flex:0.9}]}>{(b.area ?? 0).toLocaleString('pt-BR',{maximumFractionDigits:2})}</Text>
-                          <Text style={[s.homogTdLast,{flex:1.5,fontFamily:'Helvetica-Bold',color:AZUL}]}>{fm(b.valor ?? 0)}</Text>
-                        </View>
-                      )
-                    })}
-                    {/* Linha de total */}
-                    <View style={[s.homogRow, {backgroundColor: AZULLT}]}>
-                      <Text style={[s.homogTd,{flex:8.3,textAlign:'right',paddingRight:4,fontFamily:'Helvetica-Bold',color:AZUL}]}>Total benfeitorias</Text>
-                      <Text style={[s.homogTdLast,{flex:1.5,fontFamily:'Helvetica-Bold',color:AZUL}]}>{fm(evSnapData.valorBenfeitorias ?? 0)}</Text>
-                    </View>
-                  </View>
-                  <View style={s.legendaWrap}>
-                    <Text style={[s.legendaTxt,{fontFamily:'Helvetica-Bold',marginBottom:2}]}>Legenda — fórmula VEIU (Ross-Heidecke):</Text>
-                    <Text style={s.legendaTxt}>Pc = Coef. Padrão Construtivo    Ir = Vida referencial (anos)    R = Valor residual    %v = Vida consumida (Ie/Ir)</Text>
-                    <Text style={s.legendaTxt}>Ka = Depreciação por idade [1−0,5(v+v²)]    Eo = Estado de conservação (Ross-Heidecke)    Foc = Fator de obsolescência/conservação</Text>
-                    <Text style={s.legendaTxt}>Valor = CUB R8N × Pc × Área × Foc</Text>
-                  </View>
-                </>
-              )
-            })()}
-
-            {/* Resumo evolutivo: terreno + benfeitorias + valor final */}
-            {(evSnapData.valorTerreno > 0 || evSnapData.valorBenfeitorias > 0) && (
-              <View style={[s.homogTable, {marginTop: 6, marginBottom: 4}]}>
-                <View style={{ backgroundColor: AZUL, paddingVertical: 3, paddingHorizontal: 5 }}>
-                  <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BRANCO, textAlign: 'center' }}>COMPOSIÇÃO DO VALOR — MÉTODO EVOLUTIVO</Text>
-                </View>
-                <View style={s.homogRowB}>
-                  <Text style={[s.homogTd,{flex:3,textAlign:'left',paddingLeft:5}]}>Valor do Terreno</Text>
-                  <Text style={[s.homogTdLast,{flex:2,fontFamily:'Helvetica-Bold'}]}>{fm(evSnapData.valorTerreno ?? 0)}</Text>
-                </View>
-                <View style={s.homogRowB}>
-                  <Text style={[s.homogTd,{flex:3,textAlign:'left',paddingLeft:5}]}>Valor das Benfeitorias (VEIU)</Text>
-                  <Text style={[s.homogTdLast,{flex:2,fontFamily:'Helvetica-Bold'}]}>{fm(evSnapData.valorBenfeitorias ?? 0)}</Text>
-                </View>
-                <View style={[s.homogRow,{backgroundColor:AZULLT}]}>
-                  <Text style={[s.homogTd,{flex:3,textAlign:'left',paddingLeft:5,fontFamily:'Helvetica-Bold',color:AZUL}]}>Valor Final do Imóvel</Text>
-                  <Text style={[s.homogTdLast,{flex:2,fontFamily:'Helvetica-Bold',color:AZUL}]}>{fm(evSnapData.valorFinal ?? 0)}</Text>
-                </View>
-              </View>
-            )}
-          </>
-        )}
-
         {/* ────────────────────────────────────────────────────
             SEÇÃO 11 — VALOR DO IMÓVEL
         ──────────────────────────────────────────────────── */}
-        <H2 id="s-11">{isLocacao ? '11. VALOR DE LOCAÇÃO' : '11. VALOR DO IMÓVEL'}</H2>
+        <H2 id="s-11">11. VALOR DO IMÓVEL</H2>
         {/* Terreno e benfeitorias: só exibir no evolutivo ou quando preenchidos manualmente */}
         {isEvoLaudo ? (
           <>
@@ -2073,32 +1879,13 @@ export function LaudoPdf({
         {/* ────────────────────────────────────────────────────
             SEÇÃO 14 — GARANTIA
         ──────────────────────────────────────────────────── */}
-        {isLocacao ? (
-          <>
-            <H2 id="s-14">14. CONCLUSÕES GERAIS DE LOCAÇÃO</H2>
-            <P>Com base nas pesquisas de mercado realizadas e nas características do imóvel avaliado, conclui-se que o valor locativo determinado reflete as condições atuais do mercado imobiliário local, considerando imóveis de características semelhantes quanto à localização, padrão construtivo e estado de conservação.</P>
-            {(dados as any).garantiaObservacoes?.trim() && (
-              <View style={{ marginTop: 4 }}>
-                {String((dados as any).garantiaObservacoes).split('\n').map((linha: string, i: number) => (
-                  <Text key={i} style={{ fontSize: 9, color: TEXTO, lineHeight: 1.5, minHeight: linha.trim() === '' ? 6 : undefined }}>{linha || ' '}</Text>
-                ))}
-              </View>
-            )}
-          </>
-        ) : gtex.titulo ? (
+        {gtex.titulo && (
           <>
             <H2 id="s-14">14. GARANTIA</H2>
             <P><Text style={s.bold}>{gtex.titulo}</Text></P>
             <P>{gtex.texto}</P>
-            {gtex.observacoes?.trim() && (
-              <View style={{ marginTop: 4 }}>
-                {String(gtex.observacoes).split('\n').map((linha: string, i: number) => (
-                  <Text key={i} style={{ fontSize: 9, color: TEXTO, lineHeight: 1.5, minHeight: linha.trim() === '' ? 6 : undefined }}>{linha || ' '}</Text>
-                ))}
-              </View>
-            )}
           </>
-        ) : null}
+        )}
 
         {/* ────────────────────────────────────────────────────
             SEÇÃO 15 — ANEXOS E ASSINATURA

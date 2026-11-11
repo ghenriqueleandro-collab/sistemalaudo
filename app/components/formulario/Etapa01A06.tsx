@@ -44,6 +44,8 @@ type Props = {
   handleCroqui: (e: React.ChangeEvent<HTMLInputElement>) => void
   removerCroqui: (index: number) => void
   tipoLaudo?: 'detalhado' | 'simplificado'
+  incluirApresentacao?: boolean
+  textoApresentacao?: string
 }
 
 export default function Etapa01A06({
@@ -62,6 +64,8 @@ export default function Etapa01A06({
   removerLinhaDivisao,
   handleCroqui,
   removerCroqui,
+  incluirApresentacao,
+  textoApresentacao,
 }: Props) {
   const [buscandoCoords, setBuscandoCoords] = useState(false)
   const [msgCoords, setMsgCoords] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
@@ -126,15 +130,14 @@ export default function Etapa01A06({
 
     // ── 3. Pontos de referência via Overpass (tenta múltiplos mirrors) ──────────
     try {
-      // Busca progressiva com raios crescentes e tipos amplos
-      // Inclui pontos urbanos, rurais e industriais
-      const buildOverpassQuery = (raio: number) =>
+      // Query simplificada e mais compatível
+      const overpassQuery =
         `[out:json][timeout:30];` +
         `(` +
-        `nwr["name"]["amenity"~"^(hospital|bank|pharmacy|school|place_of_worship|police|college|university|fuel|courthouse|town_hall)$"](around:${raio},${lat},${lon});` +
-        `nwr["name"]["shop"~"^(supermarket|mall)$"](around:${raio},${lat},${lon});` +
-        `nwr["name"]["leisure"~"^(stadium)$"](around:${raio},${lat},${lon});` +
-        `);out center 100;`
+        `nwr["name"]["amenity"~"^(hospital|bank|pharmacy|school|place_of_worship|police|college|university|fuel|courthouse|town_hall)$"](around:6000,${lat},${lon});` +
+        `nwr["name"]["shop"~"^(supermarket|mall)$"](around:6000,${lat},${lon});` +
+        `nwr["name"]["leisure"~"^(stadium)$"](around:6000,${lat},${lon});` +
+        `);out center 60;`
 
       const mirrors = [
         'https://overpass-api.de/api/interpreter',
@@ -142,29 +145,21 @@ export default function Etapa01A06({
         'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
       ]
 
-      // Tenta raios crescentes: 3km → 8km → 20km
-      const raios = [3000, 8000, 20000]
       let dadosOver: any = null
-
-      for (const raio of raios) {
-        const overpassQuery = buildOverpassQuery(raio)
-        for (const mirror of mirrors) {
-          try {
-            const res = await fetch(mirror, {
-              method: 'POST',
-              body: `data=${encodeURIComponent(overpassQuery)}`,
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              signal: AbortSignal.timeout(20000),
-            })
-            if (!res.ok) continue
-            const json = await res.json()
-            if (json?.elements?.length >= 3) { dadosOver = json; break }
-            if (json?.elements?.length > 0 && !dadosOver) dadosOver = json // guarda mesmo com poucos
-          } catch {
-            continue
-          }
+      for (const mirror of mirrors) {
+        try {
+          const res = await fetch(mirror, {
+            method: 'POST',
+            body: `data=${encodeURIComponent(overpassQuery)}`,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            signal: AbortSignal.timeout(20000),
+          })
+          if (!res.ok) continue
+          const json = await res.json()
+          if (json?.elements?.length > 0) { dadosOver = json; break }
+        } catch {
+          continue
         }
-        if (dadosOver?.elements?.length >= 3) break // suficiente, não precisa ampliar raio
       }
 
       if (!dadosOver) throw new Error('Todos os mirrors Overpass falharam')
@@ -326,7 +321,6 @@ export default function Etapa01A06({
         <option value="">Selecione a finalidade</option>
         <option value="garantia">Garantia</option>
         <option value="execucao">Execução</option>
-        <option value="locacao">Locação</option>
       </select>
 
       <div className="border rounded p-4 bg-gray-50 space-y-4">
@@ -793,6 +787,49 @@ export default function Etapa01A06({
             />
           )}
         </div>
+      </div>
+
+      {/* ── Apresentação / Introdução (opcional) ── */}
+      <div className="border rounded p-4 bg-gray-50 space-y-3">
+        <h3 className="text-lg font-bold">Apresentação / Introdução</h3>
+        <p className="text-sm text-gray-600">
+          Página opcional que aparece antes do sumário — recomendada para clientes institucionais e processos judiciais.
+        </p>
+
+        <label className="flex items-center gap-3 cursor-pointer">
+          <div className="relative">
+            <input
+              type="checkbox"
+              name="incluirApresentacao"
+              checked={Boolean(incluirApresentacao)}
+              onChange={handleChange}
+              className="sr-only"
+            />
+            <div
+              className={`w-10 h-5 rounded-full transition-colors ${
+                incluirApresentacao ? 'bg-blue-600' : 'bg-gray-300'
+              }`}
+            />
+            <div
+              className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                incluirApresentacao ? 'translate-x-5' : 'translate-x-0.5'
+              }`}
+            />
+          </div>
+          <span className="font-medium text-sm">
+            {incluirApresentacao ? 'Incluir página de Apresentação no laudo' : 'Não incluir página de Apresentação'}
+          </span>
+        </label>
+
+        {incluirApresentacao && (
+          <textarea
+            name="textoApresentacao"
+            value={textoApresentacao || ''}
+            onChange={handleChange}
+            placeholder="Escreva a apresentação do laudo aqui. Exemplo:&#10;&#10;Prezado(a) cliente,&#10;&#10;É com satisfação que apresentamos o presente Laudo de Avaliação, elaborado em conformidade com as normas técnicas da ABNT NBR 14653..."
+            className="w-full border p-3 rounded bg-white min-h-[200px] text-sm"
+          />
+        )}
       </div>
 
     </div>
