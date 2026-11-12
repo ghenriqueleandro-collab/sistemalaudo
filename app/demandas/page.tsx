@@ -100,7 +100,7 @@ function CardDemanda({
   laudo: LaudoResumo
   onMover: (laudo: LaudoResumo) => void
 }) {
-  const endereco = [laudo.logradouro, laudo.cidade]
+  const endereco = [(laudo as any).logradouro || laudo.endereco, laudo.cidade]
     .filter(Boolean)
     .join(' · ') || 'Endereço não informado'
 
