@@ -100,7 +100,7 @@ function CardDemanda({
   laudo: LaudoResumo
   onMover: (laudo: LaudoResumo) => void
 }) {
-  const endereco = [(laudo as any).logradouro || laudo.endereco, laudo.cidade]
+  const endereco = [laudo.endereco, laudo.cidade]
     .filter(Boolean)
     .join(' · ') || 'Endereço não informado'
 
@@ -112,7 +112,7 @@ function CardDemanda({
     >
       <div className="flex items-start justify-between gap-2">
         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-          {(laudo as any).referencia || (laudo as any).codigo || laudo.id.slice(0, 8).toUpperCase()}
+          {laudo.referenciaCliente || laudo.codigo || laudo.id.slice(0, 8).toUpperCase()}
         </span>
         <svg
           className="h-3.5 w-3.5 shrink-0 text-slate-300 group-hover:text-blue-400 transition mt-0.5"
@@ -129,11 +129,11 @@ function CardDemanda({
       <p className="mt-1.5 text-sm font-semibold text-slate-900 leading-tight line-clamp-2">
         {endereco}
       </p>
-      {(laudo as any).nomeCliente && (
-        <p className="mt-1 text-xs text-slate-500 truncate">{(laudo as any).nomeCliente}</p>
+      {(laudo.proprietario || laudo.solicitante) && (
+        <p className="mt-1 text-xs text-slate-500 truncate">{laudo.proprietario || laudo.solicitante}</p>
       )}
       <p className="mt-2 text-[10px] text-slate-400">
-        {formatarData(laudo.criadoEm)}
+        {formatarData(laudo.data)}
       </p>
     </button>
   )
@@ -172,7 +172,7 @@ function ModalMover({
               Mover demanda
             </p>
             <p className="mt-0.5 text-sm font-semibold text-slate-900 line-clamp-1">
-              {(laudo as any).referencia || (laudo as any).codigo || laudo.id.slice(0, 8).toUpperCase()}
+              {laudo.referenciaCliente || laudo.codigo || laudo.id.slice(0, 8).toUpperCase()}
             </p>
           </div>
           <button
