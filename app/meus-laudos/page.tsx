@@ -158,12 +158,10 @@ export default function MeusLaudosPage() {
   )
 
   // Total de elementos comparativos em todos os laudos
-  // Usa elementosComparativos (campo inline) como contagem aproximada
   const totalElementos = useMemo(() => {
     return laudos.reduce((acc, l) => {
       const elems = (l as any).elementosComparativos
       if (Array.isArray(elems)) return acc + elems.length
-      // Fallback: dadosCalculoCDDM inline (quando não há __ref__)
       const cddm = (l as any).dadosCalculoCDDM
       if (cddm && typeof cddm === 'object' && Array.isArray(cddm.elementos)) {
         return acc + cddm.elementos.length
@@ -281,7 +279,6 @@ export default function MeusLaudosPage() {
             className="group flex items-center justify-between gap-4 rounded-[28px] border border-slate-200 bg-gradient-to-r from-slate-900 via-blue-950 to-blue-900 px-6 py-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
           >
             <div className="flex items-center gap-4">
-              {/* Ícone de mapa */}
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10">
                 <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                   <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
@@ -411,8 +408,7 @@ export default function MeusLaudosPage() {
             <div className="divide-y divide-slate-100">
               {filtrados.map((laudo) => {
                 const cfg =
-                  acompanhamentoConfig[laudo.statusAcompanhamento] ||
-                  acompanhamentoConfig.levantamento_documentos
+                  acompanhamentoConfig[laudo.statusAcompanhamento ?? 'levantamento_documentos']
                 const urlVisualizar =
                   laudo.tipoLaudo === 'simplificado'
                     ? `/visualizar-laudo/simplificado?id=${encodeURIComponent(laudo.id)}`
@@ -421,6 +417,7 @@ export default function MeusLaudosPage() {
                   laudo.tipoLaudo === 'simplificado'
                     ? `/laudo/simplificado?id=${encodeURIComponent(laudo.id)}`
                     : `/novo-laudo?id=${encodeURIComponent(laudo.id)}`
+                const nomeCliente = laudo.proprietario || laudo.solicitante
 
                 return (
                   <div
@@ -435,11 +432,11 @@ export default function MeusLaudosPage() {
                     {/* Endereço + cliente */}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-slate-900">
-                        {laudo.logradouro || laudo.endereco || '—'}
+                        {laudo.endereco || '—'}
                       </p>
                       <p className="truncate text-xs text-slate-500">
-                        {[laudo.bairro, laudo.cidade, laudo.uf].filter(Boolean).join(', ')}
-                        {laudo.nomeCliente ? ` · ${laudo.nomeCliente}` : ''}
+                        {laudo.cidade || ''}
+                        {nomeCliente ? ` · ${nomeCliente}` : ''}
                       </p>
                     </div>
 
@@ -456,7 +453,7 @@ export default function MeusLaudosPage() {
                     {/* Data */}
                     <div className="shrink-0 w-24 text-right">
                       <span className="text-xs text-slate-400">
-                        {laudo.criadoEm ? formatarData(laudo.criadoEm) : '—'}
+                        {laudo.data ? formatarData(laudo.data) : '—'}
                       </span>
                     </div>
 
