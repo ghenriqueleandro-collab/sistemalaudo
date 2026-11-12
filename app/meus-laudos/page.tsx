@@ -1,35 +1,53 @@
 /**
  * SALVAR EM: src/app/meus-laudos/page.tsx
  *
- * Integra o KanbanBoard no topo da página (acima dos cards de dashboard).
- * Alterações em relação à versão anterior:
- *   1. Import de KanbanBoard adicionado
- *   2. <KanbanBoard onLaudoIniciado={carregarDados} /> inserido antes dos cards de status
+ * Atualizado: adicionado card de destaque para o Mapa de Elementos
+ * logo abaixo dos cards de status de acompanhamento.
+ * O "Quadro de demandas" (kanban) foi movido para /demandas.
  */
 
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import AppShell from '../components/AppShell'
-import KanbanBoard from '../components/KanbanBoard'
 import {
   excluirLaudo,
   filtrarLaudos,
+  formatarData,
   formatarStatusAcompanhamento,
   listarLaudos,
   type LaudoResumo,
   type StatusAcompanhamento,
 } from '../../lib/laudos-storage'
 
-// ─── Constantes de status ─────────────────────────────────────────────────────
+// ─── Status de acompanhamento ─────────────────────────────────────────────────
 
-const acompanhamentoConfig: Record<StatusAcompanhamento, { classe: string; dot: string }> = {
-  levantamento_documentos: { classe: 'bg-amber-50 text-amber-700',    dot: 'bg-amber-400' },
-  atuando_vistoria:        { classe: 'bg-purple-50 text-purple-700',  dot: 'bg-purple-400' },
-  atuando_pesquisa:        { classe: 'bg-blue-50 text-blue-700',      dot: 'bg-blue-400' },
-  concluido:               { classe: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-400' },
+const acompanhamentoConfig: Record<
+  StatusAcompanhamento,
+  { label: string; classe: string; dotClasse: string }
+> = {
+  levantamento_documentos: {
+    label: 'Levantamento',
+    classe: 'bg-amber-50 text-amber-700 ring-amber-200',
+    dotClasse: 'bg-amber-500',
+  },
+  atuando_vistoria: {
+    label: 'Em vistoria',
+    classe: 'bg-purple-50 text-purple-700 ring-purple-200',
+    dotClasse: 'bg-purple-500',
+  },
+  atuando_pesquisa: {
+    label: 'Em pesquisa',
+    classe: 'bg-blue-50 text-blue-700 ring-blue-200',
+    dotClasse: 'bg-blue-500',
+  },
+  concluido: {
+    label: 'Concluído',
+    classe: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+    dotClasse: 'bg-emerald-500',
+  },
 }
 
 const ORDEM_STATUS: StatusAcompanhamento[] = [
@@ -39,137 +57,123 @@ const ORDEM_STATUS: StatusAcompanhamento[] = [
   'concluido',
 ]
 
-const statusVistoriaLabel: Record<string, string> = {
-  aguardando_agendamento: 'Aguardando agendamento',
-  agendada:               'Vistoria agendada',
-  realizada:              'Vistoria realizada',
-  fotos_disponiveis:      'Fotos disponíveis',
-  finalizado:             'Finalizado',
+// ─── CardResumo ───────────────────────────────────────────────────────────────
+
+function CardResumo({
+  titulo,
+  valor,
+  classe,
+  ativo,
+  onClick,
+}: {
+  titulo: string
+  valor: number
+  classe: string
+  ativo: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-[28px] border p-5 text-left transition ${
+        ativo
+          ? 'border-blue-300 bg-blue-50 shadow-sm'
+          : 'border-slate-200 bg-white hover:border-slate-300 shadow-[0_20px_60px_-42px_rgba(15,23,42,0.5)]'
+      }`}
+    >
+      <div className={`inline-flex rounded-2xl px-3 py-1 text-xs font-semibold ${classe}`}>
+        {titulo}
+      </div>
+      <div className="mt-5 text-4xl font-semibold tracking-tight text-slate-950">{valor}</div>
+    </button>
+  )
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function haversineMetros(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371000
-  const toRad = (v: number) => (v * Math.PI) / 180
-  const dLat = toRad(lat2 - lat1); const dLon = toRad(lon2 - lon1)
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
-  return R * 2 * Math.asin(Math.sqrt(a))
-}
-
-function formatarDistancia(m: number) {
-  return m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1).replace('.', ',')} km`
-}
-
-function formatarData(iso?: string) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('pt-BR')
-}
-
-// ─── Estado inicial do modal ──────────────────────────────────────────────────
-
-const NOVO_LAUDO_INICIAL = {
-  tipoLaudo: 'detalhado' as 'detalhado' | 'simplificado',
-  tipoImovelCDDM: '' as '' | 'isolado' | 'fracao',
-  areaComum: '', areaTotal: '', fracaoIdeal: '',
-  fatoresCDDMAtivos: { local: true, padrao: true, foc: true, andar: true, vaga: true },
-  coordenadasImovel: '', endereco: '', proprietario: '', solicitante: '',
-  empresaClienteId: '', tipo: '', finalidade: '',
-  areaConstruidaTotal: '', areaConstruidaAverbada: '',
-  areaTerrenoTotal: '', areaTerrenoAverbada: '',
-  matricula: '', iptu: '',
-  referencia1: '', distancia1: '', referencia2: '', distancia2: '',
-  referencia3: '', distancia3: '', referencia4: '', distancia4: '',
-  referencia5: '', distancia5: '',
-}
-
-// ─── Componente ───────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MeusLaudosPage() {
-  const { data: session, status: sessionStatus } = useSession()
-  const router = useRouter()
+  const { data: session } = useSession()
+  const perfil = (session?.user as any)?.perfil
+  const usuarioEmail = session?.user?.email || ''
+  const usuarioNome = session?.user?.name || usuarioEmail
 
-  // Lista
-  const [laudos, setLaudos] = useState<LaudoResumo[]>([])
   const [carregando, setCarregando] = useState(true)
+  const [laudos, setLaudos] = useState<LaudoResumo[]>([])
   const [busca, setBusca] = useState('')
-  const [filtroAcomp, setFiltroAcomp] = useState<StatusAcompanhamento | ''>('')
+  const [status, setStatus] = useState('')
+  const [cidade, setCidade] = useState('')
+  const [tipoImovel, setTipoImovel] = useState('')
+  const [finalidade, setFinalidade] = useState('')
+  const [tipoLaudo, setTipoLaudo] = useState('')
   const [excluindoId, setExcluindoId] = useState<string | null>(null)
   const [solicitandoId, setSolicitandoId] = useState<string | null>(null)
 
-  // Modal criação de laudo direto
-  const [empresas, setEmpresas] = useState<{ id: string; nome: string }[]>([])
-  const [mostrarModal, setMostrarModal] = useState(false)
-  const [criandoLaudo, setCriandoLaudo] = useState(false)
-  const [buscandoCoords, setBuscandoCoords] = useState(false)
-  const [msgCoords, setMsgCoords] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
-  const [novoLaudo, setNovoLaudo] = useState(NOVO_LAUDO_INICIAL)
-
-  function setField(name: string, value: string) {
-    setNovoLaudo((prev) => ({ ...prev, [name]: value }))
-  }
-
-  // ─── Carregamento ─────────────────────────────────────────────────────────
-
-  const carregarDados = useCallback(async () => {
+  const carregarLaudos = useCallback(async () => {
     try {
-      const [dadosLaudos, resEmpresas] = await Promise.all([
-        listarLaudos(),
-        fetch('/api/empresas', { cache: 'no-store' }),
-      ])
-      const dadosEmpresas = await resEmpresas.json()
-      setLaudos(dadosLaudos)
-      setEmpresas((dadosEmpresas || []).filter(Boolean))
+      const dados = await listarLaudos()
+      setLaudos(dados)
     } finally {
       setCarregando(false)
     }
   }, [])
 
   useEffect(() => {
-    if (sessionStatus === 'unauthenticated') router.push('/')
-  }, [sessionStatus, router])
+    carregarLaudos()
+    const intervalo = setInterval(carregarLaudos, 15_000)
+    return () => clearInterval(intervalo)
+  }, [carregarLaudos])
 
-  useEffect(() => {
-    if (sessionStatus === 'authenticated') {
-      carregarDados()
-      const intervalo = setInterval(carregarDados, 15_000)
-      return () => clearInterval(intervalo)
-    }
-  }, [sessionStatus, carregarDados])
-
-  // ─── Contadores e filtros ─────────────────────────────────────────────────
-
-  const contadores = useMemo(
-    () => Object.fromEntries(
-      ORDEM_STATUS.map((st) => [
-        st,
-        laudos.filter((l) => (l.statusAcompanhamento || 'levantamento_documentos') === st).length,
-      ])
-    ) as Record<StatusAcompanhamento, number>,
+  const cidades = useMemo(
+    () => [...new Set(laudos.map((i) => i.cidade).filter(Boolean))].sort(),
+    [laudos]
+  )
+  const tipos = useMemo(
+    () => [...new Set(laudos.map((i) => i.tipoImovel).filter(Boolean))].sort(),
+    [laudos]
+  )
+  const finalidades = useMemo(
+    () => [...new Set(laudos.map((i) => i.finalidade).filter(Boolean))].sort(),
     [laudos]
   )
 
-  const laudosFiltrados = useMemo(() => {
-    return filtrarLaudos(laudos, {
-      busca,
-      status: filtroAcomp,
-      cidade: '',
-      tipoImovel: '',
-      finalidade: '',
-      tipoLaudo: '',
-    })
-  }, [laudos, busca, filtroAcomp])
+  const filtrados = useMemo(
+    () =>
+      filtrarLaudos(laudos, { busca, status, cidade, tipoImovel, finalidade, tipoLaudo }),
+    [laudos, busca, status, cidade, tipoImovel, finalidade, tipoLaudo]
+  )
 
-  // ─── Permissões ──────────────────────────────────────────────────────────
+  // Contadores por statusAcompanhamento
+  const contadores = useMemo(
+    () =>
+      Object.fromEntries(
+        ORDEM_STATUS.map((st) => [
+          st,
+          laudos.filter(
+            (l) => (l.statusAcompanhamento || 'levantamento_documentos') === st
+          ).length,
+        ])
+      ) as Record<StatusAcompanhamento, number>,
+    [laudos]
+  )
 
-  const perfil = (session?.user as any)?.perfil
-  const usuarioEmail = session?.user?.email || ''
-  const usuarioNome = session?.user?.name || usuarioEmail
-  const isAdmin = perfil === 'admin'
-  const podeExcluirDireto = isAdmin
+  // Total de elementos comparativos em todos os laudos
+  // Usa elementosComparativos (campo inline) como contagem aproximada
+  const totalElementos = useMemo(() => {
+    return laudos.reduce((acc, l) => {
+      const elems = (l as any).elementosComparativos
+      if (Array.isArray(elems)) return acc + elems.length
+      // Fallback: dadosCalculoCDDM inline (quando não há __ref__)
+      const cddm = (l as any).dadosCalculoCDDM
+      if (cddm && typeof cddm === 'object' && Array.isArray(cddm.elementos)) {
+        return acc + cddm.elementos.length
+      }
+      return acc
+    }, 0)
+  }, [laudos])
 
   async function handleExcluir(id: string) {
-    if (!confirm('Tem certeza que deseja excluir este laudo? Esta ação não pode ser desfeita.')) return
+    if (!confirm('Tem certeza que deseja excluir este laudo?')) return
     try {
       setExcluindoId(id)
       await excluirLaudo(id)
@@ -182,7 +186,12 @@ export default function MeusLaudosPage() {
   }
 
   async function handleSolicitarExclusao(laudo: LaudoResumo) {
-    if (!confirm(`Solicitar exclusão deste laudo? O administrador precisará aprovar.`)) return
+    if (
+      !confirm(
+        `Solicitar exclusão do laudo #${laudo.codigo}? O administrador precisará aprovar.`
+      )
+    )
+      return
     setSolicitandoId(laudo.id)
     try {
       const res = await fetch('/api/solicitacoes', {
@@ -197,273 +206,292 @@ export default function MeusLaudosPage() {
         }),
       })
       const dados = await res.json()
-      if (!res.ok) { alert(dados.erro || 'Erro ao enviar solicitação.'); return }
+      if (!res.ok) {
+        alert(dados.erro || 'Erro ao enviar solicitação.')
+        return
+      }
       alert('Solicitação enviada. O administrador será notificado.')
     } finally {
       setSolicitandoId(null)
     }
   }
 
-  // ─── Geocodificação ───────────────────────────────────────────────────────
-
-  async function buscarCoordenadas() {
-    const raw = novoLaudo.coordenadasImovel.trim()
-    const match = raw.match(/(-?\d+[.,]?\d*)[,\s]+(-?\d+[.,]?\d*)/)
-    if (!match) {
-      setMsgCoords({ tipo: 'erro', texto: 'Formato inválido. Use: -23.550520, -46.633308' })
-      return
-    }
-    const lat = parseFloat(match[1].replace(',', '.'))
-    const lng = parseFloat(match[2].replace(',', '.'))
-    setBuscandoCoords(true)
-    setMsgCoords(null)
-    try {
-      const campos: Record<string, string> = {}
-      const resGeo = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
-        { headers: { 'Accept-Language': 'pt-BR' } }
-      )
-      if (resGeo.ok) {
-        const geo = await resGeo.json()
-        const a = geo.address || {}
-        const logradouro = [a.road, a.house_number].filter(Boolean).join(', ')
-        const bairro = a.suburb || a.neighbourhood || a.quarter || ''
-        const cidade = a.city || a.town || a.village || ''
-        const estado = a.state_code || a.state || ''
-        const cep = a.postcode || ''
-        if (logradouro) campos['endereco'] = [logradouro, bairro, cidade, estado, cep].filter(Boolean).join(', ')
-      }
-      try {
-        const deltas = [0.015, 0.05, 0.15]
-        const buildQuery = (d: number) => {
-          const b = `${lat-d},${lng-d},${lat+d},${lng+d}`
-          return `[out:json][timeout:25];(node["amenity"](${b});node["shop"](${b});node["highway"="bus_stop"](${b});node["tourism"](${b});node["leisure"](${b});way["name"](${b}););out center;`
-        }
-        let unicos: { nome: string; dist: number }[] = []
-        for (const delta of deltas) {
-          const resOv = await fetch('https://overpass-api.de/api/interpreter', {
-            method: 'POST', body: buildQuery(delta), headers: { 'Content-Type': 'text/plain' },
-          })
-          if (!resOv.ok) continue
-          const ov = await resOv.json()
-          const elems = (ov.elements || []).filter((el: any) => el.tags?.name)
-          const pontos = elems.map((el: any) => {
-            const elLat = el.lat ?? el.center?.lat
-            const elLon = el.lon ?? el.center?.lon
-            if (!elLat || !elLon) return null
-            return { nome: el.tags.name, dist: haversineMetros(lat, lng, elLat, elLon) }
-          }).filter(Boolean).sort((a: any, b: any) => a.dist - b.dist)
-          const vistos = new Set<string>()
-          unicos = []
-          for (const p of pontos) {
-            if (!vistos.has(p.nome)) { vistos.add(p.nome); unicos.push(p as { nome: string; dist: number }) }
-            if (unicos.length >= 5) break
-          }
-          if (unicos.length >= 3) break
-        }
-        if (unicos[0]) { campos['referencia1'] = unicos[0].nome; campos['distancia1'] = formatarDistancia(unicos[0].dist) }
-        if (unicos[1]) { campos['referencia2'] = unicos[1].nome; campos['distancia2'] = formatarDistancia(unicos[1].dist) }
-        if (unicos[2]) { campos['referencia3'] = unicos[2].nome; campos['distancia3'] = formatarDistancia(unicos[2].dist) }
-        if (unicos[3]) { campos['referencia4'] = unicos[3].nome; campos['distancia4'] = formatarDistancia(unicos[3].dist) }
-        if (unicos[4]) { campos['referencia5'] = unicos[4].nome; campos['distancia5'] = formatarDistancia(unicos[4].dist) }
-        if (unicos.length === 0) {
-          setMsgCoords({ tipo: 'ok', texto: 'Endereço preenchido. Nenhum ponto de referência encontrado nas proximidades — preencha manualmente.' })
-        }
-      } catch { /* overpass falhou — silencioso */ }
-      if (Object.keys(campos).length > 0) setNovoLaudo((prev) => ({ ...prev, ...campos }))
-      setMsgCoords({ tipo: 'ok', texto: 'Endereço e referências preenchidos automaticamente.' })
-    } catch {
-      setMsgCoords({ tipo: 'erro', texto: 'Não foi possível buscar os dados. Preencha manualmente.' })
-    } finally {
-      setBuscandoCoords(false)
-    }
+  function limparFiltros() {
+    setBusca('')
+    setStatus('')
+    setCidade('')
+    setTipoImovel('')
+    setFinalidade('')
+    setTipoLaudo('')
   }
 
-  // ─── Criar laudo direto (modal legado) ────────────────────────────────────
-
-  async function criarNovoLaudo() {
-    if (!novoLaudo.endereco && !novoLaudo.coordenadasImovel) {
-      alert('Preencha pelo menos o endereço ou as coordenadas do imóvel.')
-      return
-    }
-    setCriandoLaudo(true)
-    try {
-      const id = crypto.randomUUID()
-      const agora = new Date().toISOString()
-      const criadoPor = session?.user?.name || 'Usuário'
-      const payload = {
-        id, ...novoLaudo,
-        status: 'em_preenchimento',
-        statusVistoria: 'aguardando_agendamento',
-        statusAcompanhamento: 'levantamento_documentos',
-        criadoPorNome: criadoPor,
-        criadoEm: agora, atualizadoEm: agora,
-        melhoramentosPublicos: {}, croquis: [], fotos: [],
-        historicoEventos: [{ data: agora, usuario: criadoPor, acao: 'Laudo criado' }],
-      }
-      const res = await fetch('/api/laudos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) { alert('Erro ao criar laudo. Tente novamente.'); return }
-      setMostrarModal(false)
-      setNovoLaudo(NOVO_LAUDO_INICIAL)
-      setMsgCoords(null)
-      const rota = novoLaudo.tipoLaudo === 'simplificado'
-        ? `/laudo/simplificado?id=${id}`
-        : `/novo-laudo?id=${id}`
-      router.push(rota)
-    } finally {
-      setCriandoLaudo(false)
-    }
-  }
-
-  // ─── Render ───────────────────────────────────────────────────────────────
+  const isAdmin = perfil === 'admin'
+  const podeExcluirDireto = isAdmin
 
   return (
     <AppShell>
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-16 pt-8 lg:px-10 lg:pt-12">
+      <section className="mx-auto max-w-7xl px-6 pb-16 pt-10 lg:px-10 lg:pt-14">
 
         {/* Cabeçalho */}
-        <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">gestão de laudos</div>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">Meus laudos</h1>
-            <p className="mt-1 text-slate-500 text-sm">
+            <div className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-400">
+              gestão de laudos
+            </div>
+            <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-950">
+              Meus laudos
+            </h1>
+            <p className="mt-2 text-slate-500 text-sm">
               {carregando ? 'Carregando...' : `${laudos.length} laudo${laudos.length !== 1 ? 's' : ''} no total`}
             </p>
           </div>
-          {perfil !== 'cliente' && (
-            <button
-              onClick={() => setMostrarModal(true)}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition"
-            >
-              <span className="text-lg leading-none">+</span>
-              Laudo avulso
-            </button>
-          )}
+
+          <Link
+            href="/novo-laudo"
+            className="inline-flex items-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#0f3d68,#2563eb)] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/20 transition hover:-translate-y-0.5"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Novo laudo
+          </Link>
         </div>
 
-        {/* ── Quadro Kanban de demandas ── */}
-        {perfil !== 'cliente' && (
-          <KanbanBoard onLaudoIniciado={carregarDados} />
-        )}
-
-        {/* ── Separador ── */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="flex-1 h-px bg-slate-200" />
-          <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Laudos cadastrados</span>
-          <div className="flex-1 h-px bg-slate-200" />
-        </div>
-
-        {/* Cards de dashboard */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        {/* Cards de resumo — statusAcompanhamento */}
+        <div className="mt-8 grid gap-4 grid-cols-2 xl:grid-cols-4">
           {ORDEM_STATUS.map((st) => {
             const cfg = acompanhamentoConfig[st]
-            const ativo = filtroAcomp === st
             return (
-              <button
+              <CardResumo
                 key={st}
-                type="button"
-                onClick={() => setFiltroAcomp(ativo ? '' : st)}
-                className={`rounded-[20px] border p-4 text-left transition ${
-                  ativo ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
-              >
-                <span className={`inline-block h-2 w-2 rounded-full ${cfg.dot} mb-2`} />
-                <div className="text-2xl font-semibold text-slate-950">{contadores[st]}</div>
-                <div className="mt-1 text-xs text-slate-500 leading-tight">
-                  {formatarStatusAcompanhamento(st)}
-                </div>
-              </button>
+                titulo={formatarStatusAcompanhamento(st)}
+                valor={contadores[st]}
+                classe={cfg.classe}
+                ativo={status === st}
+                onClick={() => setStatus(status === st ? '' : st)}
+              />
             )
           })}
         </div>
 
-        {/* Busca */}
-        <div className="mb-5">
+        {/* ── Card de destaque: Mapa de Elementos ── */}
+        <div className="mt-5">
+          <Link
+            href="/mapa-elementos"
+            className="group flex items-center justify-between gap-4 rounded-[28px] border border-slate-200 bg-gradient-to-r from-slate-900 via-blue-950 to-blue-900 px-6 py-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <div className="flex items-center gap-4">
+              {/* Ícone de mapa */}
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10">
+                <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                  <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+                  <line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" />
+                </svg>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-white">Mapa de Elementos Comparativos</p>
+                  <span className="rounded-full bg-orange-500 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">
+                    novo
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-white/60">
+                  Visualize no mapa todos os imóveis usados como comparativos nos seus laudos
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              {totalElementos > 0 && (
+                <div className="rounded-xl bg-white/10 px-3 py-1.5 text-center">
+                  <p className="text-lg font-bold text-white leading-none">{totalElementos}</p>
+                  <p className="text-[9px] text-white/50 uppercase tracking-wide">elemento{totalElementos !== 1 ? 's' : ''}</p>
+                </div>
+              )}
+              <svg viewBox="0 0 24 24" className="h-5 w-5 text-white/50 transition group-hover:text-white group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+              </svg>
+            </div>
+          </Link>
+        </div>
+
+        {/* Painel de filtros */}
+        <div className="mt-8 rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm lg:p-5 space-y-3">
+          <div className="grid gap-3 lg:grid-cols-[repeat(5,minmax(0,1fr))_auto]">
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+            >
+              <option value="">Status</option>
+              <option value="levantamento_documentos">Levantamento de documentos</option>
+              <option value="atuando_vistoria">Atuando na vistoria</option>
+              <option value="atuando_pesquisa">Atuando na pesquisa</option>
+              <option value="concluido">Concluído</option>
+            </select>
+
+            <select
+              value={cidade}
+              onChange={(e) => setCidade(e.target.value)}
+              className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+            >
+              <option value="">Cidade</option>
+              {cidades.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+
+            <select
+              value={tipoImovel}
+              onChange={(e) => setTipoImovel(e.target.value)}
+              className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+            >
+              <option value="">Tipo de imóvel</option>
+              {tipos.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+
+            <select
+              value={finalidade}
+              onChange={(e) => setFinalidade(e.target.value)}
+              className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+            >
+              <option value="">Finalidade</option>
+              {finalidades.map((f) => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
+
+            <select
+              value={tipoLaudo}
+              onChange={(e) => setTipoLaudo(e.target.value)}
+              className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+            >
+              <option value="">Tipo de laudo</option>
+              <option value="detalhado">Detalhado</option>
+              <option value="simplificado">Simplificado</option>
+            </select>
+
+            <button
+              type="button"
+              onClick={limparFiltros}
+              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-500 hover:bg-slate-50 transition whitespace-nowrap"
+            >
+              Limpar filtros
+            </button>
+          </div>
+
           <input
+            type="text"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por endereço, proprietário, matrícula..."
-            className="w-full border border-slate-200 rounded-2xl px-4 py-2.5 text-sm bg-white outline-none focus:border-blue-400 transition"
+            placeholder="Buscar por endereço, matrícula, proprietário ou solicitante..."
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-300 focus:bg-white transition"
           />
         </div>
 
-        {/* Lista */}
-        <div className="rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden">
+        {/* Lista de laudos */}
+        <div className="mt-6 rounded-[28px] border border-slate-200 bg-white overflow-hidden shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <span className="font-semibold text-slate-900">Laudos</span>
-            {filtroAcomp && (
-              <button
-                type="button"
-                onClick={() => setFiltroAcomp('')}
-                className="text-xs text-slate-400 hover:text-slate-600 transition"
-              >
-                Ver todos ×
-              </button>
-            )}
+            <span className="text-sm text-slate-400">
+              {filtrados.length} resultado{filtrados.length !== 1 ? 's' : ''}
+            </span>
           </div>
 
           {carregando ? (
-            <div className="px-6 py-16 text-center text-slate-400 text-sm">Carregando laudos...</div>
-          ) : laudosFiltrados.length === 0 ? (
             <div className="px-6 py-16 text-center text-slate-400 text-sm">
-              {busca || filtroAcomp ? 'Nenhum laudo encontrado para essa busca.' : 'Nenhum laudo cadastrado ainda.'}
+              Carregando laudos...
+            </div>
+          ) : filtrados.length === 0 ? (
+            <div className="px-6 py-16 text-center text-slate-400 text-sm">
+              Nenhum laudo encontrado com os filtros aplicados.
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
-              {laudosFiltrados.map((laudo) => {
-                const rotaEdicao = laudo.tipoLaudo === 'simplificado'
-                  ? `/laudo/simplificado?id=${laudo.id}`
-                  : `/novo-laudo?id=${laudo.id}`
-                const rotaVis = `/visualizar-laudo?id=${laudo.id}`
-                const stAcomp = (laudo.statusAcompanhamento || 'levantamento_documentos') as StatusAcompanhamento
-                const cfgAcomp = acompanhamentoConfig[stAcomp]
+              {filtrados.map((laudo) => {
+                const cfg =
+                  acompanhamentoConfig[laudo.statusAcompanhamento] ||
+                  acompanhamentoConfig.levantamento_documentos
+                const urlVisualizar =
+                  laudo.tipoLaudo === 'simplificado'
+                    ? `/visualizar-laudo/simplificado?id=${encodeURIComponent(laudo.id)}`
+                    : `/visualizar-laudo?id=${encodeURIComponent(laudo.id)}`
+                const urlEditar =
+                  laudo.tipoLaudo === 'simplificado'
+                    ? `/laudo/simplificado?id=${encodeURIComponent(laudo.id)}`
+                    : `/novo-laudo?id=${encodeURIComponent(laudo.id)}`
+
                 return (
-                  <div key={laudo.id} className="px-6 py-4 flex items-start justify-between gap-4 hover:bg-slate-50 transition">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-slate-900 truncate">{laudo.endereco || 'Endereço não informado'}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {laudo.solicitante || '—'}
-                      </p>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cfgAcomp.classe}`}>
-                          {formatarStatusAcompanhamento(stAcomp)}
-                        </span>
-                        {laudo.statusVistoria && laudo.statusVistoria !== 'aguardando_agendamento' && (
-                          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700">
-                            {statusVistoriaLabel[laudo.statusVistoria] || laudo.statusVistoria}
-                          </span>
-                        )}
-                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-600">
-                          {laudo.tipoLaudo === 'simplificado' ? 'Simplificado' : 'Detalhado'}
-                        </span>
-                        <span className="text-xs text-slate-400">Criado em {formatarData(laudo.data)}</span>
-                      </div>
+                  <div
+                    key={laudo.id}
+                    className="flex flex-wrap items-center gap-4 px-6 py-4 hover:bg-slate-50/60 transition"
+                  >
+                    {/* Código */}
+                    <div className="shrink-0 w-16">
+                      <span className="text-xs font-mono text-slate-400">#{laudo.codigo}</span>
                     </div>
-                    <div className="flex flex-col gap-2 shrink-0">
-                      <a href={rotaEdicao}
-                        className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition text-center">
-                        Editar
-                      </a>
-                      <a href={rotaVis}
-                        className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition text-center">
+
+                    {/* Endereço + cliente */}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-slate-900">
+                        {laudo.logradouro || laudo.endereco || '—'}
+                      </p>
+                      <p className="truncate text-xs text-slate-500">
+                        {[laudo.bairro, laudo.cidade, laudo.uf].filter(Boolean).join(', ')}
+                        {laudo.nomeCliente ? ` · ${laudo.nomeCliente}` : ''}
+                      </p>
+                    </div>
+
+                    {/* Status acompanhamento */}
+                    <div className="shrink-0">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${cfg.classe}`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${cfg.dotClasse}`} />
+                        {cfg.label}
+                      </span>
+                    </div>
+
+                    {/* Data */}
+                    <div className="shrink-0 w-24 text-right">
+                      <span className="text-xs text-slate-400">
+                        {laudo.criadoEm ? formatarData(laudo.criadoEm) : '—'}
+                      </span>
+                    </div>
+
+                    {/* Ações */}
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Link
+                        href={urlVisualizar}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition"
+                      >
                         Visualizar
-                      </a>
+                      </Link>
+                      <Link
+                        href={urlEditar}
+                        className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 transition"
+                      >
+                        Editar
+                      </Link>
                       {podeExcluirDireto ? (
-                        <button type="button"
+                        <button
+                          type="button"
                           onClick={() => handleExcluir(laudo.id)}
                           disabled={excluindoId === laudo.id}
-                          className="rounded-xl border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition disabled:opacity-50 text-center">
+                          className="rounded-xl border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition disabled:opacity-50"
+                        >
                           {excluindoId === laudo.id ? '...' : 'Excluir'}
                         </button>
                       ) : (
-                        <button type="button"
+                        <button
+                          type="button"
                           onClick={() => handleSolicitarExclusao(laudo)}
                           disabled={solicitandoId === laudo.id}
-                          className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50 transition disabled:opacity-50 text-center">
+                          className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50 transition disabled:opacity-50"
+                        >
                           {solicitandoId === laudo.id ? '...' : 'Solicitar exclusão'}
                         </button>
                       )}
@@ -475,204 +503,6 @@ export default function MeusLaudosPage() {
           )}
         </div>
       </section>
-
-      {/* ── Modal de criação direta (laudo avulso sem card) ── */}
-      {mostrarModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 overflow-y-auto py-8 px-4">
-          <div className="w-full max-w-2xl rounded-[28px] border border-slate-200 bg-white p-8 shadow-xl">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-slate-950">Iniciar laudo avulso</h2>
-              <button
-                onClick={() => { setMostrarModal(false); setMsgCoords(null); setNovoLaudo(NOVO_LAUDO_INICIAL) }}
-                className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
-              >×</button>
-            </div>
-
-            <div className="space-y-4">
-              {/* Coordenadas */}
-              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 space-y-3">
-                <label className="block text-sm font-semibold text-blue-900">📍 Coordenadas do imóvel</label>
-                <div className="flex gap-2">
-                  <input value={novoLaudo.coordenadasImovel}
-                    onChange={(e) => setField('coordenadasImovel', e.target.value)}
-                    placeholder="Ex: -23.550520, -46.633308"
-                    className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
-                  <button type="button" onClick={buscarCoordenadas}
-                    disabled={buscandoCoords || !novoLaudo.coordenadasImovel.trim()}
-                    className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap">
-                    {buscandoCoords ? 'Buscando…' : 'Preencher dados'}
-                  </button>
-                </div>
-                {msgCoords && (
-                  <p className={`text-sm ${msgCoords.tipo === 'ok' ? 'text-emerald-700' : 'text-rose-600'}`}>
-                    {msgCoords.texto}
-                  </p>
-                )}
-              </div>
-
-              {/* Dados principais */}
-              <div className="grid grid-cols-2 gap-3">
-                <input value={novoLaudo.endereco} onChange={(e) => setField('endereco', e.target.value)}
-                  placeholder="Endereço" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
-                <input value={novoLaudo.proprietario} onChange={(e) => setField('proprietario', e.target.value)}
-                  placeholder="Proprietário" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
-                <select value={novoLaudo.empresaClienteId}
-                  onChange={(e) => {
-                    const emp = empresas.find((em) => em.id === e.target.value)
-                    setNovoLaudo((prev) => ({ ...prev, empresaClienteId: emp?.id || '', solicitante: emp?.nome || '' }))
-                  }}
-                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400">
-                  <option value="">Empresa / Solicitante</option>
-                  {empresas.map((emp) => <option key={emp.id} value={emp.id}>{emp.nome}</option>)}
-                </select>
-                <select value={novoLaudo.tipo} onChange={(e) => setField('tipo', e.target.value)}
-                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400">
-                  <option value="">Tipo do imóvel</option>
-                  <optgroup label="Residencial">
-                    <option>Apartamento</option><option>Casa</option><option>Sobrado</option>
-                    <option>Cobertura</option><option>Kitnet / Studio</option><option>Flat</option>
-                    <option>Terreno residencial</option><option>Sítio / Chácara</option><option>Fazenda</option>
-                  </optgroup>
-                  <optgroup label="Comercial">
-                    <option>Sala comercial</option><option>Loja comercial</option><option>Conjunto comercial</option>
-                    <option>Ponto comercial</option><option>Escritório</option><option>Hotel / Pousada</option>
-                    <option>Motel</option><option>Restaurante / Lanchonete</option><option>Posto de combustíveis</option>
-                  </optgroup>
-                  <optgroup label="Industrial / Logístico">
-                    <option>Galpão industrial</option><option>Galpão logístico</option><option>Indústria</option>
-                    <option>Depósito / Armazém</option><option>Centro de distribuição</option>
-                  </optgroup>
-                  <optgroup label="Especial">
-                    <option>Hospital / Clínica</option><option>Escola / Creche</option><option>Igreja / Templo</option>
-                    <option>Posto de saúde</option><option>Edifício de uso misto</option>
-                    <option>Estacionamento</option><option>Terreno comercial</option><option>Terreno industrial</option>
-                  </optgroup>
-                </select>
-                <select value={novoLaudo.finalidade} onChange={(e) => setField('finalidade', e.target.value)}
-                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400">
-                  <option value="">Finalidade</option>
-                  <option value="garantia">Garantia</option>
-                  <option value="execucao">Execução</option>
-                  <option value="locacao">Locação</option>
-                </select>
-                <input value={novoLaudo.matricula} onChange={(e) => setField('matricula', e.target.value)}
-                  placeholder="Matrícula" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
-              </div>
-
-              {/* Áreas */}
-              <div className="grid grid-cols-2 gap-3">
-                <input value={novoLaudo.areaConstruidaTotal} onChange={(e) => setField('areaConstruidaTotal', e.target.value)}
-                  placeholder="Área construída total (m²)" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
-                <input value={novoLaudo.areaConstruidaAverbada} onChange={(e) => setField('areaConstruidaAverbada', e.target.value)}
-                  placeholder="Área construída averbada (m²)" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
-                <input value={novoLaudo.areaTerrenoTotal} onChange={(e) => setField('areaTerrenoTotal', e.target.value)}
-                  placeholder="Área de terreno total (m²)" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
-                <input value={novoLaudo.areaTerrenoAverbada} onChange={(e) => setField('areaTerrenoAverbada', e.target.value)}
-                  placeholder="Área de terreno averbada (m²)" className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-blue-400" />
-              </div>
-
-              {/* Pontos de referência */}
-              {(novoLaudo.referencia1 || novoLaudo.referencia2) && (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-2">
-                  <p className="text-sm font-semibold text-slate-700">Pontos de referência</p>
-                  {[1, 2, 3, 4, 5].map((n) => {
-                    const ref = (novoLaudo as any)[`referencia${n}`]
-                    const dist = (novoLaudo as any)[`distancia${n}`]
-                    if (!ref) return null
-                    return (
-                      <div key={n} className="flex items-center justify-between text-sm">
-                        <span className="text-slate-700">{ref}</span>
-                        <span className="text-slate-500 text-xs">{dist}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {/* Modelo de laudo */}
-              <div>
-                <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Modelo de laudo</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {(['detalhado', 'simplificado'] as const).map((tipo) => (
-                    <button key={tipo} type="button"
-                      onClick={() => setNovoLaudo((prev) => ({ ...prev, tipoLaudo: tipo }))}
-                      className={`rounded-2xl border-2 p-3 text-left transition ${
-                        novoLaudo.tipoLaudo === tipo
-                          ? tipo === 'simplificado' ? 'border-emerald-400 bg-emerald-50' : 'border-blue-400 bg-blue-50'
-                          : 'border-slate-200 bg-white hover:border-slate-300'
-                      }`}>
-                      <p className="text-xs font-semibold text-slate-800 mb-1">
-                        {tipo === 'detalhado' ? 'Laudo completo NBR 14653' : 'Laudo simplificado'}
-                      </p>
-                      <p className="text-[11px] text-slate-500 leading-tight">
-                        {tipo === 'detalhado' ? 'Todas as seções da norma. ~20 páginas.' : 'Formato compacto para análise rápida. ~4 páginas.'}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Tipo de imóvel — só para simplificado */}
-              {novoLaudo.tipoLaudo === 'simplificado' && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Tipo de imóvel</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {([
-                      { value: 'isolado', label: 'Imóvel isolado', desc: 'Casa, terreno, galpão. Sem fração ideal.' },
-                      { value: 'fracao', label: 'Imóvel com fração', desc: 'Apartamento, sala, vaga. Possui área comum e fração ideal.' },
-                    ] as const).map(({ value, label, desc }) => (
-                      <button key={value} type="button"
-                        onClick={() => {
-                          const novoFatores = value === 'isolado'
-                            ? { ...novoLaudo.fatoresCDDMAtivos, local: true, andar: false, vaga: false }
-                            : { ...novoLaudo.fatoresCDDMAtivos, local: true, vaga: true }
-                          setNovoLaudo((prev) => ({ ...prev, tipoImovelCDDM: value, fatoresCDDMAtivos: novoFatores }))
-                        }}
-                        className={`rounded-2xl border-2 p-3 text-left transition ${
-                          novoLaudo.tipoImovelCDDM === value ? 'border-blue-400 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'
-                        }`}>
-                        <p className="text-xs font-semibold text-slate-800 mb-1">{label}</p>
-                        <p className="text-[11px] text-slate-500 leading-tight">{desc}</p>
-                      </button>
-                    ))}
-                  </div>
-                  {novoLaudo.tipoImovelCDDM === 'fracao' && (
-                    <div className="grid grid-cols-3 gap-3 mt-3">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1">Área comum (m²)</label>
-                        <input value={novoLaudo.areaComum} onChange={e => setNovoLaudo(p => ({ ...p, areaComum: e.target.value }))}
-                          placeholder="0,00" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1">Área total (m²)</label>
-                        <input value={novoLaudo.areaTotal} onChange={e => setNovoLaudo(p => ({ ...p, areaTotal: e.target.value }))}
-                          placeholder="0,00" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1">Fração ideal (%)</label>
-                        <input value={novoLaudo.fracaoIdeal} onChange={e => setNovoLaudo(p => ({ ...p, fracaoIdeal: e.target.value }))}
-                          placeholder="0,000000" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => { setMostrarModal(false); setMsgCoords(null); setNovoLaudo(NOVO_LAUDO_INICIAL) }}
-                className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                Cancelar
-              </button>
-              <button onClick={criarNovoLaudo} disabled={criandoLaudo}
-                className="flex-1 rounded-2xl bg-[linear-gradient(135deg,#0f3d68,#2563eb)] py-3 text-sm font-semibold text-white disabled:opacity-60">
-                {criandoLaudo ? 'Criando laudo...' : 'Criar laudo'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </AppShell>
   )
 }

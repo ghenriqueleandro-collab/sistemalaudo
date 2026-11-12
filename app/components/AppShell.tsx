@@ -1,7 +1,8 @@
 /**
  * SALVAR EM: src/app/components/AppShell.tsx
  *
- * Atualizado: adicionado link "Empresas" visível apenas para admin.
+ * Atualizado: adicionado link "Demandas" (visível para todos) e
+ * "Mapa de Elementos" (visível para todos) na navegação.
  */
 
 'use client'
@@ -113,22 +114,43 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       href: '/meus-laudos',
       label: 'Meus laudos',
       visivel: true,
+      novo: false,
     },
-
+    {
+      href: '/demandas',
+      label: 'Demandas',
+      visivel: true,
+      novo: false,
+    },
+    {
+      href: '/agendamentos',
+      label: 'Agendamentos',
+      visivel: isAdmin || !!permissoes?.realizarAgendamentos,
+      novo: false,
+    },
     {
       href: '/aprovacoes',
       label: 'Aprovações',
       visivel: isAdmin,
+      novo: false,
     },
     {
-      href: '/empresas',           // ← NOVO
+      href: '/empresas',
       label: 'Empresas',
       visivel: isAdmin,
+      novo: false,
     },
     {
       href: '/usuarios',
       label: 'Usuários',
       visivel: isAdmin,
+      novo: false,
+    },
+    {
+      href: '/mapa-elementos',
+      label: 'Mapa de Elementos',
+      visivel: true,
+      novo: true,
     },
   ].filter((link) => {
     if (!perfil) return true // ainda carregando
@@ -154,11 +176,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition ${classeLink(
+                className={`relative rounded-full px-4 py-2 text-sm font-medium transition ${classeLink(
                   pathname === link.href
                 )}`}
               >
                 {link.label}
+                {link.novo && pathname !== link.href && (
+                  <span className="absolute -right-1 -top-1.5 rounded-full bg-orange-500 px-1.5 py-px text-[8px] font-black uppercase tracking-wide text-white">
+                    novo
+                  </span>
+                )}
               </Link>
             ))}
           </nav>
