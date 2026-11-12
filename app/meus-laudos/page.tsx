@@ -424,18 +424,14 @@ export default function MeusLaudosPage() {
                     key={laudo.id}
                     className="flex flex-wrap items-center gap-4 px-6 py-4 hover:bg-slate-50/60 transition"
                   >
-                    {/* Código */}
-                    <div className="shrink-0 w-16">
-                      <span className="text-xs font-mono text-slate-400">#{laudo.codigo}</span>
-                    </div>
-
-                    {/* Endereço + cliente */}
+                    {/* Endereço + cliente + código */}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-slate-900">
                         {laudo.endereco || '—'}
                       </p>
                       <p className="truncate text-xs text-slate-500">
-                        {laudo.cidade || ''}
+                        <span className="font-mono text-slate-400">#{laudo.codigo}</span>
+                        {laudo.cidade ? ` · ${laudo.cidade}` : ''}
                         {nomeCliente ? ` · ${nomeCliente}` : ''}
                       </p>
                     </div>

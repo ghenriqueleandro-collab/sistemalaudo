@@ -1,8 +1,7 @@
 /**
  * SALVAR EM: src/app/components/AppShell.tsx
  *
- * Atualizado: adicionado link "Demandas" (visível para todos) e
- * "Mapa de Elementos" (visível para todos) na navegação.
+ * Atualizado: nav compacta (px-3 py-1.5, text-xs) para acomodar 7 links sem espremer.
  */
 
 'use client'
@@ -148,12 +147,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     },
     {
       href: '/mapa-elementos',
-      label: 'Mapa de Elementos',
+      label: 'Mapa',
       visivel: true,
       novo: true,
     },
   ].filter((link) => {
-    if (!perfil) return true // ainda carregando
+    if (!perfil) return true
     return link.visivel
   })
 
@@ -166,40 +165,43 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#eff6ff,white_45%,#e2e8f0)] text-slate-900">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[linear-gradient(135deg,#082f49_0%,#0f3d68_42%,#2563eb_100%)] shadow-[0_12px_45px_-24px_rgba(15,23,42,0.75)] backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-4 lg:px-10">
+        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 lg:px-8">
           <Link href="/meus-laudos" className="shrink-0 flex items-center">
             <BrandLogo />
           </Link>
 
-          <nav className="hidden items-center gap-2 rounded-full bg-white/10 p-1.5 md:flex">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`relative rounded-full px-4 py-2 text-sm font-medium transition ${classeLink(
-                  pathname === link.href
-                )}`}
-              >
-                {link.label}
-                {link.novo && pathname !== link.href && (
-                  <span className="absolute -right-1 -top-1.5 rounded-full bg-orange-500 px-1.5 py-px text-[8px] font-black uppercase tracking-wide text-white">
-                    novo
-                  </span>
-                )}
-              </Link>
-            ))}
+          {/* Nav: scroll horizontal para não espremer em telas intermediárias */}
+          <nav className="hidden min-w-0 flex-1 items-center md:flex">
+            <div className="flex items-center gap-1 overflow-x-auto rounded-full bg-white/10 p-1 scrollbar-none">
+              {links.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`relative shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${classeLink(
+                    pathname === link.href
+                  )}`}
+                >
+                  {link.label}
+                  {link.novo && pathname !== link.href && (
+                    <span className="absolute -right-1 -top-1 rounded-full bg-orange-500 px-1 py-px text-[7px] font-black uppercase tracking-wide text-white leading-none">
+                      novo
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </div>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3">
             {/* Sino de notificações */}
             <div ref={sinoRef} className="relative">
               <button
                 onClick={() => setSinoAberto((v) => !v)}
-                className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 transition"
+                className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 transition"
               >
                 <svg
                   viewBox="0 0 24 24"
-                  className="h-5 w-5"
+                  className="h-4 w-4"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="1.8"
@@ -208,14 +210,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                 </svg>
                 {naoLidas > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white border-2 border-blue-800">
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white border-2 border-blue-800">
                     {naoLidas > 9 ? '9+' : naoLidas}
                   </span>
                 )}
               </button>
 
               {sinoAberto && (
-                <div className="absolute right-0 top-12 z-50 w-80 rounded-[20px] border border-slate-200 bg-white shadow-[0_20px_60px_-20px_rgba(15,23,42,0.4)] overflow-hidden">
+                <div className="absolute right-0 top-11 z-50 w-80 rounded-[20px] border border-slate-200 bg-white shadow-[0_20px_60px_-20px_rgba(15,23,42,0.4)] overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
                     <span className="text-sm font-semibold text-slate-900">
                       Notificações
