@@ -112,7 +112,7 @@ function CardDemanda({
     >
       <div className="flex items-start justify-between gap-2">
         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-          {laudo.referencia || laudo.id.slice(0, 8).toUpperCase()}
+          {(laudo as any).referencia || (laudo as any).codigo || laudo.id.slice(0, 8).toUpperCase()}
         </span>
         <svg
           className="h-3.5 w-3.5 shrink-0 text-slate-300 group-hover:text-blue-400 transition mt-0.5"
@@ -129,8 +129,8 @@ function CardDemanda({
       <p className="mt-1.5 text-sm font-semibold text-slate-900 leading-tight line-clamp-2">
         {endereco}
       </p>
-      {laudo.nomeCliente && (
-        <p className="mt-1 text-xs text-slate-500 truncate">{laudo.nomeCliente}</p>
+      {(laudo as any).nomeCliente && (
+        <p className="mt-1 text-xs text-slate-500 truncate">{(laudo as any).nomeCliente}</p>
       )}
       <p className="mt-2 text-[10px] text-slate-400">
         {formatarData(laudo.criadoEm)}
@@ -172,7 +172,7 @@ function ModalMover({
               Mover demanda
             </p>
             <p className="mt-0.5 text-sm font-semibold text-slate-900 line-clamp-1">
-              {laudo.referencia || laudo.id.slice(0, 8).toUpperCase()}
+              {(laudo as any).referencia || (laudo as any).codigo || laudo.id.slice(0, 8).toUpperCase()}
             </p>
           </div>
           <button
