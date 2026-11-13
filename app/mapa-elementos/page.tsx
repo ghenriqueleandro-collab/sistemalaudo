@@ -480,7 +480,44 @@ export default function MapaElementosPage() {
     return null
   }, [lerMidia])
 
-  // ── Carregar dados ──
+  // ── Processar um único laudo → lista de ElementoMapa com coord válida ──
+  const processarLaudo = useCallback(async (laudo: any): Promise<ElementoMapa[]> => {
+    let elems: any[] = []
+
+    // 1. dadosCalculoCDDM — fonte preferida (tem VU calculado)
+    const rawCddm = laudo.dadosCalculoCDDM
+    if (rawCddm && typeof rawCddm === 'object' && Array.isArray(rawCddm.elementos)) {
+      elems = rawCddm.elementos
+    } else if (typeof rawCddm === 'string' && (rawCddm.startsWith('__ref__:') || rawCddm.startsWith('__chunks__:'))) {
+      const resolvido = await resolverCampo(rawCddm)
+      if (resolvido && typeof resolvido === 'object' && Array.isArray(resolvido.elementos)) {
+        elems = resolvido.elementos
+      }
+    }
+
+    // 2. Fallback: elementosComparativos
+    //    Usado quando cddm está ausente OU quando cddm resolvido veio vazio
+    if (elems.length === 0) {
+      const rawElems = laudo.elementosComparativos
+      if (Array.isArray(rawElems)) {
+        elems = rawElems
+      } else if (typeof rawElems === 'string' && (rawElems.startsWith('__ref__:') || rawElems.startsWith('__chunks__:'))) {
+        const resolvido = await resolverCampo(rawElems)
+        if (Array.isArray(resolvido)) elems = resolvido
+      }
+    }
+
+    // Filtrar apenas elementos com coordenadas válidas
+    return elems
+      .filter((el: any) => el?.coordenadas && parseCoord(el.coordenadas))
+      .map((el: any) => ({
+        ...el,
+        laudoId: laudo.id,
+        laudoReferencia: laudo.referencia || laudo.id.slice(0, 8),
+      }))
+  }, [resolverCampo])
+
+  // ── Carregar dados em lotes para não sobrecarregar o servidor ──
   const carregarElementos = useCallback(async () => {
     setCarregando(true)
     setErro('')
@@ -497,51 +534,22 @@ export default function MapaElementosPage() {
         return true
       })
 
-      // Resolver todos os laudos em paralelo (não serial)
-      const resultados = await Promise.all(
-        laudos.map(async (laudo: any): Promise<ElementoMapa[]> => {
-          let elems: any[] = []
+      // Processar em lotes de 8 para evitar throttle do servidor
+      const LOTE = 8
+      const lista: ElementoMapa[] = []
+      for (let i = 0; i < laudos.length; i += LOTE) {
+        const lote = laudos.slice(i, i + LOTE)
+        const resultadosLote = await Promise.all(lote.map((l: any) => processarLaudo(l)))
+        lista.push(...resultadosLote.flat())
+      }
 
-          // 1. dadosCalculoCDDM — fonte preferida (inclui VU calculado)
-          const rawCddm = laudo.dadosCalculoCDDM
-          if (rawCddm && typeof rawCddm === 'object' && Array.isArray(rawCddm.elementos)) {
-            elems = rawCddm.elementos
-          } else if (typeof rawCddm === 'string' && (rawCddm.startsWith('__ref__:') || rawCddm.startsWith('__chunks__:'))) {
-            const resolvido = await resolverCampo(rawCddm)
-            if (resolvido && typeof resolvido === 'object' && Array.isArray(resolvido.elementos)) {
-              elems = resolvido.elementos
-            }
-          }
-
-          // 2. Fallback: elementosComparativos
-          if (elems.length === 0) {
-            const rawElems = laudo.elementosComparativos
-            if (Array.isArray(rawElems)) {
-              elems = rawElems
-            } else if (typeof rawElems === 'string' && (rawElems.startsWith('__ref__:') || rawElems.startsWith('__chunks__:'))) {
-              const resolvido = await resolverCampo(rawElems)
-              if (Array.isArray(resolvido)) elems = resolvido
-            }
-          }
-
-          // Filtrar elementos com coordenadas válidas
-          return elems
-            .filter((el: any) => el?.coordenadas && parseCoord(el.coordenadas))
-            .map((el: any) => ({
-              ...el,
-              laudoId: laudo.id,
-              laudoReferencia: laudo.referencia || laudo.id.slice(0, 8),
-            }))
-        })
-      )
-
-      setElementos(resultados.flat())
+      setElementos(lista)
     } catch {
       setErro('Não foi possível carregar os elementos. Tente novamente.')
     } finally {
       setCarregando(false)
     }
-  }, [resolverCampo])
+  }, [processarLaudo])
 
   useEffect(() => {
     if (sessionStatus === 'authenticated') carregarElementos()
