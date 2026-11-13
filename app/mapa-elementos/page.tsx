@@ -265,11 +265,23 @@ function MapaOSM({
     }).filter((p): p is PinInfo => p !== null)
   }, [elementos, center, zoom, centerPx, size])
 
-  // Handlers
-  function handleWheel(e: React.WheelEvent) {
-    e.preventDefault()
-    const delta = e.deltaY > 0 ? -1 : 1
-    setZoom((z: number) => Math.min(18, Math.max(5, z + delta)))
+  // Registrar listener de wheel nativo com passive:false para poder chamar preventDefault
+  // (o onWheel do React é passivo em alguns browsers e ignora preventDefault)
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const handler = (e: WheelEvent) => {
+      e.preventDefault()
+      const delta = e.deltaY > 0 ? -1 : 1
+      setZoom((z: number) => Math.min(18, Math.max(5, z + delta)))
+    }
+    el.addEventListener('wheel', handler, { passive: false })
+    return () => el.removeEventListener('wheel', handler)
+  }, [])
+
+  // Handlers (touch/mouse continuam via React)
+  function handleWheel(_e: React.WheelEvent) {
+    // Tratado pelo listener nativo acima
   }
 
   function handleMouseDown(e: React.MouseEvent) {
@@ -438,6 +450,14 @@ export default function MapaElementosPage() {
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_INICIAIS)
   const [selecionado, setSelecionado] = useState<ElementoMapa | null>(null)
   const [painelFiltroAberto, setPainelFiltroAberto] = useState(true)
+
+  // Travar scroll do body enquanto a página do mapa estiver montada
+  // (evita que o scroll da página apareça junto com o zoom do mapa)
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
 
   // ── Helpers para resolver refs do Redis ──
 
