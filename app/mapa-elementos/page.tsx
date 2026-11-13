@@ -343,7 +343,7 @@ function MapaOSM({
       onTouchEnd={handleMouseUp}
     >
       {/* Tiles OSM */}
-      {tiles.map(({ tx, ty, left, top }) => (
+      {tiles.map(({ tx, ty, left, top }: TileInfo) => (
         <img
           key={`${zoom}-${tx}-${ty}`}
           src={`https://tile.openstreetmap.org/${zoom}/${tx}/${ty}.png`}
@@ -362,7 +362,7 @@ function MapaOSM({
       ))}
 
       {/* Pins */}
-      {pins.map(({ el, px, py }, idx) => {
+      {pins.map(({ el, px, py }: PinInfo, idx) => {
         const cor = corParaTipo(el.tipo || '')
         const ativo = selecionado?.id === el.id && selecionado?.laudoId === el.laudoId
         return (
@@ -497,47 +497,45 @@ export default function MapaElementosPage() {
         return true
       })
 
-      const lista: ElementoMapa[] = []
+      // Resolver todos os laudos em paralelo (não serial)
+      const resultados = await Promise.all(
+        laudos.map(async (laudo: any): Promise<ElementoMapa[]> => {
+          let elems: any[] = []
 
-      for (const laudo of laudos) {
-        let elems: any[] = []
-
-        // 1. dadosCalculoCDDM — fonte preferida (inclui VU calculado)
-        const rawCddm = laudo.dadosCalculoCDDM
-        if (rawCddm && typeof rawCddm === 'object' && Array.isArray(rawCddm.elementos)) {
-          elems = rawCddm.elementos
-        } else if (typeof rawCddm === 'string' && (rawCddm.startsWith('__ref__:') || rawCddm.startsWith('__chunks__:'))) {
-          const resolvido = await resolverCampo(rawCddm)
-          if (resolvido && typeof resolvido === 'object' && Array.isArray(resolvido.elementos)) {
-            elems = resolvido.elementos
+          // 1. dadosCalculoCDDM — fonte preferida (inclui VU calculado)
+          const rawCddm = laudo.dadosCalculoCDDM
+          if (rawCddm && typeof rawCddm === 'object' && Array.isArray(rawCddm.elementos)) {
+            elems = rawCddm.elementos
+          } else if (typeof rawCddm === 'string' && (rawCddm.startsWith('__ref__:') || rawCddm.startsWith('__chunks__:'))) {
+            const resolvido = await resolverCampo(rawCddm)
+            if (resolvido && typeof resolvido === 'object' && Array.isArray(resolvido.elementos)) {
+              elems = resolvido.elementos
+            }
           }
-        }
 
-        // 2. Fallback: elementosComparativos (todos os elementos mesmo sem VU)
-        if (elems.length === 0) {
-          const rawElems = laudo.elementosComparativos
-          if (Array.isArray(rawElems)) {
-            elems = rawElems
-          } else if (typeof rawElems === 'string' && (rawElems.startsWith('__ref__:') || rawElems.startsWith('__chunks__:'))) {
-            const resolvido = await resolverCampo(rawElems)
-            if (Array.isArray(resolvido)) elems = resolvido
+          // 2. Fallback: elementosComparativos
+          if (elems.length === 0) {
+            const rawElems = laudo.elementosComparativos
+            if (Array.isArray(rawElems)) {
+              elems = rawElems
+            } else if (typeof rawElems === 'string' && (rawElems.startsWith('__ref__:') || rawElems.startsWith('__chunks__:'))) {
+              const resolvido = await resolverCampo(rawElems)
+              if (Array.isArray(resolvido)) elems = resolvido
+            }
           }
-        }
 
-        // Adicionar elementos com coordenadas válidas
-        for (const el of elems) {
-          if (!el?.coordenadas) continue
-          const coord = parseCoord(el.coordenadas)
-          if (!coord) continue
-          lista.push({
-            ...el,
-            laudoId: laudo.id,
-            laudoReferencia: laudo.referencia || laudo.id.slice(0, 8),
-          })
-        }
-      }
+          // Filtrar elementos com coordenadas válidas
+          return elems
+            .filter((el: any) => el?.coordenadas && parseCoord(el.coordenadas))
+            .map((el: any) => ({
+              ...el,
+              laudoId: laudo.id,
+              laudoReferencia: laudo.referencia || laudo.id.slice(0, 8),
+            }))
+        })
+      )
 
-      setElementos(lista)
+      setElementos(resultados.flat())
     } catch {
       setErro('Não foi possível carregar os elementos. Tente novamente.')
     } finally {
