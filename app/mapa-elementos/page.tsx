@@ -167,26 +167,37 @@ export default function MapaElementosPage() {
       const laudos: any[] = await res.json()
       const lista: ElementoMapa[] = []
 
+      console.log(`[mapa] ${laudos.length} laudos recebidos`)
+
       // Processar laudos em paralelo (lotes de 5 para não sobrecarregar)
       const LOTE = 5
       for (let i = 0; i < laudos.length; i += LOTE) {
         const lote = laudos.slice(i, i + LOTE)
         await Promise.all(lote.map(async (laudo) => {
           let elems: ElementoCDDM[] = []
+          const laudoRef = laudo.referenciaCliente || laudo.codigo || laudo.id?.slice(0, 8) || '?'
 
           // Tentar dadosCalculoCDDM primeiro (tem fatores calculados)
           const rawCddm = laudo.dadosCalculoCDDM
           if (rawCddm && typeof rawCddm === 'object' && Array.isArray(rawCddm.elementos)) {
             // Inline com elementos
             elems = rawCddm.elementos
+            console.log(`[mapa] laudo ${laudoRef}: cddm inline → ${elems.length} elementos`)
           } else if (typeof rawCddm === 'string') {
             // Ref ou chunks — resolver via API de mídias
+            console.log(`[mapa] laudo ${laudoRef}: cddm é ref (${rawCddm.slice(0, 40)}…) — resolvendo`)
             const resolvido = await resolverCampo(rawCddm)
             if (resolvido && typeof resolvido === 'object' && Array.isArray(resolvido.elementos)) {
               elems = resolvido.elementos
+              console.log(`[mapa] laudo ${laudoRef}: cddm resolvido → ${elems.length} elementos`)
             } else if (Array.isArray(resolvido)) {
               elems = resolvido
+              console.log(`[mapa] laudo ${laudoRef}: cddm resolvido (array) → ${elems.length} elementos`)
+            } else {
+              console.warn(`[mapa] laudo ${laudoRef}: falha ao resolver cddm, resolvido=`, resolvido)
             }
+          } else {
+            console.log(`[mapa] laudo ${laudoRef}: sem cddm (tipo=${typeof rawCddm})`)
           }
 
           // Fallback: elementosComparativos (campo alternativo)
@@ -194,24 +205,37 @@ export default function MapaElementosPage() {
             const rawElems = laudo.elementosComparativos
             if (Array.isArray(rawElems)) {
               elems = rawElems
+              console.log(`[mapa] laudo ${laudoRef}: elementosComparativos inline → ${elems.length} elementos`)
             } else if (typeof rawElems === 'string') {
+              console.log(`[mapa] laudo ${laudoRef}: elementosComparativos é ref — resolvendo`)
               const resolvido = await resolverCampo(rawElems)
-              if (Array.isArray(resolvido)) elems = resolvido
+              if (Array.isArray(resolvido)) {
+                elems = resolvido
+                console.log(`[mapa] laudo ${laudoRef}: elementosComparativos resolvido → ${elems.length} elementos`)
+              }
+            } else {
+              console.log(`[mapa] laudo ${laudoRef}: sem elementosComparativos (tipo=${typeof rawElems})`)
             }
           }
 
+          let comCoord = 0
           for (const el of elems) {
             if (el.coordenadas && parseCoord(el.coordenadas)) {
+              comCoord++
               lista.push({
                 ...el,
                 laudoId: laudo.id,
-                laudoReferencia: laudo.referenciaCliente || laudo.codigo || laudo.id.slice(0, 8),
+                laudoReferencia: laudoRef,
               })
             }
+          }
+          if (elems.length > 0) {
+            console.log(`[mapa] laudo ${laudoRef}: ${comCoord}/${elems.length} elementos com coordenada válida`)
           }
         }))
       }
 
+      console.log(`[mapa] TOTAL: ${lista.length} elementos com coordenadas`)
       setElementos(lista)
     } catch {
       setErro('Não foi possível carregar os elementos. Tente novamente.')
