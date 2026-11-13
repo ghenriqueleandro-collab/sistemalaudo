@@ -23,7 +23,7 @@ export default function BrandLogo() {
         <div style={{ width: 4, height: '100%', background: '#3b82f6', borderRadius: '2px 2px 0 0' }} />
       </div>
 
-      {/* Tagline — uma linha só, bem discreta */}
+      {/* Tagline — duas linhas, altura fixa para não afetar o container */}
       <span style={{
         fontFamily: "'Inter', system-ui, sans-serif",
         fontSize: '6.5px',
@@ -31,10 +31,11 @@ export default function BrandLogo() {
         letterSpacing: '0.14em',
         textTransform: 'uppercase' as const,
         color: 'rgba(255,255,255,0.4)',
-        lineHeight: 1,
-        whiteSpace: 'nowrap' as const,
+        lineHeight: 1.6,
+        display: 'block',
+        alignSelf: 'center',
       }}>
-        Inteligência Imobiliária
+        Inteligência<br />Imobiliária
       </span>
     </div>
   )
