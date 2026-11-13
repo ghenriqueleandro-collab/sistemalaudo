@@ -510,6 +510,24 @@ export default function MapaElementosPage() {
       }
     }
 
+    // Recalcular após fallback 2 para decidir se ainda precisamos tentar evolutivo
+    const elemsComCoordApos2 = elems.filter((el: any) => el?.coordenadas && parseCoord(el.coordenadas))
+
+    // 3. Fallback: dadosCalculoEvolutivo (método evolutivo)
+    //    Laudos com metodoAvaliacao='evolutivo' armazenam elementos em
+    //    dadosCalculoEvolutivo.elementos, e NÃO em dadosCalculoCDDM nem elementosComparativos
+    if (elems.length === 0 || elemsComCoordApos2.length === 0) {
+      const rawEv = laudo.dadosCalculoEvolutivo
+      if (rawEv && typeof rawEv === 'object' && Array.isArray(rawEv.elementos) && rawEv.elementos.length > 0) {
+        elems = rawEv.elementos
+      } else if (typeof rawEv === 'string' && (rawEv.startsWith('__ref__:') || rawEv.startsWith('__chunks__:'))) {
+        const resolvido = await resolverCampo(rawEv)
+        if (resolvido && typeof resolvido === 'object' && Array.isArray(resolvido.elementos) && resolvido.elementos.length > 0) {
+          elems = resolvido.elementos
+        }
+      }
+    }
+
     // Filtrar apenas elementos com coordenadas válidas
     return elems
       .filter((el: any) => el?.coordenadas && parseCoord(el.coordenadas))
