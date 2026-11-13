@@ -16,7 +16,7 @@ import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import AppShell from '../components/AppShell'
-import type { ElementoMapa } from './tipos'
+import type { ElementoMapa, ElementoCDDM } from './tipos'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
