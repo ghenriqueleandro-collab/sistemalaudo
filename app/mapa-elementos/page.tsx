@@ -116,70 +116,98 @@ export default function MapaElementosPage() {
   const arrastando = useRef(false)
   const ultimoMouse = useRef({ x: 0, y: 0 })
 
-  // ── Resolver referência __ref__ para objeto real ──
-  const resolverDadosCDDM = useCallback(async (laudo: any): Promise<any[] | null> => {
-    const rawCddm = laudo.dadosCalculoCDDM
-    if (!rawCddm) return null
+  // ── Helpers para resolver refs do Redis ──
 
-    // Já é um objeto com elementos
-    if (typeof rawCddm === 'object' && Array.isArray(rawCddm.elementos)) {
-      return rawCddm.elementos
-    }
-
-    // É uma referência __ref__:laudo:{id}:dadosCalculoCDDM — buscar via API dedicada
-    if (typeof rawCddm === 'string' && rawCddm.startsWith('__ref__:')) {
-      try {
-        // Buscar laudo individual (endpoint GET /api/laudos/:id retorna o laudo completo com refs não resolvidas)
-        // Usamos a rota de chunks diretamente (a ref aponta para uma chave Redis separada)
-        // Como não há endpoint dedicado para resolver refs, buscamos via /api/laudos/:id
-        // e tentamos extrair elementosComparativos que geralmente não têm ref
-        const resId = await fetch(`/api/laudos/${laudo.id}`, { cache: 'no-store' })
-        if (!resId.ok) return null
-        const laudoFull = await resId.json()
-
-        // dadosCalculoCDDM pode ainda ser uma ref, mas elementosComparativos geralmente está inline
-        const cddm = laudoFull.dadosCalculoCDDM
-        if (cddm && typeof cddm === 'object' && Array.isArray(cddm.elementos)) {
-          return cddm.elementos
-        }
-
-        // Fallback: usar elementosComparativos diretamente (mesmos dados, sem fatores calculados)
-        const elems = laudoFull.elementosComparativos
-        if (Array.isArray(elems)) return elems
-      } catch {
-        return null
-      }
-    }
-
-    return null
+  /** Busca uma chave Redis via /api/laudo-midias e faz parse do JSON */
+  const lerMidia = useCallback(async (chave: string): Promise<any | null> => {
+    try {
+      const res = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(chave)}`, { cache: 'no-store' })
+      if (!res.ok) return null
+      const { dado } = await res.json()
+      if (!dado) return null
+      return typeof dado === 'string' ? JSON.parse(dado) : dado
+    } catch { return null }
   }, [])
+
+  /** Resolve qualquer campo que pode ser inline, __ref__: ou __chunks__: */
+  const resolverCampo = useCallback(async (valor: any): Promise<any | null> => {
+    if (!valor) return null
+    if (typeof valor !== 'string') return valor
+    if (valor.startsWith('__chunks__:')) {
+      const sem = valor.replace('__chunks__:', '')
+      const lastColon = sem.lastIndexOf(':')
+      const chave = sem.slice(0, lastColon)
+      const num = parseInt(sem.slice(lastColon + 1), 10)
+      if (isNaN(num) || num <= 0) return null
+      try {
+        const partes = await Promise.all(
+          Array.from({ length: num }, async (_, i) => {
+            const r = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(`${chave}__c${i}`)}`, { cache: 'no-store' })
+            if (!r.ok) return ''
+            const { dado } = await r.json()
+            return dado || ''
+          })
+        )
+        const json = partes.join('')
+        return json ? JSON.parse(json) : null
+      } catch { return null }
+    }
+    if (valor.startsWith('__ref__:')) {
+      const chave = valor.replace('__ref__:', '')
+      return lerMidia(chave)
+    }
+    return null
+  }, [lerMidia])
 
   // ── Carregar dados ──
   const carregarElementos = useCallback(async () => {
     try {
       const res = await fetch('/api/laudos', { cache: 'no-store' })
       if (!res.ok) throw new Error()
-      const laudos: any[] = await res.json()
+      const laudosBrutos: any[] = await res.json()
+
+      // Deduplicar laudos (Redis pode ter IDs duplicados)
+      const laudosVistos = new Set<string>()
+      const laudos = laudosBrutos.filter((l: any) => {
+        if (!l?.id || laudosVistos.has(l.id)) return false
+        laudosVistos.add(l.id)
+        return true
+      })
 
       const lista: ElementoMapa[] = []
+
       for (const laudo of laudos) {
-        // Tenta obter elementos via dadosCalculoCDDM ou elementosComparativos
         let elems: ElementoCDDM[] = []
 
+        // ── 1. Tentar dadosCalculoCDDM (fonte preferida: inclui VU calculado) ──
         const rawCddm = laudo.dadosCalculoCDDM
         if (rawCddm && typeof rawCddm === 'object' && Array.isArray(rawCddm.elementos)) {
+          // Inline — mais comum em laudos antigos ou pequenos
           elems = rawCddm.elementos
-        } else if (typeof rawCddm === 'string' && rawCddm.startsWith('__ref__:')) {
-          // Dados CDDM estão em chave separada — resolver via API
-          const resolvidos = await resolverDadosCDDM(laudo)
-          elems = resolvidos || []
-        } else if (Array.isArray(laudo.elementosComparativos)) {
-          // Fallback: usar elementosComparativos inline
-          elems = laudo.elementosComparativos
+        } else if (typeof rawCddm === 'string' && (rawCddm.startsWith('__ref__:') || rawCddm.startsWith('__chunks__:'))) {
+          // Ref ou chunks — resolver via /api/laudo-midias
+          const resolvido = await resolverCampo(rawCddm)
+          if (resolvido && typeof resolvido === 'object' && Array.isArray(resolvido.elementos)) {
+            elems = resolvido.elementos
+          }
         }
 
+        // ── 2. Fallback: elementosComparativos (todos os elementos, mesmo sem VU) ──
+        if (elems.length === 0) {
+          const rawElems = laudo.elementosComparativos
+          if (Array.isArray(rawElems)) {
+            elems = rawElems
+          } else if (typeof rawElems === 'string' && (rawElems.startsWith('__ref__:') || rawElems.startsWith('__chunks__:'))) {
+            const resolvido = await resolverCampo(rawElems)
+            if (Array.isArray(resolvido)) {
+              elems = resolvido
+            }
+          }
+        }
+
+        // ── Adicionar ao mapa apenas elementos com coordenadas válidas ──
         for (const el of elems) {
-          if (el.coordenadas && parseCoord(el.coordenadas)) {
+          if (el?.coordenadas && parseCoord(el.coordenadas)) {
             lista.push({
               ...el,
               laudoId: laudo.id,
@@ -188,13 +216,14 @@ export default function MapaElementosPage() {
           }
         }
       }
+
       setElementos(lista)
     } catch {
       setErro('Não foi possível carregar os elementos. Tente novamente.')
     } finally {
       setCarregando(false)
     }
-  }, [resolverDadosCDDM])
+  }, [resolverCampo])
 
   useEffect(() => {
     if (sessionStatus === 'authenticated') carregarElementos()
