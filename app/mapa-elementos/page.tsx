@@ -170,6 +170,9 @@ function MapaOSM({
   onSelecionar: (el: ElementoMapa | null) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
+  // setZoom precisa ser acessível fora do closure do useEffect;
+  // usamos uma ref para o handler para poder remover corretamente
+  const wheelHandlerRef = useRef<((e: WheelEvent) => void) | null>(null)
   const [size, setSize] = useState({ w: 800, h: 600 })
 
   // Estado do mapa: centro e zoom
@@ -180,18 +183,8 @@ function MapaOSM({
   const dragging = useRef(false)
   const lastMouse = useRef({ x: 0, y: 0 })
 
-  // Medir container
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    const obs = new ResizeObserver((entries) => {
-      const r = entries[0].contentRect
-      setSize({ w: r.width, h: r.height })
-    })
-    obs.observe(el)
-    setSize({ w: el.clientWidth, h: el.clientHeight })
-    return () => obs.disconnect()
-  }, [])
+  // ResizeObserver ref — guardamos para poder desconectar ao desmontar
+  const resizeObsRef = useRef<ResizeObserver | null>(null)
 
   // Auto-centrar nos elementos quando carregados
   useEffect(() => {
@@ -265,23 +258,46 @@ function MapaOSM({
     }).filter((p): p is PinInfo => p !== null)
   }, [elementos, center, zoom, centerPx, size])
 
-  // Registrar listener de wheel nativo com passive:false para poder chamar preventDefault
-  // (o onWheel do React é passivo em alguns browsers e ignora preventDefault)
-  useEffect(() => {
-    const el = containerRef.current
+  // ref callback: registra o listener wheel com passive:false E o ResizeObserver
+  // assim que o div é inserido no DOM. Isso resolve o problema do early-return
+  // para !center que fazia containerRef.current ser null no useEffect.
+  const setContainerRef = useCallback((el: HTMLDivElement | null) => {
+    // Cleanup do elemento anterior
+    if (containerRef.current && wheelHandlerRef.current) {
+      containerRef.current.removeEventListener('wheel', wheelHandlerRef.current)
+      wheelHandlerRef.current = null
+    }
+    if (resizeObsRef.current) {
+      resizeObsRef.current.disconnect()
+      resizeObsRef.current = null
+    }
+    // Atualizar containerRef (mantido para compatibilidade com código que o lê)
+    ;(containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el
     if (!el) return
+
+    // Registrar listener de scroll nativo com passive:false
     const handler = (e: WheelEvent) => {
       e.preventDefault()
+      e.stopPropagation()
       const delta = e.deltaY > 0 ? -1 : 1
       setZoom((z: number) => Math.min(18, Math.max(5, z + delta)))
     }
+    wheelHandlerRef.current = handler
     el.addEventListener('wheel', handler, { passive: false })
-    return () => el.removeEventListener('wheel', handler)
+
+    // Configurar ResizeObserver para medir o container
+    const obs = new ResizeObserver((entries) => {
+      const r = entries[0].contentRect
+      setSize({ w: r.width, h: r.height })
+    })
+    obs.observe(el)
+    setSize({ w: el.clientWidth, h: el.clientHeight })
+    resizeObsRef.current = obs
   }, [])
 
   // Handlers (touch/mouse continuam via React)
   function handleWheel(_e: React.WheelEvent) {
-    // Tratado pelo listener nativo acima
+    // Tratado pelo ref callback acima
   }
 
   function handleMouseDown(e: React.MouseEvent) {
@@ -342,7 +358,7 @@ function MapaOSM({
 
   return (
     <div
-      ref={containerRef}
+      ref={setContainerRef}
       className="relative h-full w-full overflow-hidden cursor-grab active:cursor-grabbing"
       style={{ background: '#a8c8e8' }}
       onWheel={handleWheel}
