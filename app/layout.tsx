@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Lesath Engenharia - Gestão',
+  title: 'Lesath',
   description: 'Sistema interno de gestão de laudos da Lesath Engenharia',
 }
 
