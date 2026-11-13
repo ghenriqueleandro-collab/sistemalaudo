@@ -495,15 +495,18 @@ export default function MapaElementosPage() {
       }
     }
 
+    // Verificar se os elementos de cddm têm coordenadas válidas
+    const elemsComCoord = elems.filter((el: any) => el?.coordenadas && parseCoord(el.coordenadas))
+
     // 2. Fallback: elementosComparativos
-    //    Usado quando cddm está ausente OU quando cddm resolvido veio vazio
-    if (elems.length === 0) {
+    //    Usado quando cddm está ausente, vazio OU quando nenhum elem do cddm tem coord válida
+    if (elems.length === 0 || elemsComCoord.length === 0) {
       const rawElems = laudo.elementosComparativos
-      if (Array.isArray(rawElems)) {
+      if (Array.isArray(rawElems) && rawElems.length > 0) {
         elems = rawElems
       } else if (typeof rawElems === 'string' && (rawElems.startsWith('__ref__:') || rawElems.startsWith('__chunks__:'))) {
         const resolvido = await resolverCampo(rawElems)
-        if (Array.isArray(resolvido)) elems = resolvido
+        if (Array.isArray(resolvido) && resolvido.length > 0) elems = resolvido
       }
     }
 
@@ -728,7 +731,7 @@ export default function MapaElementosPage() {
               )}
               {!carregando && (
                 <span className="text-xs text-slate-500">
-                  {elementosFiltrados.length} elemento{elementosFiltrados.length !== 1 ? 's' : ''}
+                  {elementosFiltrados.length} de {elementos.length} elemento{elementos.length !== 1 ? 's' : ''}
                 </span>
               )}
               <button
