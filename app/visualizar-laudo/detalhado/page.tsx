@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import React, { useEffect, useState, Suspense } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -97,37 +98,14 @@ const PaginaFlexivel = PaginaBase
 const CabecalhoLaudoCompleto = () => (
   <div className="mb-6">
     <div className="flex items-start justify-between gap-4">
-      {/* Logo inline — versão escura para laudo sobre fundo branco */}
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-        <span style={{
-          fontFamily: "'Playfair Display', Georgia, serif",
-          fontStyle: 'italic',
-          fontWeight: 700,
-          fontSize: '1.1rem',
-          color: '#0b1a2e',
-          letterSpacing: '-0.01em',
-          lineHeight: 1,
-        }}>
-          Lesath
-        </span>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 18 }}>
-          <div style={{ width: 3, height: '55%', background: '#1a5fd4', borderRadius: '2px 2px 0 0' }} />
-          <div style={{ width: 3, height: '80%', background: '#2473f5', borderRadius: '2px 2px 0 0' }} />
-          <div style={{ width: 3, height: '100%', background: '#4d9fff', borderRadius: '2px 2px 0 0' }} />
-        </div>
-        <span style={{
-          fontFamily: "'Inter', system-ui, sans-serif",
-          fontSize: '6.5px',
-          fontWeight: 600,
-          letterSpacing: '0.16em',
-          textTransform: 'uppercase' as const,
-          color: '#6b7a8d',
-          lineHeight: 1.15,
-          paddingTop: 1,
-        }}>
-          Inteligência<br />Imobiliária
-        </span>
-      </div>
+      <Image
+        src="/logo-lesath.png"
+        alt="Lesath Engenharia"
+        width={140}
+        height={40}
+        priority
+        className="h-8 w-auto object-contain"
+      />
       <div className="text-right leading-tight">
         <div className="text-[10px] uppercase tracking-[0.28em] text-[#8FA4C7]">LAUDO DE AVALIAÇÃO</div>
         <div className="text-[12px] font-semibold text-[#17325C]">Lesath Engenharia</div>
