@@ -100,24 +100,64 @@ export default function MapaElementosPage() {
   const [selecionado, setSelecionado] = useState<ElementoMapa | null>(null)
   const [painelFiltroAberto, setPainelFiltroAberto] = useState(true)
 
-  // ── Resolver referência __ref__ ──
-  const resolverDadosCDDM = useCallback(async (laudo: any): Promise<any[] | null> => {
-    const rawCddm = laudo.dadosCalculoCDDM
-    if (!rawCddm) return null
-    if (typeof rawCddm === 'object' && Array.isArray(rawCddm.elementos)) return rawCddm.elementos
-    if (typeof rawCddm === 'string' && rawCddm.startsWith('__ref__:')) {
-      try {
-        const resId = await fetch(`/api/laudos/${laudo.id}`, { cache: 'no-store' })
-        if (!resId.ok) return null
-        const laudoFull = await resId.json()
-        const cddm = laudoFull.dadosCalculoCDDM
-        if (cddm && typeof cddm === 'object' && Array.isArray(cddm.elementos)) return cddm.elementos
-        const elems = laudoFull.elementosComparativos
-        if (Array.isArray(elems)) return elems
-      } catch { return null }
+  // ── Helpers para resolver __ref__ e __chunks__ via /api/laudo-midias ──────────
+  //
+  // O sistema usa três formatos para campos grandes:
+  //   1. Inline — objeto/array direto no laudo (laudos pequenos)
+  //   2. __ref__:chave — valor salvo em chave Redis separada
+  //   3. __chunks__:chave:N — valor dividido em N chunks (chave__c0, chave__c1…)
+  //
+  // Todos os campos grandes são buscados via GET /api/laudo-midias?chave=…
+
+  async function lerMidia(chave: string): Promise<any | null> {
+    try {
+      const res = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(chave)}`, { cache: 'no-store' })
+      if (!res.ok) return null
+      const { dado } = await res.json()
+      if (!dado) return null
+      return typeof dado === 'string' ? JSON.parse(dado) : dado
+    } catch {
+      return null
+    }
+  }
+
+  async function lerChunks(chave: string, numChunks: number): Promise<any | null> {
+    try {
+      const partes = await Promise.all(
+        Array.from({ length: numChunks }, async (_, i) => {
+          const res = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(`${chave}__c${i}`)}`, { cache: 'no-store' })
+          if (!res.ok) return ''
+          const { dado } = await res.json()
+          return dado || ''
+        })
+      )
+      const json = partes.join('')
+      return json ? JSON.parse(json) : null
+    } catch {
+      return null
+    }
+  }
+
+  // Resolve um campo que pode ser inline, __ref__ ou __chunks__
+  async function resolverCampo(valor: any): Promise<any | null> {
+    if (!valor) return null
+    // Já é um objeto/array — inline
+    if (typeof valor !== 'string') return valor
+    // Formato __chunks__:chave:N
+    if (valor.startsWith('__chunks__:')) {
+      const sem = valor.replace('__chunks__:', '')
+      const lastColon = sem.lastIndexOf(':')
+      const chave = sem.slice(0, lastColon)
+      const num = parseInt(sem.slice(lastColon + 1), 10)
+      return lerChunks(chave, num)
+    }
+    // Formato __ref__:chave
+    if (valor.startsWith('__ref__:')) {
+      const chave = valor.replace('__ref__:', '')
+      return lerMidia(chave)
     }
     return null
-  }, [])
+  }
 
   // ── Carregar dados ──
   const carregarElementos = useCallback(async () => {
@@ -126,33 +166,60 @@ export default function MapaElementosPage() {
       if (!res.ok) throw new Error()
       const laudos: any[] = await res.json()
       const lista: ElementoMapa[] = []
-      for (const laudo of laudos) {
-        let elems: ElementoCDDM[] = []
-        const rawCddm = laudo.dadosCalculoCDDM
-        if (rawCddm && typeof rawCddm === 'object' && Array.isArray(rawCddm.elementos)) {
-          elems = rawCddm.elementos
-        } else if (typeof rawCddm === 'string' && rawCddm.startsWith('__ref__:')) {
-          elems = (await resolverDadosCDDM(laudo)) || []
-        } else if (Array.isArray(laudo.elementosComparativos)) {
-          elems = laudo.elementosComparativos
-        }
-        for (const el of elems) {
-          if (el.coordenadas && parseCoord(el.coordenadas)) {
-            lista.push({
-              ...el,
-              laudoId: laudo.id,
-              laudoReferencia: laudo.referencia || laudo.id.slice(0, 8),
-            })
+
+      // Processar laudos em paralelo (lotes de 5 para não sobrecarregar)
+      const LOTE = 5
+      for (let i = 0; i < laudos.length; i += LOTE) {
+        const lote = laudos.slice(i, i + LOTE)
+        await Promise.all(lote.map(async (laudo) => {
+          let elems: ElementoCDDM[] = []
+
+          // Tentar dadosCalculoCDDM primeiro (tem fatores calculados)
+          const rawCddm = laudo.dadosCalculoCDDM
+          if (rawCddm && typeof rawCddm === 'object' && Array.isArray(rawCddm.elementos)) {
+            // Inline com elementos
+            elems = rawCddm.elementos
+          } else if (typeof rawCddm === 'string') {
+            // Ref ou chunks — resolver via API de mídias
+            const resolvido = await resolverCampo(rawCddm)
+            if (resolvido && typeof resolvido === 'object' && Array.isArray(resolvido.elementos)) {
+              elems = resolvido.elementos
+            } else if (Array.isArray(resolvido)) {
+              elems = resolvido
+            }
           }
-        }
+
+          // Fallback: elementosComparativos (campo alternativo)
+          if (elems.length === 0) {
+            const rawElems = laudo.elementosComparativos
+            if (Array.isArray(rawElems)) {
+              elems = rawElems
+            } else if (typeof rawElems === 'string') {
+              const resolvido = await resolverCampo(rawElems)
+              if (Array.isArray(resolvido)) elems = resolvido
+            }
+          }
+
+          for (const el of elems) {
+            if (el.coordenadas && parseCoord(el.coordenadas)) {
+              lista.push({
+                ...el,
+                laudoId: laudo.id,
+                laudoReferencia: laudo.referenciaCliente || laudo.codigo || laudo.id.slice(0, 8),
+              })
+            }
+          }
+        }))
       }
+
       setElementos(lista)
     } catch {
       setErro('Não foi possível carregar os elementos. Tente novamente.')
     } finally {
       setCarregando(false)
     }
-  }, [resolverDadosCDDM])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (sessionStatus === 'authenticated') carregarElementos()
