@@ -141,6 +141,10 @@ export default function NovoLaudoPage() {
   // Impede que abrir o laudo sem editar sobrescreva dados de outro usuário
   const [laudoModificado, setLaudoModificado] = useState(false)
   const laudoModificadoRef = useRef(false)
+  // Timestamp (ms) de quando o carregamento do form terminou com sucesso.
+  // 0 = ainda não carregou. Usado no guard do unmount para evitar saves
+  // disparados imediatamente após re-hidratação (antes do form estar estável).
+  const formLoadedAtRef = useRef(0)
   const [laudoUuid, setLaudoUuid] = useState(() => crypto.randomUUID())
   const [modalRestaurar, setModalRestaurar] = useState(false)
 
@@ -184,6 +188,7 @@ export default function NovoLaudoPage() {
           setEditandoLaudoExistente(false)
           setLaudoId('')
           setFormPronto(true)
+          formLoadedAtRef.current = Date.now()
           return
         }
 
@@ -342,6 +347,7 @@ export default function NovoLaudoPage() {
         setUsarCidadeReferencia(Boolean(laudoSalvo.cidadePrincipal || laudoSalvo.distanciaCidadePrincipal))
         // Carregamento completo com sucesso
         setFormPronto(true)
+        formLoadedAtRef.current = Date.now()
       } catch (error) {
         console.error('[carregarLaudo] Erro durante carregamento:', error)
         // NÃO chamar setFormPronto(true) — mantém formPronto=false
@@ -1027,11 +1033,18 @@ export default function NovoLaudoPage() {
 
   useEffect(() => {
     return () => {
-      // Só salva ao desmontar se: form foi carregado E usuário realmente modificou algo
-      // Previne sobrescrever dados de outro usuário que está editando simultaneamente
-      // CRÍTICO: sem verificar laudoModificadoRef, abrir e fechar o laudo sem editar
-      // dispara save com form possivelmente incompleto e sobrescreve dados no Redis
-      if (formProntoRef.current && laudoModificadoRef.current) saveRef.current(true)
+      // Só salva ao desmontar se:
+      // 1. Form foi totalmente carregado (formProntoRef)
+      // 2. Usuário realmente modificou algo (laudoModificadoRef)
+      // 3. O form está carregado há pelo menos 5s (formLoadedAtRef)
+      //    — evita saves disparados imediatamente após re-hidratação ou
+      //      remount causado por sessão expirada/redirect do middleware,
+      //      onde o estado React ainda pode estar incompleto.
+      const formEstavel = formLoadedAtRef.current > 0 &&
+        (Date.now() - formLoadedAtRef.current) > 5_000
+      if (formProntoRef.current && laudoModificadoRef.current && formEstavel) {
+        saveRef.current(true)
+      }
     }
   }, [])
 

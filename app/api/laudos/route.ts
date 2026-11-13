@@ -51,13 +51,33 @@ export async function POST(request: NextRequest) {
 
     const existente = await redis.get<any>(`laudo:${id}`)
 
-    // Merge com existente para que campos não enviados no payload não sejam
-    // apagados. Isso protege contra saves parciais (ex: unmount durante carregamento)
-    // sobrescreverem o laudo salvo com valores em branco.
-    // Os campos enviados em `dados` têm prioridade sobre os existentes.
+    // Merge com existente: campos do payload têm prioridade, EXCETO strings vazias.
+    // Se o existente tem um valor preenchido e o payload traz '' para o mesmo campo,
+    // mantém o valor existente — protege contra saves com form parcialmente carregado
+    // (ex: unmount logo após re-hidratação, sessão expirada + redirect do middleware).
+    // Arrays vazios [] também são descartados se o existente tiver itens.
+    function mergeSeguro(existente: any, novo: any): any {
+      if (!existente || typeof existente !== 'object') return novo
+      const resultado: Record<string, any> = { ...existente }
+      for (const [chave, valor] of Object.entries(novo)) {
+        const valorExistente = existente[chave]
+        // String vazia sobrescrevendo string preenchida → mantém existente
+        if (typeof valor === 'string' && valor === '' &&
+            typeof valorExistente === 'string' && valorExistente !== '') {
+          continue
+        }
+        // Array vazio sobrescrevendo array com itens → mantém existente
+        if (Array.isArray(valor) && valor.length === 0 &&
+            Array.isArray(valorExistente) && valorExistente.length > 0) {
+          continue
+        }
+        resultado[chave] = valor
+      }
+      return resultado
+    }
+
     const laudo = {
-      ...(existente ?? {}),
-      ...dados,
+      ...mergeSeguro(existente ?? {}, dados),
       id,
       criadoEm: existente?.criadoEm ?? dados.criadoEm ?? agora,
       atualizadoEm: agora,
