@@ -16,14 +16,7 @@ import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import AppShell from '../components/AppShell'
-import type { ElementoCDDM } from '../components/formulario/EtapaCalculoCDDM'
-
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-
-type ElementoMapa = ElementoCDDM & {
-  laudoId: string
-  laudoReferencia: string
-}
+import type { ElementoMapa } from './tipos'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

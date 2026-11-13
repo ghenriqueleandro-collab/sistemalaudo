@@ -10,37 +10,13 @@
 
 'use client'
 
-import { useEffect, useRef } from 'react'
-
-// Tipos importados via dynamic — precisamos reexportar ElementoCDDM aqui
-// para evitar import circular. Usamos `any` como workaround para o campo.
-type ElementoMapa = {
-  id?: string
-  laudoId: string
-  laudoReferencia: string
-  coordenadas: string
-  tipo?: string
-  logradouro?: string
-  bairro?: string
-  cidade?: string
-  uf?: string
-  area?: string
-  valorOferta?: string
-  padraoConstrutivo?: string
-  estadoConservacao?: string
-  dormitorios?: string
-  suites?: string
-  vagas?: string
-  fonte?: string
-  data?: string
-  link?: string
-  [key: string]: any
-}
+import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react'
+import type { ElementoMapa } from './tipos'
 
 type Props = {
   elementos: ElementoMapa[]
   selecionado: ElementoMapa | null
-  onSelecionar: (el: ElementoMapa | null) => void
+  onSelecionar: Dispatch<SetStateAction<ElementoMapa | null>>
   corParaTipo: (tipo: string) => string
 }
 
