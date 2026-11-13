@@ -108,6 +108,8 @@ export default function MeusLaudosPage() {
   const [tipoLaudo, setTipoLaudo] = useState('')
   const [excluindoId, setExcluindoId] = useState<string | null>(null)
   const [solicitandoId, setSolicitandoId] = useState<string | null>(null)
+  const [duplicandoId, setDuplicandoId] = useState<string | null>(null)
+  const [menuAbertoId, setMenuAbertoId] = useState<string | null>(null)
 
   const carregarLaudos = useCallback(async () => {
     try {
@@ -123,6 +125,14 @@ export default function MeusLaudosPage() {
     const intervalo = setInterval(carregarLaudos, 15_000)
     return () => clearInterval(intervalo)
   }, [carregarLaudos])
+
+  // Fechar menu ao pressionar Escape
+  useEffect(() => {
+    if (!menuAbertoId) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuAbertoId(null) }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [menuAbertoId])
 
   const cidades = useMemo(
     () => [...new Set(laudos.map((i) => i.cidade).filter(Boolean))].sort(),
@@ -180,6 +190,26 @@ export default function MeusLaudosPage() {
       alert('Erro ao excluir o laudo.')
     } finally {
       setExcluindoId(null)
+    }
+  }
+
+  async function handleDuplicar(laudo: LaudoResumo) {
+    if (!confirm(`Duplicar o laudo "${laudo.endereco || laudo.codigo}"? Um novo laudo idêntico será criado com status "Levantamento de documentos".`)) return
+    try {
+      setDuplicandoId(laudo.id)
+      setMenuAbertoId(null)
+      const res = await fetch(`/api/laudos/${laudo.id}/duplicar`, { method: 'POST' })
+      const dados = await res.json()
+      if (!res.ok) {
+        alert(dados.erro || 'Erro ao duplicar o laudo.')
+        return
+      }
+      await carregarLaudos()
+      alert(`Laudo duplicado com sucesso!\nReferência: ${dados.referencia}`)
+    } catch {
+      alert('Erro ao duplicar o laudo.')
+    } finally {
+      setDuplicandoId(null)
     }
   }
 
@@ -419,6 +449,8 @@ export default function MeusLaudosPage() {
                     : `/novo-laudo?id=${encodeURIComponent(laudo.id)}`
                 const nomeCliente = laudo.proprietario || laudo.solicitante
 
+                const menuAberto = menuAbertoId === laudo.id
+
                 return (
                   <div
                     key={laudo.id}
@@ -453,7 +485,7 @@ export default function MeusLaudosPage() {
                       </span>
                     </div>
 
-                    {/* Ações */}
+                    {/* Ações rápidas + menu 3 pontinhos */}
                     <div className="flex shrink-0 items-center gap-2">
                       <Link
                         href={urlVisualizar}
@@ -469,25 +501,83 @@ export default function MeusLaudosPage() {
                       >
                         Editar
                       </Link>
-                      {podeExcluirDireto ? (
+
+                      {/* Menu 3 pontinhos */}
+                      <div className="relative">
                         <button
                           type="button"
-                          onClick={() => handleExcluir(laudo.id)}
-                          disabled={excluindoId === laudo.id}
-                          className="rounded-xl border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition disabled:opacity-50"
+                          onClick={() => setMenuAbertoId(menuAberto ? null : laudo.id)}
+                          disabled={duplicandoId === laudo.id || excluindoId === laudo.id}
+                          className="flex h-7 w-7 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition disabled:opacity-40"
+                          title="Mais opções"
                         >
-                          {excluindoId === laudo.id ? '...' : 'Excluir'}
+                          {(duplicandoId === laudo.id || excluindoId === laudo.id) ? (
+                            <span className="text-[10px] font-bold">...</span>
+                          ) : (
+                            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
+                              <circle cx="5" cy="12" r="1.5" />
+                              <circle cx="12" cy="12" r="1.5" />
+                              <circle cx="19" cy="12" r="1.5" />
+                            </svg>
+                          )}
                         </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleSolicitarExclusao(laudo)}
-                          disabled={solicitandoId === laudo.id}
-                          className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50 transition disabled:opacity-50"
-                        >
-                          {solicitandoId === laudo.id ? '...' : 'Solicitar exclusão'}
-                        </button>
-                      )}
+
+                        {menuAberto && (
+                          <>
+                            {/* Overlay para fechar ao clicar fora */}
+                            <div
+                              className="fixed inset-0 z-10"
+                              onClick={() => setMenuAbertoId(null)}
+                            />
+                            {/* Dropdown */}
+                            <div className="absolute right-0 top-9 z-20 w-48 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/80">
+                              <button
+                                type="button"
+                                onClick={() => { setMenuAbertoId(null); handleDuplicar(laudo) }}
+                                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition"
+                              >
+                                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                </svg>
+                                Duplicar laudo
+                              </button>
+
+                              <div className="border-t border-slate-100" />
+
+                              {podeExcluirDireto ? (
+                                <button
+                                  type="button"
+                                  onClick={() => { setMenuAbertoId(null); handleExcluir(laudo.id) }}
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-rose-600 hover:bg-rose-50 transition"
+                                >
+                                  <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-rose-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                    <path d="M10 11v6M14 11v6" />
+                                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                                  </svg>
+                                  Excluir laudo
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => { setMenuAbertoId(null); handleSolicitarExclusao(laudo) }}
+                                  disabled={solicitandoId === laudo.id}
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-500 hover:bg-slate-50 transition disabled:opacity-50"
+                                >
+                                  <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="8" x2="12" y2="12" />
+                                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                                  </svg>
+                                  Solicitar exclusão
+                                </button>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )
