@@ -2,18 +2,15 @@
  * SALVAR EM: src/app/mapa-elementos/page.tsx
  *
  * Mapa de Elementos Comparativos — exibe no mapa todos os imóveis usados
- * como elementos comparativos (dadosCalculoCDDM.elementos) nos laudos salvos.
+ * como elementos comparativos nos laudos salvos.
  *
- * Funciona sem dependências externas de mapas: usa uma projeção Mercator simples
- * com pan/zoom por CSS transform. Cada alfinete é posicionado via coordenadas reais.
- * Clique num alfinete para ver os detalhes completos do elemento.
- *
- * Filtros disponíveis: tipo, cidade, área, valor, padrão construtivo.
+ * Usa tiles reais do OpenStreetMap via projeção Mercator (sem Leaflet).
+ * Suporta pan/zoom, filtros e painel de detalhe.
  */
 
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import AppShell from '../components/AppShell'
 import type { ElementoCDDM } from '../components/formulario/EtapaCalculoCDDM'
@@ -25,35 +22,98 @@ type ElementoMapa = ElementoCDDM & {
   laudoReferencia: string
 }
 
-// ─── Helpers de coordenadas ───────────────────────────────────────────────────
+// ─── Projeção Mercator / Tiles OSM ────────────────────────────────────────────
 
-function parseCoord(s: string): [number, number] | null {
-  if (!s) return null
-  const partes = s.split(',').map((p) => parseFloat(p.trim().replace(',', '.')))
-  if (partes.length < 2 || isNaN(partes[0]) || isNaN(partes[1])) return null
-  const [lat, lon] = partes
-  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null
-  return [lat, lon]
+/** lat/lon → pixel tile x,y no nível de zoom z */
+function latLonToTile(lat: number, lon: number, z: number): { x: number; y: number } {
+  const n = Math.pow(2, z)
+  const x = Math.floor(((lon + 180) / 360) * n)
+  const latRad = (lat * Math.PI) / 180
+  const y = Math.floor(((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n)
+  return { x, y }
 }
 
-/** Projeção Mercator: lat/lon → fração [0,1] no canvas */
-function mercatorXY(
-  lat: number,
-  lon: number,
-  bounds: { minLat: number; maxLat: number; minLon: number; maxLon: number }
-): [number, number] {
-  const pad = 0.05
-  const latRange = (bounds.maxLat - bounds.minLat) * (1 + pad * 2)
-  const lonRange = (bounds.maxLon - bounds.minLon) * (1 + pad * 2)
-  const minLat = bounds.minLat - (bounds.maxLat - bounds.minLat) * pad
-  const minLon = bounds.minLon - (bounds.maxLon - bounds.minLon) * pad
-  const x = ((lon - minLon) / lonRange) * 100
-  const y = (1 - (lat - minLat) / latRange) * 100
-  return [x, y]
+/** lat/lon → pixel (px, py) dentro do canvas de largura W × altura H,
+ *  dado o tile de origem (tileX0, tileY0) no zoom z, com tileSize pixels por tile */
+function latLonToPixel(
+  lat: number, lon: number, z: number,
+  tileX0: number, tileY0: number, tileSize: number
+): { px: number; py: number } {
+  const n = Math.pow(2, z)
+  const totalX = ((lon + 180) / 360) * n * tileSize
+  const latRad = (lat * Math.PI) / 180
+  const totalY = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n * tileSize
+  return {
+    px: totalX - tileX0 * tileSize,
+    py: totalY - tileY0 * tileSize,
+  }
+}
+
+// ─── Helpers de coordenadas ───────────────────────────────────────────────────
+
+/**
+ * Parseia coordenadas no formato "lat, lon" suportando:
+ * - ponto decimal:  "-22.98407, -46.46696"
+ * - vírgula decimal BR: "-22,98407, -46,46696"  (separador decimal = vírgula, separador par = espaço ou ponto-e-vírgula)
+ */
+function parseCoord(s: string): [number, number] | null {
+  if (!s || typeof s !== 'string') return null
+  const str = s.trim()
+
+  // Tenta formato "lat, lon" com ponto decimal (padrão Google Maps)
+  const matchPonto = str.match(/^(-?\d+\.\d+)\s*[,;]\s*(-?\d+\.\d+)$/)
+  if (matchPonto) {
+    const lat = parseFloat(matchPonto[1])
+    const lon = parseFloat(matchPonto[2])
+    if (isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+      return [lat, lon]
+    }
+  }
+
+  // Tenta formato BR "lat, lon" com vírgula decimal: "-22,98407, -46,46696"
+  // Padrão: sinal-opcional + dígitos + vírgula + dígitos, espaço, sinal-opcional + dígitos + vírgula + dígitos
+  const matchVirgula = str.match(/^(-?\d+),(\d+)\s+(-?\d+),(\d+)$/)
+  if (matchVirgula) {
+    const lat = parseFloat(`${matchVirgula[1]}.${matchVirgula[2]}`)
+    const lon = parseFloat(`${matchVirgula[3]}.${matchVirgula[4]}`)
+    if (isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+      return [lat, lon]
+    }
+  }
+
+  // Tenta formato com ponto-e-vírgula como separador de par: "-22.98407;-46.46696"
+  const matchSemicolon = str.match(/^(-?[\d.]+)\s*;\s*(-?[\d.]+)$/)
+  if (matchSemicolon) {
+    const lat = parseFloat(matchSemicolon[1])
+    const lon = parseFloat(matchSemicolon[2])
+    if (isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+      return [lat, lon]
+    }
+  }
+
+  // Fallback genérico: split por vírgula e tenta normalizar
+  const partes = str.split(',')
+  if (partes.length === 2) {
+    const lat = parseFloat(partes[0].trim())
+    const lon = parseFloat(partes[1].trim())
+    if (isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+      return [lat, lon]
+    }
+  }
+  // 4 partes = vírgula decimal: ["-22", "98407", " -46", "46696"]
+  if (partes.length === 4) {
+    const lat = parseFloat(`${partes[0].trim()}.${partes[1].trim()}`)
+    const lon = parseFloat(`${partes[2].trim()}.${partes[3].trim()}`)
+    if (isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+      return [lat, lon]
+    }
+  }
+
+  return null
 }
 
 function formatarMoeda(v: string) {
-  const n = parseFloat(v.replace(/\./g, '').replace(',', '.'))
+  const n = parseFloat(String(v).replace(/\./g, '').replace(',', '.'))
   if (isNaN(n)) return v
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 }
@@ -67,10 +127,11 @@ const CORES_TIPO: Record<string, string> = {
   sala: '#7c3aed',
   galpão: '#dc2626',
   'sala/conjunto': '#7c3aed',
-  default: '#0f172a',
+  default: '#64748b',
 }
 
 function corParaTipo(tipo: string): string {
+  if (!tipo) return CORES_TIPO.default
   const t = tipo.toLowerCase().trim()
   return CORES_TIPO[t] || CORES_TIPO.default
 }
@@ -88,13 +149,282 @@ type Filtros = {
 }
 
 const FILTROS_INICIAIS: Filtros = {
-  tipo: '',
-  cidade: '',
-  areaMin: '',
-  areaMax: '',
-  valorMin: '',
-  valorMax: '',
-  padrao: '',
+  tipo: '', cidade: '', areaMin: '', areaMax: '',
+  valorMin: '', valorMax: '', padrao: '',
+}
+
+// ─── Componente do mapa com tiles OSM ────────────────────────────────────────
+
+const TILE_SIZE = 256
+
+type TileInfo = { tx: number; ty: number; left: number; top: number }
+type PinInfo = { el: ElementoMapa; px: number; py: number }
+
+function MapaOSM({
+  elementos,
+  selecionado,
+  onSelecionar,
+}: {
+  elementos: ElementoMapa[]
+  selecionado: ElementoMapa | null
+  onSelecionar: (el: ElementoMapa | null) => void
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState({ w: 800, h: 600 })
+
+  // Estado do mapa: centro e zoom
+  const [center, setCenter] = useState<{ lat: number; lon: number } | null>(null)
+  const [zoom, setZoom] = useState(12)
+
+  // Pan
+  const dragging = useRef(false)
+  const lastMouse = useRef({ x: 0, y: 0 })
+
+  // Medir container
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const obs = new ResizeObserver((entries) => {
+      const r = entries[0].contentRect
+      setSize({ w: r.width, h: r.height })
+    })
+    obs.observe(el)
+    setSize({ w: el.clientWidth, h: el.clientHeight })
+    return () => obs.disconnect()
+  }, [])
+
+  // Auto-centrar nos elementos quando carregados
+  useEffect(() => {
+    if (elementos.length === 0) return
+    const coords = elementos.map((e) => parseCoord(e.coordenadas)).filter((c): c is [number, number] => c !== null)
+    if (coords.length === 0) return
+    const lats = coords.map((c) => c[0])
+    const lons = coords.map((c) => c[1])
+    const latC = (Math.min(...lats) + Math.max(...lats)) / 2
+    const lonC = (Math.min(...lons) + Math.max(...lons)) / 2
+    setCenter({ lat: latC, lon: lonC })
+    // Ajustar zoom baseado no spread
+    const dLat = Math.max(...lats) - Math.min(...lats)
+    const dLon = Math.max(...lons) - Math.min(...lons)
+    const spread = Math.max(dLat, dLon)
+    const z = spread < 0.01 ? 15 : spread < 0.05 ? 13 : spread < 0.2 ? 12 : spread < 1 ? 10 : spread < 5 ? 8 : 6
+    setZoom(z)
+  }, [elementos])
+
+  // Centro atual em pixels globais
+  const centerPx = useMemo(() => {
+    if (!center) return { x: 0, y: 0 }
+    const n = Math.pow(2, zoom)
+    const x = ((center.lon + 180) / 360) * n * TILE_SIZE
+    const latRad = (center.lat * Math.PI) / 180
+    const y = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n * TILE_SIZE
+    return { x, y }
+  }, [center, zoom])
+
+  // Tiles a renderizar
+  const tiles = useMemo((): TileInfo[] => {
+    if (!center) return []
+    const halfW = size.w / 2
+    const halfH = size.h / 2
+    const tileX0 = Math.floor((centerPx.x - halfW) / TILE_SIZE)
+    const tileY0 = Math.floor((centerPx.y - halfH) / TILE_SIZE)
+    const tileX1 = Math.ceil((centerPx.x + halfW) / TILE_SIZE)
+    const tileY1 = Math.ceil((centerPx.y + halfH) / TILE_SIZE)
+    const result: TileInfo[] = []
+    const n = Math.pow(2, zoom)
+    for (let tx = tileX0; tx <= tileX1; tx++) {
+      for (let ty = tileY0; ty <= tileY1; ty++) {
+        const txWrapped = ((tx % n) + n) % n
+        if (ty < 0 || ty >= n) continue
+        result.push({
+          tx: txWrapped,
+          ty,
+          left: tx * TILE_SIZE - centerPx.x + size.w / 2,
+          top: ty * TILE_SIZE - centerPx.y + size.h / 2,
+        })
+      }
+    }
+    return result
+  }, [center, zoom, size, centerPx])
+
+  // Posição dos pins em pixels
+  const pins = useMemo((): PinInfo[] => {
+    if (!center) return []
+    return elementos.map((el) => {
+      const coord = parseCoord(el.coordenadas)
+      if (!coord) return null
+      const n = Math.pow(2, zoom)
+      const globalX = ((coord[1] + 180) / 360) * n * TILE_SIZE
+      const latRad = (coord[0] * Math.PI) / 180
+      const globalY = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n * TILE_SIZE
+      return {
+        el,
+        px: globalX - centerPx.x + size.w / 2,
+        py: globalY - centerPx.y + size.h / 2,
+      }
+    }).filter((p): p is PinInfo => p !== null)
+  }, [elementos, center, zoom, centerPx, size])
+
+  // Handlers
+  function handleWheel(e: React.WheelEvent) {
+    e.preventDefault()
+    const delta = e.deltaY > 0 ? -1 : 1
+    setZoom((z: number) => Math.min(18, Math.max(5, z + delta)))
+  }
+
+  function handleMouseDown(e: React.MouseEvent) {
+    if ((e.target as HTMLElement).closest('[data-pin]')) return
+    dragging.current = true
+    lastMouse.current = { x: e.clientX, y: e.clientY }
+  }
+
+  function handleMouseMove(e: React.MouseEvent) {
+    if (!dragging.current || !center) return
+    const dx = e.clientX - lastMouse.current.x
+    const dy = e.clientY - lastMouse.current.y
+    lastMouse.current = { x: e.clientX, y: e.clientY }
+    const n = Math.pow(2, zoom)
+    const lonPerPx = 360 / (n * TILE_SIZE)
+    const latPerPx = (() => {
+      const latRad = (center.lat * Math.PI) / 180
+      return (360 / (n * TILE_SIZE)) / Math.cos(latRad)
+    })()
+    setCenter((c: { lat: number; lon: number } | null) => c ? {
+      lat: Math.max(-85, Math.min(85, c.lat + dy * latPerPx)),
+      lon: c.lon - dx * lonPerPx,
+    } : c)
+  }
+
+  function handleMouseUp() { dragging.current = false }
+
+  function handleTouchStart(e: React.TouchEvent) {
+    if (e.touches.length === 1) {
+      dragging.current = true
+      lastMouse.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    }
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (e.touches.length === 1 && dragging.current && center) {
+      const dx = e.touches[0].clientX - lastMouse.current.x
+      const dy = e.touches[0].clientY - lastMouse.current.y
+      lastMouse.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      const n = Math.pow(2, zoom)
+      const lonPerPx = 360 / (n * TILE_SIZE)
+      const latRad = (center.lat * Math.PI) / 180
+      const latPerPx = (360 / (n * TILE_SIZE)) / Math.cos(latRad)
+      setCenter((c: { lat: number; lon: number } | null) => c ? {
+        lat: Math.max(-85, Math.min(85, c.lat + dy * latPerPx)),
+        lon: c.lon - dx * lonPerPx,
+      } : c)
+    }
+  }
+
+  if (!center) {
+    return (
+      <div className="flex h-full items-center justify-center bg-slate-100">
+        <span className="text-sm text-slate-500">Aguardando elementos…</span>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative h-full w-full overflow-hidden cursor-grab active:cursor-grabbing"
+      style={{ background: '#a8c8e8' }}
+      onWheel={handleWheel}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleMouseUp}
+    >
+      {/* Tiles OSM */}
+      {tiles.map(({ tx, ty, left, top }) => (
+        <img
+          key={`${zoom}-${tx}-${ty}`}
+          src={`https://tile.openstreetmap.org/${zoom}/${tx}/${ty}.png`}
+          alt=""
+          draggable={false}
+          style={{
+            position: 'absolute',
+            left,
+            top,
+            width: TILE_SIZE,
+            height: TILE_SIZE,
+            imageRendering: 'pixelated',
+            userSelect: 'none',
+          }}
+        />
+      ))}
+
+      {/* Pins */}
+      {pins.map(({ el, px, py }, idx) => {
+        const cor = corParaTipo(el.tipo || '')
+        const ativo = selecionado?.id === el.id && selecionado?.laudoId === el.laudoId
+        return (
+          <div
+            key={`${el.laudoId}-${el.id ?? idx}`}
+            data-pin="true"
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation()
+              onSelecionar(ativo ? null : el)
+            }}
+            title={[el.tipo, el.logradouro, el.cidade].filter(Boolean).join(' · ')}
+            style={{
+              position: 'absolute',
+              left: px,
+              top: py,
+              transform: 'translate(-50%, -100%)',
+              zIndex: ativo ? 30 : 20,
+              cursor: 'pointer',
+              transition: 'transform 0.1s',
+              ...(ativo ? { transform: 'translate(-50%, -100%) scale(1.3)' } : {}),
+            }}
+          >
+            <svg
+              width={ativo ? 30 : 24}
+              height={ativo ? 40 : 32}
+              viewBox="0 0 24 32"
+              fill="none"
+              style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))' }}
+            >
+              <path
+                d="M12 0C5.373 0 0 5.373 0 12c0 8.5 12 20 12 20S24 20.5 24 12C24 5.373 18.627 0 12 0z"
+                fill={cor}
+                stroke="white"
+                strokeWidth="1.5"
+              />
+              <circle cx="12" cy="12" r="4" fill="white" fillOpacity="0.95" />
+            </svg>
+          </div>
+        )
+      })}
+
+      {/* Crédito OSM */}
+      <div
+        className="absolute bottom-0 right-0 z-30 bg-white/80 px-1.5 py-0.5 text-[9px] text-slate-600"
+        style={{ backdropFilter: 'blur(2px)' }}
+      >
+        © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline">OpenStreetMap</a>
+      </div>
+
+      {/* Controles de zoom */}
+      <div className="absolute right-3 top-3 z-30 flex flex-col overflow-hidden rounded-lg border border-slate-300 bg-white shadow">
+        <button
+          onClick={() => setZoom((z: number) => Math.min(18, z + 1))}
+          className="border-b border-slate-200 px-3 py-1.5 text-base font-bold text-slate-700 hover:bg-slate-50 transition leading-none"
+        >+</button>
+        <button
+          onClick={() => setZoom((z: number) => Math.max(5, z - 1))}
+          className="px-3 py-1.5 text-base font-bold text-slate-700 hover:bg-slate-50 transition leading-none"
+        >−</button>
+      </div>
+    </div>
+  )
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -109,16 +439,8 @@ export default function MapaElementosPage() {
   const [selecionado, setSelecionado] = useState<ElementoMapa | null>(null)
   const [painelFiltroAberto, setPainelFiltroAberto] = useState(true)
 
-  // Pan/zoom
-  const mapaRef = useRef<HTMLDivElement>(null)
-  const [zoom, setZoom] = useState(1)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
-  const arrastando = useRef(false)
-  const ultimoMouse = useRef({ x: 0, y: 0 })
-
   // ── Helpers para resolver refs do Redis ──
 
-  /** Busca uma chave Redis via /api/laudo-midias e faz parse do JSON */
   const lerMidia = useCallback(async (chave: string): Promise<any | null> => {
     try {
       const res = await fetch(`/api/laudo-midias?chave=${encodeURIComponent(chave)}`, { cache: 'no-store' })
@@ -129,7 +451,6 @@ export default function MapaElementosPage() {
     } catch { return null }
   }, [])
 
-  /** Resolve qualquer campo que pode ser inline, __ref__: ou __chunks__: */
   const resolverCampo = useCallback(async (valor: any): Promise<any | null> => {
     if (!valor) return null
     if (typeof valor !== 'string') return valor
@@ -161,12 +482,14 @@ export default function MapaElementosPage() {
 
   // ── Carregar dados ──
   const carregarElementos = useCallback(async () => {
+    setCarregando(true)
+    setErro('')
     try {
       const res = await fetch('/api/laudos', { cache: 'no-store' })
       if (!res.ok) throw new Error()
       const laudosBrutos: any[] = await res.json()
 
-      // Deduplicar laudos (Redis pode ter IDs duplicados)
+      // Deduplicar laudos
       const laudosVistos = new Set<string>()
       const laudos = laudosBrutos.filter((l: any) => {
         if (!l?.id || laudosVistos.has(l.id)) return false
@@ -177,43 +500,40 @@ export default function MapaElementosPage() {
       const lista: ElementoMapa[] = []
 
       for (const laudo of laudos) {
-        let elems: ElementoCDDM[] = []
+        let elems: any[] = []
 
-        // ── 1. Tentar dadosCalculoCDDM (fonte preferida: inclui VU calculado) ──
+        // 1. dadosCalculoCDDM — fonte preferida (inclui VU calculado)
         const rawCddm = laudo.dadosCalculoCDDM
         if (rawCddm && typeof rawCddm === 'object' && Array.isArray(rawCddm.elementos)) {
-          // Inline — mais comum em laudos antigos ou pequenos
           elems = rawCddm.elementos
         } else if (typeof rawCddm === 'string' && (rawCddm.startsWith('__ref__:') || rawCddm.startsWith('__chunks__:'))) {
-          // Ref ou chunks — resolver via /api/laudo-midias
           const resolvido = await resolverCampo(rawCddm)
           if (resolvido && typeof resolvido === 'object' && Array.isArray(resolvido.elementos)) {
             elems = resolvido.elementos
           }
         }
 
-        // ── 2. Fallback: elementosComparativos (todos os elementos, mesmo sem VU) ──
+        // 2. Fallback: elementosComparativos (todos os elementos mesmo sem VU)
         if (elems.length === 0) {
           const rawElems = laudo.elementosComparativos
           if (Array.isArray(rawElems)) {
             elems = rawElems
           } else if (typeof rawElems === 'string' && (rawElems.startsWith('__ref__:') || rawElems.startsWith('__chunks__:'))) {
             const resolvido = await resolverCampo(rawElems)
-            if (Array.isArray(resolvido)) {
-              elems = resolvido
-            }
+            if (Array.isArray(resolvido)) elems = resolvido
           }
         }
 
-        // ── Adicionar ao mapa apenas elementos com coordenadas válidas ──
+        // Adicionar elementos com coordenadas válidas
         for (const el of elems) {
-          if (el?.coordenadas && parseCoord(el.coordenadas)) {
-            lista.push({
-              ...el,
-              laudoId: laudo.id,
-              laudoReferencia: laudo.referencia || laudo.id.slice(0, 8),
-            })
-          }
+          if (!el?.coordenadas) continue
+          const coord = parseCoord(el.coordenadas)
+          if (!coord) continue
+          lista.push({
+            ...el,
+            laudoId: laudo.id,
+            laudoReferencia: laudo.referencia || laudo.id.slice(0, 8),
+          })
         }
       }
 
@@ -249,56 +569,15 @@ export default function MapaElementosPage() {
       if (filtros.tipo && el.tipo?.toLowerCase() !== filtros.tipo.toLowerCase()) return false
       if (filtros.cidade && el.cidade !== filtros.cidade) return false
       if (filtros.padrao && el.padraoConstrutivo !== filtros.padrao) return false
-      const area = parseFloat(el.area?.replace(',', '.') || '0')
+      const area = parseFloat(String(el.area || '').replace(',', '.'))
       if (filtros.areaMin && area < parseFloat(filtros.areaMin)) return false
       if (filtros.areaMax && area > parseFloat(filtros.areaMax)) return false
-      const valor = parseFloat(el.valorOferta?.replace(/\./g, '').replace(',', '.') || '0')
+      const valor = parseFloat(String(el.valorOferta || '').replace(/\./g, '').replace(',', '.'))
       if (filtros.valorMin && valor < parseFloat(filtros.valorMin.replace(/\./g, ''))) return false
       if (filtros.valorMax && valor > parseFloat(filtros.valorMax.replace(/\./g, ''))) return false
       return true
     })
   }, [elementos, filtros])
-
-  // ── Calcular bounds para posicionamento ──
-  const bounds = useMemo(() => {
-    const coords = elementosFiltrados
-      .map((e) => parseCoord(e.coordenadas))
-      .filter((c): c is [number, number] => c !== null)
-    if (coords.length === 0) return { minLat: -23.7, maxLat: -23.4, minLon: -46.8, maxLon: -46.4 }
-    const lats = coords.map((c) => c[0])
-    const lons = coords.map((c) => c[1])
-    return {
-      minLat: Math.min(...lats),
-      maxLat: Math.max(...lats),
-      minLon: Math.min(...lons),
-      maxLon: Math.max(...lons),
-    }
-  }, [elementosFiltrados])
-
-  // ── Pan/zoom handlers ──
-  function onWheel(e: React.WheelEvent) {
-    e.preventDefault()
-    const delta = e.deltaY > 0 ? 0.9 : 1.1
-    setZoom((z) => Math.min(8, Math.max(0.5, z * delta)))
-  }
-  function onMouseDown(e: React.MouseEvent) {
-    if ((e.target as HTMLElement).closest('[data-pin]')) return
-    arrastando.current = true
-    ultimoMouse.current = { x: e.clientX, y: e.clientY }
-  }
-  function onMouseMove(e: React.MouseEvent) {
-    if (!arrastando.current) return
-    const dx = e.clientX - ultimoMouse.current.x
-    const dy = e.clientY - ultimoMouse.current.y
-    ultimoMouse.current = { x: e.clientX, y: e.clientY }
-    setPan((p) => ({ x: p.x + dx, y: p.y + dy }))
-  }
-  function onMouseUp() { arrastando.current = false }
-
-  function resetarVista() {
-    setZoom(1)
-    setPan({ x: 0, y: 0 })
-  }
 
   const totalFiltros = Object.values(filtros).filter(Boolean).length
 
@@ -308,8 +587,8 @@ export default function MapaElementosPage() {
 
         {/* ── Painel de filtros ── */}
         <aside
-          className={`flex flex-col border-r border-slate-200 bg-white transition-all duration-300 ${
-            painelFiltroAberto ? 'w-72 shrink-0' : 'w-0 overflow-hidden'
+          className={`flex flex-col border-r border-slate-200 bg-white transition-all duration-300 overflow-hidden ${
+            painelFiltroAberto ? 'w-72 shrink-0' : 'w-0'
           }`}
         >
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
@@ -335,108 +614,69 @@ export default function MapaElementosPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
-
-            {/* Tipo */}
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Tipo de imóvel
-              </label>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Tipo de imóvel</label>
               <select
                 value={filtros.tipo}
                 onChange={(e) => setFiltros((f) => ({ ...f, tipo: e.target.value }))}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400 focus:bg-white transition"
               >
                 <option value="">Todos os tipos</option>
-                {tiposUnicos.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
+                {tiposUnicos.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
 
-            {/* Cidade */}
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Cidade
-              </label>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Cidade</label>
               <select
                 value={filtros.cidade}
                 onChange={(e) => setFiltros((f) => ({ ...f, cidade: e.target.value }))}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400 focus:bg-white transition"
               >
                 <option value="">Todas as cidades</option>
-                {cidadesUnicas.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
+                {cidadesUnicas.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
 
-            {/* Área */}
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Área (m²)
-              </label>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Área (m²)</label>
               <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  placeholder="Mín"
-                  value={filtros.areaMin}
+                <input type="number" placeholder="Mín" value={filtros.areaMin}
                   onChange={(e) => setFiltros((f) => ({ ...f, areaMin: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:bg-white transition"
-                />
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:bg-white transition" />
                 <span className="shrink-0 text-xs text-slate-400">até</span>
-                <input
-                  type="number"
-                  placeholder="Máx"
-                  value={filtros.areaMax}
+                <input type="number" placeholder="Máx" value={filtros.areaMax}
                   onChange={(e) => setFiltros((f) => ({ ...f, areaMax: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:bg-white transition"
-                />
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:bg-white transition" />
               </div>
             </div>
 
-            {/* Valor */}
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Valor de oferta (R$)
-              </label>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Valor de oferta (R$)</label>
               <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  placeholder="Mín"
-                  value={filtros.valorMin}
+                <input type="number" placeholder="Mín" value={filtros.valorMin}
                   onChange={(e) => setFiltros((f) => ({ ...f, valorMin: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:bg-white transition"
-                />
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:bg-white transition" />
                 <span className="shrink-0 text-xs text-slate-400">até</span>
-                <input
-                  type="number"
-                  placeholder="Máx"
-                  value={filtros.valorMax}
+                <input type="number" placeholder="Máx" value={filtros.valorMax}
                   onChange={(e) => setFiltros((f) => ({ ...f, valorMax: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:bg-white transition"
-                />
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:bg-white transition" />
               </div>
             </div>
 
-            {/* Padrão */}
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Padrão construtivo
-              </label>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Padrão construtivo</label>
               <select
                 value={filtros.padrao}
                 onChange={(e) => setFiltros((f) => ({ ...f, padrao: e.target.value }))}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400 focus:bg-white transition"
               >
                 <option value="">Todos os padrões</option>
-                {padroesUnicos.map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
+                {padroesUnicos.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
           </div>
 
-          {/* Contador de resultados */}
           <div className="border-t border-slate-100 px-4 py-3">
             <p className="text-xs text-slate-500">
               <span className="font-bold text-slate-900">{elementosFiltrados.length}</span>{' '}
@@ -449,9 +689,9 @@ export default function MapaElementosPage() {
         </aside>
 
         {/* ── Área do mapa ── */}
-        <div className="relative flex-1 overflow-hidden bg-[#e8edf2]">
+        <div className="relative flex-1 overflow-hidden">
 
-          {/* Barra superior do mapa */}
+          {/* Barra superior */}
           <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-200/60 bg-white/90 px-4 py-2.5 backdrop-blur">
             <div className="flex items-center gap-3">
               <button
@@ -464,16 +704,12 @@ export default function MapaElementosPage() {
                 {painelFiltroAberto ? 'Ocultar filtros' : 'Filtros'}
               </button>
 
-              {/* Legenda de tipos */}
               <div className="hidden items-center gap-3 md:flex">
                 {Object.entries(CORES_TIPO)
                   .filter(([k]) => k !== 'default')
                   .map(([tipo, cor]) => (
                     <span key={tipo} className="flex items-center gap-1 text-[11px] text-slate-600 capitalize">
-                      <span
-                        className="inline-block h-2.5 w-2.5 rounded-full"
-                        style={{ background: cor }}
-                      />
+                      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: cor }} />
                       {tipo}
                     </span>
                   ))}
@@ -481,142 +717,48 @@ export default function MapaElementosPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">
-                {elementosFiltrados.length} elemento{elementosFiltrados.length !== 1 ? 's' : ''}
-              </span>
-              {/* Controles de zoom */}
-              <div className="flex overflow-hidden rounded-lg border border-slate-200 bg-white">
-                <button
-                  onClick={() => setZoom((z) => Math.min(8, z * 1.3))}
-                  className="border-r border-slate-200 px-2.5 py-1.5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition"
-                >
-                  +
-                </button>
-                <button
-                  onClick={resetarVista}
-                  className="border-r border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 transition"
-                >
-                  {Math.round(zoom * 100)}%
-                </button>
-                <button
-                  onClick={() => setZoom((z) => Math.max(0.5, z * 0.77))}
-                  className="px-2.5 py-1.5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition"
-                >
-                  −
-                </button>
-              </div>
+              {carregando && (
+                <span className="text-xs text-slate-500 animate-pulse">Carregando…</span>
+              )}
+              {!carregando && (
+                <span className="text-xs text-slate-500">
+                  {elementosFiltrados.length} elemento{elementosFiltrados.length !== 1 ? 's' : ''}
+                </span>
+              )}
+              <button
+                onClick={carregarElementos}
+                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
+                title="Recarregar"
+              >
+                ↺
+              </button>
             </div>
           </div>
 
-          {/* Canvas do mapa */}
-          <div
-            ref={mapaRef}
-            className="absolute inset-0 cursor-grab active:cursor-grabbing overflow-hidden"
-            style={{ top: '44px' }}
-            onWheel={onWheel}
-            onMouseDown={onMouseDown}
-            onMouseMove={onMouseMove}
-            onMouseUp={onMouseUp}
-            onMouseLeave={onMouseUp}
-          >
+          {/* Mapa */}
+          <div className="absolute inset-0" style={{ top: '44px' }}>
             {carregando ? (
-              <div className="flex h-full items-center justify-center">
+              <div className="flex h-full items-center justify-center bg-slate-100">
                 <div className="rounded-2xl bg-white/90 px-6 py-4 shadow-lg text-sm text-slate-600">
                   Carregando elementos…
                 </div>
               </div>
             ) : erro ? (
-              <div className="flex h-full items-center justify-center">
+              <div className="flex h-full items-center justify-center bg-slate-100">
                 <div className="rounded-2xl border border-rose-200 bg-white px-6 py-4 shadow-lg text-sm text-rose-700">
                   {erro}
                 </div>
               </div>
-            ) : elementosFiltrados.length === 0 ? (
-              <div className="flex h-full items-center justify-center">
-                <div className="rounded-2xl bg-white/90 px-6 py-4 shadow-lg text-center">
-                  <p className="text-sm font-semibold text-slate-700">Nenhum elemento encontrado</p>
-                  <p className="mt-1 text-xs text-slate-400">Ajuste os filtros ou adicione laudos com coordenadas.</p>
-                </div>
-              </div>
             ) : (
-              <div
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-                  transformOrigin: 'center center',
-                  position: 'relative',
-                  userSelect: 'none',
-                }}
-              >
-                {/* Grade de fundo simulando mapa */}
-                <svg
-                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <defs>
-                    <pattern id="grid-sm" width="40" height="40" patternUnits="userSpaceOnUse">
-                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#d1d9e0" strokeWidth="0.5" />
-                    </pattern>
-                    <pattern id="grid-lg" width="200" height="200" patternUnits="userSpaceOnUse">
-                      <rect width="200" height="200" fill="url(#grid-sm)" />
-                      <path d="M 200 0 L 0 0 0 200" fill="none" stroke="#b8c4cd" strokeWidth="1" />
-                    </pattern>
-                  </defs>
-                  <rect width="100%" height="100%" fill="#e8edf2" />
-                  <rect width="100%" height="100%" fill="url(#grid-lg)" />
-                </svg>
-
-                {/* Alfinetes */}
-                {elementosFiltrados.map((el, idx) => {
-                  const coord = parseCoord(el.coordenadas)
-                  if (!coord) return null
-                  const [px, py] = mercatorXY(coord[0], coord[1], bounds)
-                  const cor = corParaTipo(el.tipo || '')
-                  const ativo = selecionado?.id === el.id && selecionado?.laudoId === el.laudoId
-                  return (
-                    <div
-                      key={`${el.laudoId}-${el.id}-${idx}`}
-                      data-pin="true"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setSelecionado(ativo ? null : el)
-                      }}
-                      title={[el.tipo, el.logradouro, el.cidade].filter(Boolean).join(' · ')}
-                      style={{
-                        position: 'absolute',
-                        left: `${px}%`,
-                        top: `${py}%`,
-                        transform: 'translate(-50%, -100%)',
-                        zIndex: ativo ? 20 : 10,
-                        cursor: 'pointer',
-                        transition: 'transform 0.15s',
-                      }}
-                    >
-                      {/* Alfinete SVG */}
-                      <svg
-                        width={ativo ? 32 : 26}
-                        height={ativo ? 42 : 34}
-                        viewBox="0 0 26 34"
-                        fill="none"
-                        style={{ filter: ativo ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.35))' : 'drop-shadow(0 2px 4px rgba(0,0,0,0.25))' }}
-                      >
-                        <path
-                          d="M13 0C6.373 0 1 5.373 1 12c0 9 12 22 12 22S25 21 25 12C25 5.373 19.627 0 13 0z"
-                          fill={ativo ? cor : cor}
-                          stroke="white"
-                          strokeWidth="2"
-                        />
-                        <circle cx="13" cy="12" r="4.5" fill="white" fillOpacity="0.9" />
-                      </svg>
-                    </div>
-                  )
-                })}
-              </div>
+              <MapaOSM
+                elementos={elementosFiltrados}
+                selecionado={selecionado}
+                onSelecionar={setSelecionado}
+              />
             )}
           </div>
 
-          {/* Painel de detalhe do elemento selecionado */}
+          {/* Painel de detalhe */}
           {selecionado && (
             <div className="absolute bottom-4 right-4 z-20 w-80 rounded-2xl border border-slate-200 bg-white shadow-[0_8px_32px_-8px_rgba(15,23,42,0.3)] overflow-hidden">
               <div className="flex items-start justify-between gap-2 border-b border-slate-100 px-4 py-3">
@@ -673,7 +815,7 @@ export default function MapaElementosPage() {
                 </div>
 
                 {(selecionado.dormitorios || selecionado.suites || selecionado.vagas) && (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {selecionado.dormitorios && (
                       <span className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600">
                         🛏 {selecionado.dormitorios} dorm.
