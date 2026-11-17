@@ -138,6 +138,14 @@ function extrairCidadeDoEndereco(endereco?: string, fallback?: string): string {
   return filtradas.length >= 2 ? filtradas[filtradas.length - 2] : filtradas[filtradas.length - 1] || fallback || ''
 }
 
+// Formata endereço completo para capa: remove apenas CEP e UF (sigla de estado)
+function formatarEnderecoCapaCompleto(endereco?: string, fallback?: string): string {
+  if (!endereco) return fallback || ''
+  const partes = endereco.split(' – ').map(p => p.trim()).filter(Boolean)
+  const filtradas = partes.filter(p => !p.startsWith('CEP') && !/^[A-Z]{2}$/.test(p))
+  return filtradas.join(' – ') || fallback || ''
+}
+
 function numeroPorExtenso(valor: number): string {
   const unidades = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove',
     'dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove']
@@ -880,7 +888,7 @@ export function LaudoPdf({
           <Text style={s.coverMainTitle}>{'Laudo de\nAvaliação'}</Text>
           <Text style={s.coverSubtitle}>{finalidade}</Text>
           <Text style={s.coverLocLabel}>LOCALIZAÇÃO DO IMÓVEL</Text>
-          <Text style={s.coverLocVal}>{extrairCidadeDoEndereco(dados.endereco, dados.cidadePrincipal)}</Text>
+          <Text style={[s.coverLocVal, { fontSize: 10 }]}>{formatarEnderecoCapaCompleto(dados.endereco, dados.cidadePrincipal)}</Text>
           <View style={s.coverDivider} />
           <View style={s.coverGrid}>
             {[
