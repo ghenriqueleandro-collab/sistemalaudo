@@ -172,16 +172,19 @@ function obterTextoGarantia(classificacao?: string, observacoes?: string) {
   if (classificacao === 'boa') return {
     titulo: 'O imóvel avaliado apresenta-se como boa garantia.',
     texto: 'Após análise das características apresentadas no presente laudo, entendemos que o imóvel em questão reúne condições satisfatórias para ser aceito como garantia.',
+    observacoes: observacoes || '',
   }
   if (classificacao === 'observacoes') return {
     titulo: 'O imóvel avaliado apresenta observações relevantes quanto à garantia.',
-    texto: `Após análise das características apresentada no presente laudo, verificamos que o imóvel poderá ser aceito como garantia, porém existem ressalvas que deverão ser avaliadas pelo interessado, ficando a aceitação final a seu critério.${observacoes ? ` Observações: ${observacoes}` : ''}`,
+    texto: 'Após análise das características apresentada no presente laudo, verificamos que o imóvel poderá ser aceito como garantia, porém existem ressalvas que deverão ser avaliadas pelo interessado, ficando a aceitação final a seu critério.',
+    observacoes: observacoes || '',
   }
   if (classificacao === 'negativa') return {
     titulo: 'O imóvel avaliado não é recomendado como garantia.',
-    texto: `Após análise das características apresentada no presente laudo, entendemos que o imóvel em questão não apresenta condições adequadas para aceitação como garantia.${observacoes ? ` Justificativa: ${observacoes}` : ''}`,
+    texto: 'Após análise das características apresentada no presente laudo, entendemos que o imóvel em questão não apresenta condições adequadas para aceitação como garantia.',
+    observacoes: observacoes || '',
   }
-  return { titulo: '', texto: '' }
+  return { titulo: '', texto: '', observacoes: '' }
 }
 
 const TEXTO_TERRENO_ENCRAVADO = `O terreno encravado caracteriza-se por não possuir acesso oficial a qualquer via pública, podendo ser total ou parcial. A área com encravamento total, como é o caso do avaliando, não apresenta acesso em nenhuma de suas confrontações, dependendo, assim, de imóveis vizinhos para ser alcançado. Já o encravamento parcial é caracterizado por imóvel que possui acesso oficial, porém, por qualquer motivo, seja ele natural ou não, não é possível o acesso por esta via.
@@ -1884,6 +1887,9 @@ export function LaudoPdf({
             <H2 id="s-14">14. GARANTIA</H2>
             <P><Text style={s.bold}>{gtex.titulo}</Text></P>
             <P>{gtex.texto}</P>
+            {gtex.observacoes?.trim() && (
+              <P>{gtex.observacoes}</P>
+            )}
           </>
         )}
 
